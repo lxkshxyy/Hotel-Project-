@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy-950: #0b1f4a;
+  --color-navy-900: #0f2a5c;
+  --color-navy-800: #14306b;
+  --color-navy-700: #263d6e;
+  --color-navy-100: #e3e9f5;
+  --color-navy-50: #eef2f9;
+
+  --color-ember-700: #a3360a;
+  --color-ember-600: #c2410c;
+  --color-ember-200: #f7b58e;
+  --color-ember-50: #fdf3ec;
+
+  /* Interactive accent (tabs, selected states). Blue on the personal site, orange in Business. */
+  --color-accent: #1d72e8;
+  --color-accent-400: #53b2fe;
+  --color-accent-50: #eaf2ff;
+
+  --color-leaf-800: #14532d;
+  --color-leaf-700: #15803d;
+  --color-leaf-100: #dcf2e3;
+  --color-leaf-50: #ecf7ef;
+
+  --color-ink-900: #1b2333;
+  --color-ink-700: #3a4456;
+  --color-ink-500: #5b6475;
+  --color-ink-400: #8a94a6;
+  --color-line: #e2e6ef;
+  --color-line-strong: #c9d2e3;
+  --color-mist: #f1f3f8;
+  --color-canvas: #f5f7fb;
+
+  --shadow-card: 0 10px 30px rgba(11, 31, 74, 0.08);
+  --shadow-float: 0 18px 50px rgba(11, 31, 74, 0.16);
+}
+
+/*
+ * Business theme. Switching to the Business account adds .theme-biz to the page, which
+ * swaps the navy brand colours for a warm rust palette that matches the business home panel.
+ * Header, logo, footer, buttons, headings and the phone tab bar all follow automatically.
+ */
+.theme-biz {
+  --color-navy-950: #3b1709;
+  --color-navy-900: #4a1e0d;
+  --color-navy-800: #5e2711;
+  --color-navy-700: #73341c;
+  --color-navy-100: #f7e1d6;
+  --color-navy-50: #fcefe8;
+  --color-line: #f0e0d7;
+  --color-line-strong: #e2c9bb;
+  --color-mist: #f8eee9;
+  --color-canvas: #fbf5f1;
+  --color-accent: #c2410c;
+  --color-accent-400: #f08a4b;
+  --color-accent-50: #fdeee6;
+  --shadow-card: 0 10px 30px rgba(94, 39, 17, 0.08);
+  --shadow-float: 0 18px 50px rgba(94, 39, 17, 0.16);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas font-sans text-[15px] leading-normal text-ink-900 antialiased;
+  }
+  a {
+    @apply text-navy-800;
+  }
+  :focus-visible {
+    outline: 3px solid #f7b58e;
+    outline-offset: 2px;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6;
+}
+@utility card {
+  @apply rounded-2xl border border-line bg-white;
+}
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 font-bold no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-ember-600 text-white hover:bg-ember-700;
+}
+@utility btn-navy {
+  @apply btn bg-navy-800 text-white hover:bg-navy-950;
+}
+@utility btn-outline {
+  @apply btn border border-line-strong bg-white text-navy-800 hover:bg-navy-50;
+}
+@utility field {
+  @apply w-full rounded-xl border border-line-strong bg-white px-3 py-3 text-[15px] text-ink-900 placeholder:text-ink-400 focus:border-navy-800 focus:outline-none;
+}
+@utility label {
+  @apply flex flex-col gap-1.5 text-[13px] font-semibold text-ink-700;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full bg-navy-100 px-3 py-1.5 text-[13px] font-bold text-navy-800;
+}
+@utility tag {
+  @apply rounded-md bg-mist px-2 py-1 text-xs font-semibold text-ink-700;
+}
+@utility section-title {
+  @apply text-2xl font-extrabold tracking-tight text-navy-800 sm:text-[28px];
+}
+
+/* Leave room for the mobile tab bar + iOS home indicator */
+.pb-tabbar {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .pb-tabbar {
+    padding-bottom: 0;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
