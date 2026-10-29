@@ -3,6 +3,7 @@
 // It confirms a paid booking even if the guest closed the browser before the page could.
 // Deploy with --no-verify-jwt (Razorpay doesn't send a Supabase token).
 import { confirmPaid } from '../_shared/confirm.ts'
+import { creditTopup } from '../_shared/topup.ts'
 import { admin, hmacHex, safeEqual } from '../_shared/server.ts'
 
 Deno.serve(async (req) => {
@@ -14,7 +15,8 @@ Deno.serve(async (req) => {
   const e = JSON.parse(raw)
   const pay = e.payload?.payment?.entity
   if ((e.event === 'payment.captured' || e.event === 'order.paid') && pay?.order_id) {
-    await confirmPaid(pay.order_id, pay.id)
+    // A guest booking, or an agency wallet top-up.
+    if (!(await confirmPaid(pay.order_id, pay.id))) await creditTopup(pay.order_id)
   }
   if (e.event === 'refund.processed') {
     const r = e.payload?.refund?.entity

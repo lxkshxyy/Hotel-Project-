@@ -389,4 +389,44 @@ function clubStatus(list) {
 }
 const pointsFor = (amount) => Math.floor(amount / 100) * 1;
 const isAtLeast = (t, name) => clubTiers.indexOf(t) >= clubTiers.findIndex((x) => x.name === name);
-export { availability, bookedNights, bookingId, cancelTerms, clubStatus, freeCancelHours, isAtLeast, pointsFor, quote, site };
+// src/lib/agentRates.ts
+/** [CONFIRM WITH CLIENT] Agent net rate = public room price minus this share. */
+const AGENT_DISCOUNT = .1;
+/** Agent's markup for a hotel: a city rule wins over the default. */
+function markupFor(city, def, byCity = {}) {
+	return byCity[city] ?? def;
+}
+const netNight = (publicPrice) => Math.round(publicPrice * .9);
+function agentQuote(q) {
+	const room = q.hotel.rooms.find((r) => r.id === q.roomId);
+	if (!room) throw new Error("That room type is no longer available.");
+	const errors = [];
+	const rooms = Math.max(1, Math.min(8, Math.floor(q.rooms)));
+	const guests = Math.max(1, q.adults + q.children);
+	if (q.checkOut <= q.checkIn) errors.push("Check-out must be after check-in.");
+	if (guests > room.maxGuests * rooms) errors.push(`${room.name} fits ${room.maxGuests} guests per room. Add a room.`);
+	const publicNightly = nightlyPrices(room, q.checkIn, q.checkOut);
+	const nightly = publicNightly.map(netNight);
+	const nights = nightly.length;
+	const netRoom = nightly.reduce((s, p) => s + p, 0) * rooms;
+	const netTax = Math.round(nightly.reduce((s, p) => s + p * rooms * gstRate(p), 0));
+	const netTotal = netRoom + netTax;
+	const markupAmount = Math.max(0, Math.round(q.markup.type === "pct" ? netTotal * q.markup.value / 100 : q.markup.value * rooms * nights));
+	const publicTotal = publicNightly.reduce((s, p) => s + p * rooms * (1 + gstRate(p)), 0);
+	return {
+		room,
+		rooms,
+		nights,
+		guests,
+		nightly,
+		netRoom,
+		netTax,
+		netTotal,
+		markupAmount,
+		sellingTotal: netTotal + markupAmount,
+		/** What a guest would pay on the public site (before any member or coupon discounts). */
+		publicTotal: Math.round(publicTotal),
+		errors
+	};
+}
+export { AGENT_DISCOUNT, agentQuote, availability, bookedNights, bookingId, cancelTerms, clubStatus, freeCancelHours, isAtLeast, markupFor, pointsFor, quote, site };

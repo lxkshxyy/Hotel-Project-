@@ -54,7 +54,7 @@ checked on the server. Deploy them once (and again after changing pricing or Clu
 npm run sync:functions               # copies the website's price rules into the functions
 npx supabase login
 npx supabase link --project-ref <your-project-ref>
-npx supabase functions deploy create-booking verify-payment cancel-booking
+npx supabase functions deploy create-booking verify-payment cancel-booking agent-create-booking agent-cancel-booking agent-wallet-topup agent-wallet-verify
 npx supabase functions deploy razorpay-webhook --no-verify-jwt
 npx supabase secrets set SITE_URL=https://<your-site> EMAIL_FROM="StayEasy <bookings@yourdomain.com>" RESEND_API_KEY=<key>
 ```

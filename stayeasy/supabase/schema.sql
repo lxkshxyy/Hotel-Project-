@@ -441,3 +441,203 @@ create policy "Signed-in users post their own reviews"
       where b.user_id = auth.uid() and b.hotel_slug = reviews.hotel_slug and b.status = 'confirmed' and b.check_in <= current_date
     ))
   );
+
+-- ═══════════════════════════ Travel-agent portal (TripDesk) ═══════════════════════════
+-- Agencies buy at net rates from a wallet and sell at their own markup. Money moves only in
+-- the agent-* functions; the browser can read its own agency's data and manage customers/quotes.
+
+create table if not exists public.agents (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null unique references auth.users (id) on delete cascade,
+  status        text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  credit_limit  integer not null default 0 check (credit_limit >= 0),
+  data          jsonb not null,   -- name, owner, phone, city, address, PAN, GSTIN, docs, markup settings
+  created_at    timestamptz not null default now()
+);
+alter table public.agents enable row level security;
+
+create table if not exists public.agent_members (
+  agent_id    uuid not null references public.agents (id) on delete cascade,
+  user_id     uuid references auth.users (id) on delete cascade,
+  email       text not null,
+  name        text not null,
+  role        text not null default 'Agent' check (role in ('Admin', 'Agent')),
+  created_at  timestamptz not null default now(),
+  primary key (agent_id, email)
+);
+create unique index if not exists agent_members_user_idx on public.agent_members (user_id) where user_id is not null;
+alter table public.agent_members enable row level security;
+
+create or replace function public.my_agent_id() returns uuid
+language sql stable security definer set search_path = public as $$
+  select agent_id from public.agent_members where user_id = auth.uid() limit 1
+$$;
+create or replace function public.my_agent_role() returns text
+language sql stable security definer set search_path = public as $$
+  select role from public.agent_members where user_id = auth.uid() limit 1
+$$;
+
+drop policy if exists "Members read their agency" on public.agents;
+create policy "Members read their agency" on public.agents for select using (id = public.my_agent_id());
+drop policy if exists "Members read their team" on public.agent_members;
+create policy "Members read their team" on public.agent_members for select using (agent_id = public.my_agent_id());
+
+create table if not exists public.agent_ledger (
+  id                bigint generated always as identity primary key,
+  agent_id          uuid not null references public.agents (id) on delete cascade,
+  type              text not null check (type in ('topup', 'booking', 'refund', 'adjust')),
+  amount            integer not null,
+  note              text not null default '',
+  booking_id        text,
+  payment_order_id  text unique,
+  created_at        timestamptz not null default now()
+);
+create index if not exists agent_ledger_agent_idx on public.agent_ledger (agent_id, created_at desc);
+alter table public.agent_ledger enable row level security;
+drop policy if exists "Members read their ledger" on public.agent_ledger;
+create policy "Members read their ledger" on public.agent_ledger for select using (agent_id = public.my_agent_id());
+
+create table if not exists public.agent_topups (
+  order_id    text primary key,
+  agent_id    uuid not null references public.agents (id) on delete cascade,
+  amount      integer not null check (amount > 0),
+  status      text not null default 'pending' check (status in ('pending', 'paid')),
+  created_at  timestamptz not null default now()
+);
+alter table public.agent_topups enable row level security;   -- server functions only
+
+create table if not exists public.agent_customers (
+  id          uuid primary key default gen_random_uuid(),
+  agent_id    uuid not null references public.agents (id) on delete cascade,
+  name        text not null check (char_length(name) between 2 and 120),
+  phone       text not null check (phone ~ '^[6-9][0-9]{9}$'),
+  email       text,
+  city        text,
+  notes       text check (char_length(notes) <= 1000),
+  created_at  timestamptz not null default now(),
+  unique (agent_id, phone)
+);
+alter table public.agent_customers enable row level security;
+drop policy if exists "Members manage their customers" on public.agent_customers;
+create policy "Members manage their customers" on public.agent_customers for all
+  using (agent_id = public.my_agent_id()) with check (agent_id = public.my_agent_id());
+
+create table if not exists public.agent_quotes (
+  id          text primary key,
+  agent_id    uuid not null references public.agents (id) on delete cascade,
+  data        jsonb not null,
+  created_at  timestamptz not null default now()
+);
+alter table public.agent_quotes enable row level security;
+drop policy if exists "Members manage their quotes" on public.agent_quotes;
+create policy "Members manage their quotes" on public.agent_quotes for all
+  using (agent_id = public.my_agent_id()) with check (agent_id = public.my_agent_id());
+
+-- Agent bookings live in the same bookings table, so hotels and room counts see them.
+alter table public.bookings add column if not exists agent_id uuid references public.agents (id);
+alter table public.bookings add column if not exists booked_by text;
+alter table public.bookings add column if not exists customer_id uuid references public.agent_customers (id) on delete set null;
+alter table public.bookings add column if not exists net_amount integer;
+alter table public.bookings add column if not exists markup_amount integer;
+alter table public.bookings add column if not exists selling_amount integer;
+alter table public.bookings drop constraint if exists bookings_pay_mode_check;
+alter table public.bookings add constraint bookings_pay_mode_check check (pay_mode in ('hotel', 'now', 'agent'));
+create index if not exists bookings_agent_idx on public.bookings (agent_id, created_at desc) where agent_id is not null;
+
+-- Guests' "My bookings" shows only their own web bookings; agencies see theirs.
+drop policy if exists "Users read their own bookings" on public.bookings;
+create policy "Users read their own bookings" on public.bookings for select using (auth.uid() = user_id and source <> 'agent');
+drop policy if exists "Agencies read their bookings" on public.bookings;
+create policy "Agencies read their bookings" on public.bookings for select using (agent_id is not null and agent_id = public.my_agent_id());
+
+-- No Club points on agent bookings.
+drop trigger if exists bookings_points on public.bookings;
+create trigger bookings_points
+  after insert on public.bookings
+  for each row when (new.status = 'confirmed' and new.source <> 'agent')
+  execute function public.apply_booking_points();
+
+-- Register: the caller becomes the agency's Admin. The StayEasy team approves in the dashboard
+-- (update agents set status = 'approved', credit_limit = … where id = …).
+create or replace function public.register_agency(profile jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  me text := (select email from auth.users where id = auth.uid());
+  new_id uuid;
+begin
+  if auth.uid() is null then raise exception 'Please sign in again.'; end if;
+  if exists (select 1 from public.agent_members where user_id = auth.uid()) then raise exception 'This email already belongs to an agency.'; end if;
+  if coalesce(profile ->> 'pan', '') !~ '^[A-Z]{5}[0-9]{4}[A-Z]$' then raise exception 'Enter a valid PAN.'; end if;
+  insert into public.agents (owner_id, data)
+  values (auth.uid(), (profile - 'id' - 'status' - 'creditLimit') || jsonb_build_object('email', me))
+  returning id into new_id;
+  insert into public.agent_members (agent_id, user_id, email, name, role)
+  values (new_id, auth.uid(), lower(me), coalesce(profile ->> 'ownerName', me), 'Admin');
+  return new_id;
+end;
+$$;
+
+-- Admins edit name, contact, address and markup. PAN, GSTIN, documents and status stay as checked.
+create or replace function public.update_agency(profile jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_agent_role() is distinct from 'Admin' then raise exception 'Only the agency admin can change settings.'; end if;
+  update public.agents a
+     set data = (profile - 'id' - 'status' - 'creditLimit' - 'pan' - 'gstin' - 'docs' - 'email')
+                || jsonb_build_object('pan', a.data -> 'pan', 'gstin', a.data -> 'gstin', 'docs', a.data -> 'docs', 'email', a.data -> 'email')
+   where a.id = public.my_agent_id();
+end;
+$$;
+
+create or replace function public.invite_agent_member(member_email text, member_name text, member_role text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_agent_role() is distinct from 'Admin' then raise exception 'Only the agency admin can add staff.'; end if;
+  if member_role not in ('Admin', 'Agent') then raise exception 'Choose Admin or Agent.'; end if;
+  if exists (select 1 from public.agent_members m join auth.users u on u.id = m.user_id where lower(u.email) = lower(member_email)) then
+    raise exception 'That email already belongs to an agency.';
+  end if;
+  insert into public.agent_members (agent_id, user_id, email, name, role)
+  values (public.my_agent_id(), (select id from auth.users where lower(email) = lower(member_email) limit 1), lower(member_email), member_name, member_role)
+  on conflict (agent_id, email) do update set name = excluded.name, role = excluded.role;
+end;
+$$;
+
+create or replace function public.accept_agent_invite() returns boolean
+language plpgsql security definer set search_path = public as $$
+declare me text := (select lower(email) from auth.users where id = auth.uid());
+begin
+  update public.agent_members set user_id = auth.uid() where email = me and user_id is null;
+  return found;
+end;
+$$;
+
+create or replace function public.remove_agent_member(member_email text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_agent_role() is distinct from 'Admin' then raise exception 'Only the agency admin can remove staff.'; end if;
+  delete from public.agent_members m
+   using public.agents a
+   where m.agent_id = public.my_agent_id() and a.id = m.agent_id and m.email = lower(member_email) and m.user_id is distinct from a.owner_id;
+end;
+$$;
+
+-- Takes a booking's net amount from the wallet (with credit), atomically. Used by agent-create-booking.
+create or replace function public.agent_debit(p_agent uuid, p_amount integer, p_booking text, p_note text) returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  credit integer;
+  bal integer;
+begin
+  select credit_limit into credit from public.agents where id = p_agent and status = 'approved' for update;
+  if not found then raise exception 'Your agency is not approved for bookings yet.'; end if;
+  select coalesce(sum(amount), 0) into bal from public.agent_ledger where agent_id = p_agent;
+  if bal + credit < p_amount then raise exception 'Not enough in your wallet. You need ₹% more.', p_amount - bal - credit; end if;
+  insert into public.agent_ledger (agent_id, type, amount, note, booking_id) values (p_agent, 'booking', -p_amount, p_note, p_booking);
+  return bal - p_amount;
+end;
+$$;
+revoke all on function public.agent_debit(uuid, integer, text, text) from public, anon, authenticated;
+
+revoke all on function public.register_agency(jsonb), public.update_agency(jsonb), public.invite_agent_member(text, text, text), public.accept_agent_invite(), public.remove_agent_member(text) from public, anon;
+grant execute on function public.register_agency(jsonb), public.update_agency(jsonb), public.invite_agent_member(text, text, text), public.accept_agent_invite(), public.remove_agent_member(text) to authenticated;
