@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Figtree', ui-sans-serif, sans-serif;
+  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Lato', ui-sans-serif, sans-serif;
 
   /* Front-desk palette: ledger-cloth pine, room-key brass, cool paper. */
   --color-pine-950: #0b241b;

@@ -1,13 +1,10 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, Link, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Link, Navigate, RouterProvider } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import { Spinner } from './components/ui'
 import { SessionProvider } from './context/Session'
 import Landing from './pages/Landing'
 
-const Login = lazy(() => import('./pages/Login'))
-const Welcome = lazy(() => import('./pages/Login').then((m) => ({ default: m.Welcome })))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Properties = lazy(() => import('./pages/Properties'))
 const PropertyOverview = lazy(() => import('./pages/PropertyOverview'))
 const Wizard = lazy(() => import('./pages/Wizard'))
@@ -32,13 +29,14 @@ function NotFound() {
 
 const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
-  { path: '/login', element: s(<Login />) },
-  { path: '/welcome', element: s(<Welcome />) },
+  { path: '/login', element: <Landing /> },
+  { path: '/signup', element: <Landing /> },
+  { path: '/welcome', element: <Navigate to="/app" replace /> },
   {
     path: '/app',
     element: <AppLayout />,
     children: [
-      { index: true, element: s(<Dashboard />) },
+      { index: true, element: <Navigate to="/app/properties" replace /> },
       { path: 'properties', element: s(<Properties />) },
       { path: 'properties/:id', element: s(<PropertyOverview />) },
       { path: 'properties/:id/edit', element: s(<Wizard />) },

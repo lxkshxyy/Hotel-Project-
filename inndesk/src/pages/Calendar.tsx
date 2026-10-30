@@ -56,7 +56,7 @@ export default function Calendar() {
         <PageHead title="Rates and availability" />
         <div className="panel mt-6">
           <Empty icon={<CalendarRange className="h-7 w-7" />} title="Add a property with rooms first">
-            <Link to="/app/properties/new/edit" className="btn-primary">
+            <Link to="/app/properties?new=1" className="btn-primary">
               Add property
             </Link>
           </Empty>

@@ -5,14 +5,14 @@ import { slugify, uid } from './format'
 import type { Listing } from './types'
 
 export const steps = [
-  { id: 'basics', label: 'Property details' },
+  { id: 'basics', label: 'Basic Info' },
   { id: 'location', label: 'Location' },
   { id: 'amenities', label: 'Amenities' },
-  { id: 'rooms', label: 'Rooms and prices' },
-  { id: 'photos', label: 'Photos' },
+  { id: 'rooms', label: 'Rooms' },
+  { id: 'photos', label: 'Photos And Videos' },
   { id: 'policies', label: 'Policies' },
-  { id: 'legal', label: 'Business and payout' },
-  { id: 'review', label: 'Review and publish' },
+  { id: 'legal', label: 'Finance & Legal' },
+  { id: 'review', label: 'Review' },
 ] as const
 export type StepId = (typeof steps)[number]['id']
 
@@ -25,7 +25,7 @@ export function blankListing(ownerId: string, owner?: { phone?: string; email?: 
     status: 'draft',
     createdAt: now,
     updatedAt: now,
-    basics: { name: '', propertyType: 'Hotel', stars: 0, description: '', highlights: [], phone: owner?.phone ?? '', email: owner?.email ?? '' },
+    basics: { name: '', propertyType: 'Hotel', stars: 0, description: '', highlights: [], phone: owner?.phone ?? '', email: owner?.email ?? '', channelManager: null },
     location: { city: '', area: '', address: '', pincode: '', landmarks: [] },
     amenities: ['wifi', 'ac', 'hotWater'],
     rooms: [],
@@ -134,14 +134,33 @@ export interface Check {
   message: string
 }
 
+const thisYear = new Date().getFullYear()
+
+/** What's missing on the Basic Info tab, keyed by field so the form can show each message in place. */
+export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yearBuilt' | 'bookingSince' | 'channel' | 'channelName' | 'email' | 'phone' | 'landline' | 'description', string>> {
+  const b = l.basics
+  const e: ReturnType<typeof basicsErrors> = {}
+  if (b.name.trim().length < 3) e.name = 'Enter the property name as on your documents.'
+  if (b.category === 'hotel' && !b.starsChosen) e.stars = 'Choose a star rating, or “Not rated”.'
+  if (!b.yearBuilt) e.yearBuilt = 'Choose the year the property was built.'
+  if (!b.bookingSince) e.bookingSince = 'Choose the year you started taking bookings.'
+  else if (b.yearBuilt && b.bookingSince < b.yearBuilt) e.bookingSince = 'This can’t be before the year the property was built.'
+  else if (b.bookingSince > thisYear) e.bookingSince = 'Choose this year or earlier.'
+  if (b.channelManager == null) e.channel = 'Choose No or Yes.'
+  else if (b.channelManager && !b.channelManagerName?.trim()) e.channelName = 'Choose your channel manager.'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())) e.email = 'Enter the email guests can write to.'
+  if (!/^[6-9]\d{9}$/.test(b.phone)) e.phone = 'Enter a 10-digit mobile number.'
+  if (b.landline && !/^0?\d{10,11}$/.test(b.landline.replace(/[\s-]/g, ''))) e.landline = 'Enter the landline with STD code, e.g. 011 2345 6789.'
+  if (b.description.trim().length < 80) e.description = `Write at least 80 characters (now ${b.description.trim().length}).`
+  return e
+}
+export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).filter((m): m is string => !!m)
+
 /** Things that must be fixed before the listing can go live. */
 export function blockers(l: Listing): Check[] {
   const out: Check[] = []
-  const b = l.basics
   const loc = l.location
-  if (b.name.trim().length < 3) out.push({ step: 'basics', message: 'Add the property name guests will see.' })
-  if (b.description.trim().length < 80) out.push({ step: 'basics', message: `Write a description of at least 80 characters (now ${b.description.trim().length}).` })
-  if (!/^[6-9]\d{9}$/.test(b.phone)) out.push({ step: 'basics', message: 'Add a 10-digit mobile number for the front desk.' })
+  out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   if (!cities.some((c) => c.name === loc.city)) out.push({ step: 'location', message: 'Choose the city.' })
   if (loc.area.trim().length < 2) out.push({ step: 'location', message: 'Add the area or locality.' })
   if (loc.address.trim().length < 8) out.push({ step: 'location', message: 'Add the street address.' })
@@ -168,7 +187,6 @@ export function blockers(l: Listing): Check[] {
 /** Optional improvements that help a listing sell. */
 export function tips(l: Listing): Check[] {
   const out: Check[] = []
-  if (l.basics.highlights.filter(Boolean).length < 3) out.push({ step: 'basics', message: 'Add three short highlights, like “5 minutes from the metro”.' })
   if (l.location.landmarks.filter((x) => x.name).length < 2) out.push({ step: 'location', message: 'Add two nearby landmarks with distances.' })
   if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
   if (l.photos.length < 10) out.push({ step: 'photos', message: 'Hotels with 10 or more photos get more bookings.' })

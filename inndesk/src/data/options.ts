@@ -10,7 +10,6 @@ export const cities = [
   { name: 'Kolkata', lat: 22.5726, lng: 88.3639 },
 ]
 
-export const propertyTypes = ['Hotel', 'Guest house', 'Homestay', 'Resort', 'Serviced apartment', 'Boutique hotel', 'Hostel']
 
 /**
  * Amenities. `key` matches StayEasy's own amenity list, so those show with icons on the hotel page.

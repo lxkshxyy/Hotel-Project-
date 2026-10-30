@@ -50,6 +50,18 @@ export interface Listing {
     highlights: string[]
     phone: string
     email: string
+    /** Hotel or Homestays & Villas, chosen when the listing is started. */
+    category?: 'hotel' | 'homestay'
+    /** True once the owner has picked a star rating (0 = not rated). */
+    starsChosen?: boolean
+    yearBuilt?: number
+    bookingSince?: number
+    /** null/undefined = not answered yet. */
+    channelManager?: boolean | null
+    channelManagerName?: string
+    landline?: string
+    /** The guest contact email the owner has confirmed. */
+    emailVerified?: string
   }
   location: {
     city: string

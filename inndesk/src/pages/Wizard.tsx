@@ -1,16 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, CircleAlert, ExternalLink, Lightbulb, MapPin, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, CircleAlert, ExternalLink, Lightbulb, Lock, MapPin, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { CodeBoxes, Popup } from '../components/Auth'
 import MapPicker from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
+import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bedTypes, cancellationOptions, checkTimes, cities, propertyTypes, roomAmenities } from '../data/options'
+import { amenityGroups, bedTypes, cancellationOptions, checkTimes, cities, roomAmenities } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { blankListing, blockers, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { basicsErrors, blockers, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { getListing, publishListing, PublishError, retrySync, saveListing } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
@@ -38,80 +40,188 @@ const err = (show: boolean, msg: string) =>
 
 /* ---------------- steps ---------------- */
 
-function Basics({ l, set }: { l: Listing; set: Set }) {
+const years = Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => new Date().getFullYear() - i)
+const channelManagers = ['STAAH', 'eZee Centrix', 'AxisRooms', 'SiteMinder', 'RateGain', 'Djubo', 'Other']
+
+/** One line of the Basic Info card: the question on the left, the answer on the right. */
+function Row({ title, help, error, children, id }: { title: string; help?: string; error?: string; children: ReactNode; id?: string }) {
+  return (
+    <div className="grid gap-3 border-t border-line px-4 py-5 first:border-t-0 sm:grid-cols-[1fr_minmax(0,480px)] sm:gap-8 sm:px-5">
+      <div>
+        <label htmlFor={id} className="block text-[16px] font-bold text-ink-900">
+          {title}
+        </label>
+        {help && <p className="mt-0.5 text-[14px] text-ink-500">{help}</p>}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {children}
+        {error && (
+          <span role="alert" className="text-[13px] font-semibold text-alert">
+            {error}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Card({ title, intro, children }: { title: string; intro?: string; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-line">
+      <div className="border-b border-line px-4 py-4 sm:px-5">
+        <h3 className="text-[22px] font-bold text-ink-900">{title}</h3>
+        {intro && <p className="text-[14px] text-ink-500">{intro}</p>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: boolean; onChangeType: () => void }) {
+  const { user } = useSession()
   const b = l.basics
   const up = (p: Partial<Listing['basics']>) => set((x) => ({ ...x, basics: { ...x.basics, ...p } }))
+  const e = show ? basicsErrors(l) : {}
   const len = b.description.trim().length
+  const [verify, setVerify] = useState<'idle' | 'code' | 'later'>('idle')
+  const [code, setCode] = useState('')
+  const verified = !!b.email.trim() && b.emailVerified === b.email.trim().toLowerCase()
+  const startVerify = () => {
+    const em = b.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return
+    // The sign-in email was confirmed at sign-up, so it counts as verified straight away.
+    if (em === user?.email) return up({ emailVerified: em })
+    setCode('')
+    setVerify(isDemoMode ? 'code' : 'later')
+  }
   return (
-    <Section title="Property details" intro="What guests see first on your listing.">
-      <label className="label">
-        Property name
-        <input className="field" value={b.name} onChange={(e) => up({ name: e.target.value })} placeholder="e.g. Hotel Sunrise Residency" maxLength={70} />
-      </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          Type of property
-          <select className="field" value={b.propertyType} onChange={(e) => up({ propertyType: e.target.value })}>
-            {propertyTypes.map((t) => (
-              <option key={t}>{t}</option>
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-[32px] font-black text-ink-900">Basic Info</h2>
+        <span className="flex items-center gap-2 text-[14px] text-ink-700">
+          Property type: <strong className="text-ink-900">{b.propertyType}</strong>
+          {b.category && <span className="text-ink-500">({b.category === 'hotel' ? 'Hotel' : 'Homestays & Villas'})</span>}
+          <button type="button" onClick={onChangeType} className="font-bold text-pine-800 hover:underline">
+            Change
+          </button>
+        </span>
+      </div>
+
+      <Card title="Property Details" intro="Update your property details here">
+        <Row id="b-name" title="Name of the property" help="Enter the name as on the property documents" error={e.name}>
+          <input id="b-name" className="field" value={b.name} onChange={(x) => up({ name: x.target.value })} placeholder="Enter the full name" maxLength={70} aria-invalid={!!e.name} />
+        </Row>
+        {b.category !== 'homestay' && (
+          <Row id="b-stars" title="Hotel star rating" error={e.stars}>
+            <select id="b-stars" className="field" value={b.starsChosen ? String(b.stars) : ''} onChange={(x) => up({ stars: Number(x.target.value), starsChosen: x.target.value !== '' })} aria-invalid={!!e.stars}>
+              <option value="">Select rating</option>
+              <option value="0">Not rated</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n} star
+                </option>
+              ))}
+            </select>
+          </Row>
+        )}
+        <Row id="b-built" title="When was the property built?" error={e.yearBuilt}>
+          <select id="b-built" className="field" value={b.yearBuilt ?? ''} onChange={(x) => up({ yearBuilt: Number(x.target.value) || undefined })} aria-invalid={!!e.yearBuilt}>
+            <option value="">Select a year</option>
+            {years.map((y) => (
+              <option key={y}>{y}</option>
             ))}
           </select>
-        </label>
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 text-sm font-semibold text-ink-700">Star rating</legend>
-          <div className="flex flex-wrap gap-1.5">
-            {[0, 1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={b.stars === n}
-                onClick={() => up({ stars: n })}
-                className={`min-h-[46px] rounded-[10px] border px-3 text-sm font-bold ${b.stars === n ? 'border-pine-800 bg-pine-800 text-white' : 'border-line-strong bg-white text-ink-700 hover:border-pine-700'}`}
-              >
-                {n === 0 ? 'Not rated' : `${n}★`}
-              </button>
+        </Row>
+        <Row id="b-since" title="Accepting bookings since?" help="Since when guests have been able to book this property" error={e.bookingSince}>
+          <select id="b-since" className="field" value={b.bookingSince ?? ''} onChange={(x) => up({ bookingSince: Number(x.target.value) || undefined })} aria-invalid={!!e.bookingSince}>
+            <option value="">Select a year</option>
+            {years.filter((y) => !b.yearBuilt || y >= b.yearBuilt).map((y) => (
+              <option key={y}>{y}</option>
+            ))}
+          </select>
+        </Row>
+        <Row title="Do you work with a channel manager?" help="A channel manager updates your rooms and rates across travel websites in one go" error={e.channel ?? e.channelName}>
+          <div role="radiogroup" aria-label="Channel manager" className="flex min-h-[46px] items-center gap-8">
+            {[
+              [false, 'No'],
+              [true, 'Yes'],
+            ].map(([v, t]) => (
+              <label key={t as string} className="flex cursor-pointer items-center gap-2.5 text-[16px] text-ink-900">
+                <input type="radio" name="cm" checked={b.channelManager === v} onChange={() => up({ channelManager: v as boolean, channelManagerName: v ? b.channelManagerName : '' })} className="h-5 w-5 accent-pine-800" />
+                {t as string}
+              </label>
             ))}
           </div>
-        </fieldset>
-      </div>
-      <label className="label">
-        Description
-        <textarea className="field min-h-[140px] leading-relaxed" value={b.description} onChange={(e) => up({ description: e.target.value })} maxLength={1500} placeholder="Describe the building, the rooms, what’s nearby and who the property suits." />
-        <span className={`text-[13px] font-normal ${len < 80 ? 'text-ink-500' : 'text-live'}`}>{len < 80 ? `${80 - len} more characters needed` : `${len} characters`}</span>
-      </label>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1.5 text-sm font-semibold text-ink-700">Highlights (up to 4, shown as short points)</legend>
-        {[0, 1, 2, 3].map((i) => (
-          <input
-            key={i}
-            className="field"
-            aria-label={`Highlight ${i + 1}`}
-            maxLength={60}
-            value={b.highlights[i] ?? ''}
-            placeholder={['5 minutes’ walk to the metro', 'Rooftop breakfast area', '24-hour front desk', 'Free parking for guests'][i]}
-            onChange={(e) => {
-              const h = [...b.highlights]
-              h[i] = e.target.value
-              up({ highlights: h })
-            }}
-          />
-        ))}
-      </fieldset>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          Front-desk mobile
-          <span className="flex overflow-hidden rounded-[10px] border border-line-strong bg-white focus-within:border-pine-700">
-            <span className="flex items-center bg-paper px-3 text-sm font-bold">+91</span>
-            <input className="min-h-[46px] min-w-0 flex-1 px-3 outline-none" inputMode="numeric" value={b.phone} onChange={(e) => up({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
+          {b.channelManager && (
+            <select className="field" aria-label="Which channel manager" value={b.channelManagerName ?? ''} onChange={(x) => up({ channelManagerName: x.target.value })} aria-invalid={!!e.channelName}>
+              <option value="">Select your channel manager</option>
+              {channelManagers.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          )}
+        </Row>
+
+        <div className="border-t border-line bg-[#f1f3f1] px-4 pt-6 pb-4 sm:px-5">
+          <h3 className="text-[20px] font-bold text-ink-900">Contact details to be shared with guests</h3>
+          <p className="text-[14px] text-ink-500">Guests see these details after they book</p>
+        </div>
+        <Row id="b-email" title="Email ID" error={e.email}>
+          <span className="relative">
+            <input id="b-email" className="field pr-24" type="email" value={b.email} onChange={(x) => up({ email: x.target.value })} placeholder="Enter email ID" aria-invalid={!!e.email} />
+            {verified ? (
+              <span className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 text-[14px] font-bold text-live">
+                <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /> Verified
+              </span>
+            ) : (
+              <button type="button" onClick={startVerify} disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())} className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
+                Verify
+              </button>
+            )}
           </span>
-          {err(b.phone.length > 0 && !/^[6-9]\d{9}$/.test(b.phone), 'Enter a 10-digit mobile number.')}
-        </label>
-        <label className="label">
-          Reservations email
-          <input className="field" type="email" value={b.email} onChange={(e) => up({ email: e.target.value })} />
-        </label>
-      </div>
-    </Section>
+          {verify === 'later' && <span className="text-[13px] text-ink-500">We’ll confirm this email with you before the property goes live. Your sign-in email is verified instantly.</span>}
+        </Row>
+        <Row id="b-phone" title="Mobile number" help="For guests to call about their booking" error={e.phone}>
+          <span className={`flex overflow-hidden rounded-[10px] border bg-white focus-within:border-pine-700 ${e.phone ? 'border-alert' : 'border-line-strong'}`}>
+            <span className="flex items-center bg-paper px-3 text-sm font-bold text-ink-700">+91</span>
+            <input id="b-phone" className="min-h-[46px] min-w-0 flex-1 px-3 text-[15px] outline-none" inputMode="numeric" autoComplete="tel-national" placeholder="10-digit mobile number" value={b.phone} onChange={(x) => up({ phone: x.target.value.replace(/\D/g, '').slice(0, 10) })} />
+          </span>
+        </Row>
+        <Row id="b-land" title="Landline number" help="Optional" error={e.landline}>
+          <input id="b-land" className="field" inputMode="tel" placeholder="STD code and number" value={b.landline ?? ''} onChange={(x) => up({ landline: x.target.value.replace(/[^\d\s-]/g, '').slice(0, 14) })} />
+        </Row>
+
+        <div className="border-t border-line bg-[#f1f3f1] px-4 pt-6 pb-4 sm:px-5">
+          <h3 className="text-[20px] font-bold text-ink-900">About the property</h3>
+          <p className="text-[14px] text-ink-500">Shown on your {site.marketplace} page</p>
+        </div>
+        <Row id="b-desc" title="Description" help="The building, the rooms, what’s nearby and who it suits" error={e.description}>
+          <textarea id="b-desc" className="field min-h-[130px] leading-relaxed" value={b.description} onChange={(x) => up({ description: x.target.value })} maxLength={1500} aria-invalid={!!e.description} />
+          {!e.description && <span className={`text-[13px] ${len < 80 ? 'text-ink-500' : 'text-live'}`}>{len < 80 ? `${80 - len} more characters needed` : `${len} characters`}</span>}
+        </Row>
+      </Card>
+
+      <Popup open={verify === 'code'} onClose={() => setVerify('idle')} title="Verify email">
+        <form
+          onSubmit={(ev) => {
+            ev.preventDefault()
+            if (!/^\d{6}$/.test(code)) return
+            up({ emailVerified: b.email.trim().toLowerCase() })
+            setVerify('idle')
+          }}
+          className="flex flex-col gap-4"
+        >
+          <p className="text-[14.5px] text-ink-700">
+            Enter the 6-digit code sent to <strong className="text-ink-900">{b.email}</strong>
+          </p>
+          <CodeBoxes value={code} onChange={setCode} />
+          <span className="rounded-lg bg-pine-50 px-3 py-2 text-[13px] text-pine-900">Demo mode: any 6 digits work.</span>
+          <button type="submit" className="btn-brass min-h-12" disabled={!/^\d{6}$/.test(code)}>
+            Verify
+          </button>
+        </form>
+      </Popup>
+    </section>
   )
 }
 
@@ -573,34 +683,27 @@ export default function Wizard() {
   const { id = 'new' } = useParams()
   const [params, setParams] = useSearchParams()
   const { owner } = useSession()
-  const navigate = useNavigate()
   const [l, setL] = useState<Listing | null | undefined>(undefined)
   const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved')
   const [saveError, setSaveError] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [result, setResult] = useState('')
   const [justPublished, setJustPublished] = useState<Listing | null>(null)
+  const [showErrors, setShowErrors] = useState(false)
+  const [stepNote, setStepNote] = useState<string[]>([])
+  const [changingType, setChangingType] = useState(false)
   const top = useRef<HTMLDivElement>(null)
   const step = (steps.some((s) => s.id === params.get('step')) ? params.get('step') : 'basics') as StepId
   const index = steps.findIndex((s) => s.id === step)
 
-  // Open an existing listing, or create a fresh draft for /new.
-  // The ref keeps React's development double-run from creating two drafts.
-  const creating = useRef<Promise<Listing> | null>(null)
   useEffect(() => {
-    if (!owner) return
+    if (!owner || id === 'new') return
     let live = true
-    if (id === 'new') {
-      creating.current ??= saveListing(blankListing(owner.id, { phone: owner.phone, email: owner.email, businessName: owner.businessName, gstin: owner.gstin }))
-      creating.current.then((d) => live && navigate(`/app/properties/${d.id}/edit?step=basics`, { replace: true }))
-    } else {
-      creating.current = null
-      getListing(owner.id, id).then((x) => live && setL(x))
-    }
+    getListing(owner.id, id).then((x) => live && setL(x))
     return () => {
       live = false
     }
-  }, [id, owner, navigate])
+  }, [id, owner])
 
   const set: Set = useCallback((fn) => {
     setL((x) => (x ? fn(x) : x))
@@ -631,11 +734,30 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [l, saveState, save])
 
+  if (id === 'new') return <Navigate to="/app/properties?new=1" replace />
+
+  const isLive = !!l && l.status !== 'draft'
+  // A tab opens once every tab before it is complete. Live listings can jump anywhere.
+  const unlocked = (i: number) => isLive || (!!l && steps.slice(0, i).every((s) => stepDone(l, s.id)))
+
   const go = (s: StepId) => {
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
+    setShowErrors(false)
+    setStepNote([])
     setParams({ step: s }, { replace: false })
     top.current?.scrollIntoView({ block: 'start' })
     window.scrollTo({ top: 0 })
+  }
+
+  const next = () => {
+    if (!l) return
+    if (!isLive && !stepDone(l, step)) {
+      setShowErrors(true)
+      setStepNote(blockers(l).filter((c) => c.step === step).map((c) => c.message))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    go(steps[index + 1].id)
   }
 
   const publish = async () => {
@@ -654,20 +776,20 @@ export default function Wizard() {
     }
   }
 
-  if (l === undefined || id === 'new') return <Spinner label={id === 'new' ? 'Starting your property' : 'Opening property'} />
+  if (l === undefined) return <Spinner label="Opening property" />
   if (l === null)
     return (
       <div className="container-page py-20 text-center">
         <h1 className="text-2xl font-bold">Property not found</h1>
         <Link to="/app/properties" className="btn-primary mt-6">
-          Back to properties
+          Back to my properties
         </Link>
       </div>
     )
+  if (!unlocked(index)) return <Navigate to={`/app/properties/${l.id}/edit?step=basics`} replace />
 
-  const isLive = l.status !== 'draft'
   const stepBody = {
-    basics: <Basics l={l} set={set} />,
+    basics: <Basics l={l} set={set} show={showErrors} onChangeType={() => setChangingType(true)} />,
     location: <Location l={l} set={set} />,
     amenities: <Amenities l={l} set={set} />,
     rooms: <Rooms l={l} set={set} goPhotos={() => go('photos')} />,
@@ -678,57 +800,43 @@ export default function Wizard() {
   }[step]
 
   return (
-    <div ref={top} className="flex min-h-dvh flex-col">
-      <div className="sticky top-16 z-30 border-b border-line bg-white/95 backdrop-blur lg:top-0">
-        <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <Link to={isLive ? `/app/properties/${l.id}` : '/app/properties'} aria-label="Back" className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-paper">
+    <div ref={top} className="flex min-h-[calc(100dvh-68px)] flex-col">
+      <div className="sticky top-[68px] z-30 border-b border-line bg-white">
+        <div className="flex items-center gap-3 px-3 pt-2 sm:px-6">
+          <Link to={isLive ? `/app/properties/${l.id}` : '/app/properties'} aria-label="Back to my properties" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-paper">
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
           <div className="min-w-0 flex-1">
-            <strong className="block truncate font-display text-lg">{l.basics.name.trim() || 'New property'}</strong>
-            <span className="text-[13px] text-ink-500" role="status">
+            <strong className="block truncate text-[16px]">{l.basics.name.trim() || `New ${l.basics.propertyType.toLowerCase()}`}</strong>
+            <span className="text-[12px] text-ink-500" role="status">
               {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? `Not saved: ${saveError}` : saveState === 'dirty' ? (isLive ? 'Unsaved changes' : 'Saving soon…') : isLive ? 'All changes saved' : 'Draft saved'}
             </span>
           </div>
-          <KeyTag status={l.status} />
+          <KeyTag status={l.status} label={isLive ? undefined : 'In progress'} />
           {isLive && (
-            <button type="button" className="btn-primary hidden sm:inline-flex" disabled={saveState !== 'dirty'} onClick={() => save(l)}>
+            <button type="button" className="btn-primary hidden min-h-10 sm:inline-flex" disabled={saveState !== 'dirty'} onClick={() => save(l)}>
               Save changes
             </button>
           )}
         </div>
-        <div className="h-1 bg-line">
-          <div className="h-full bg-brass-500 transition-all" style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[260px_1fr]">
-        <nav aria-label="Steps" className="border-b border-line bg-white px-4 py-3 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
-          <label className="lg:hidden">
-            <span className="sr-only">Step</span>
-            <select className="field" value={step} onChange={(e) => go(e.target.value as StepId)}>
-              {steps.map((s, i) => (
-                <option key={s.id} value={s.id}>
-                  Step {i + 1} of {steps.length}: {s.label}
-                  {stepDone(l, s.id) && s.id !== 'review' ? ' (done)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <ol className="hidden flex-col gap-1 lg:flex">
+        <nav aria-label="Listing steps" className="no-scrollbar mt-1 overflow-x-auto px-3 sm:px-6">
+          <ol className="flex min-w-max">
             {steps.map((s, i) => {
-              const done = stepDone(l, s.id)
               const on = s.id === step
+              const open = unlocked(i)
+              const done = open && stepDone(l, s.id) && s.id !== 'review'
               return (
                 <li key={s.id}>
                   <button
                     type="button"
+                    disabled={!open}
                     aria-current={on ? 'step' : undefined}
                     onClick={() => go(s.id)}
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-2 text-left text-[15px] font-semibold ${on ? 'bg-pine-50 text-pine-900' : 'text-ink-700 hover:bg-paper'}`}
+                    title={open ? undefined : 'Complete the earlier steps first'}
+                    className={`flex h-12 items-center gap-2 border-b-[3px] px-3 text-[14px] font-semibold whitespace-nowrap transition-colors ${on ? 'border-pine-800 text-ink-900' : 'border-transparent text-ink-700 hover:text-ink-900'} disabled:cursor-not-allowed disabled:text-ink-400`}
                   >
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold ${done && s.id !== 'review' ? 'bg-pine-800 text-white' : on ? 'bg-brass-500 text-pine-950' : 'bg-paper text-ink-500 ring-1 ring-line-strong'}`}>
-                      {done && s.id !== 'review' ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Done" /> : i + 1}
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${done ? 'bg-pine-800 text-white' : on ? 'bg-white text-pine-900 ring-2 ring-pine-800' : 'bg-paper text-ink-500 ring-1 ring-line-strong'}`}>
+                      {done ? <Check className="h-3.5 w-3.5" strokeWidth={3} aria-label="Done" /> : !open ? <Lock className="h-3 w-3" aria-label="Locked" /> : i + 1}
                     </span>
                     {s.label}
                   </button>
@@ -737,17 +845,35 @@ export default function Wizard() {
             })}
           </ol>
         </nav>
+      </div>
 
-        <div className="min-w-0 px-4 py-8 sm:px-8 lg:px-12">
-          <div className="mx-auto max-w-[920px]">{stepBody}</div>
+      <div className="flex-1 px-3 py-8 sm:px-6">
+        <div className="mx-auto flex max-w-[920px] flex-col gap-5">
+          {stepNote.length > 0 && (
+            <Notice tone="error">
+              <strong className="block">Complete this section to continue:</strong>
+              <ul className="mt-1 list-disc pl-5">
+                {stepNote.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </Notice>
+          )}
+          {stepBody}
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 lg:pl-[284px]">
-          <button type="button" className="btn-ghost" disabled={index === 0} onClick={() => go(steps[index - 1].id)}>
-            Back
-          </button>
+      <div className="sticky bottom-0 z-30 border-t border-line bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="mx-auto flex max-w-[920px] items-center justify-between gap-3 px-3 py-3 sm:px-0">
+          {index === 0 ? (
+            <Link to="/app/properties" className="min-h-11 px-2 py-2.5 text-[16px] font-bold text-pine-800 hover:underline">
+              Back
+            </Link>
+          ) : (
+            <button type="button" className="min-h-11 px-2 text-[16px] font-bold text-pine-800 hover:underline" onClick={() => go(steps[index - 1].id)}>
+              Back
+            </button>
+          )}
           <div className="flex gap-2">
             {isLive && (
               <button type="button" className="btn-primary sm:hidden" disabled={saveState !== 'dirty'} onClick={() => save(l)}>
@@ -755,13 +881,24 @@ export default function Wizard() {
               </button>
             )}
             {index < steps.length - 1 && (
-              <button type="button" className={isLive ? 'btn-ghost' : 'btn-primary'} onClick={() => go(steps[index + 1].id)}>
-                {isLive ? 'Next' : 'Save and continue'}
+              <button type="button" className="btn-brass min-h-11 px-6" onClick={next}>
+                Continue
               </button>
             )}
           </div>
         </div>
       </div>
+
+      <PropertyTypePicker
+        open={changingType}
+        initial={l.basics.propertyType}
+        confirmLabel="Save type"
+        onClose={() => setChangingType(false)}
+        onPick={(category, type) => {
+          set((x) => ({ ...x, basics: { ...x.basics, category, propertyType: type, ...(category === 'homestay' ? { stars: 0, starsChosen: false } : {}) } }))
+          setChangingType(false)
+        }}
+      />
 
       <AnimatePresence>
         {justPublished && (

@@ -1,7 +1,9 @@
-import { motion, useReducedMotion } from 'framer-motion'
-import { BedDouble, CalendarRange, Camera, MapPin, ShieldCheck, Wallet } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { Logo } from '../components/ui'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { BedDouble, CalendarRange, Camera, ShieldCheck, Wallet } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { CreateAccount, ForgotPassword, SignInCard } from '../components/Auth'
+import { Mark } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
 import { inr } from '../lib/format'
@@ -32,88 +34,130 @@ const faqs = [
   { q: 'What happens to my bank details?', a: 'InnDesk keeps only the account holder name, bank, IFSC and the last four digits. The full account number is collected by the payments partner when payouts are set up.' },
 ]
 
+const rotating = ['Hotel, Homestay', 'Villa, Resort', 'Hostel, Guest house', 'Cottage, Apartment', "Lodge, Bed & B'fast"]
+
+/** Only the property type changes: the old words slide up and out, the new ones slide in from below. */
+function RotatingType() {
+  const reduce = useReducedMotion()
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (reduce) return
+    const t = setInterval(() => setI((x) => (x + 1) % rotating.length), 2800)
+    return () => clearInterval(t)
+  }, [reduce])
+  return (
+    <span className="relative inline-flex h-[1.2em] overflow-hidden align-bottom" aria-live="off">
+      <span className="sr-only">{rotating.join(', ')}</span>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={rotating[i]}
+          aria-hidden="true"
+          initial={{ y: '100%', opacity: 0 }}
+          animate={{ y: '0%', opacity: 1 }}
+          exit={{ y: '-100%', opacity: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="block font-semibold whitespace-nowrap text-brass-200"
+        >
+          {rotating[i]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+const stats = [
+  { big: '₹0', text: `To list your property. ${site.marketplace} earns only when a guest completes a stay.` },
+  { big: '2 channels', text: `Your listing shows on the ${site.marketplace} website and to travel agents on TripDesk.` },
+  { big: 'Weekly', text: `Payouts to your bank, ${site.payoutCycle}.` },
+]
+
 export default function Landing() {
   const { user, owner } = useSession()
-  const reduce = useReducedMotion()
-  const start = user ? (owner ? '/app/properties/new/edit' : '/welcome') : '/login?next=/app/properties/new/edit'
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [params] = useSearchParams()
+  const next = params.get('next')
+  const after = next && next.startsWith('/app') ? next : '/app'
+  const [create, setCreate] = useState<{ open: boolean; email: string }>({ open: pathname === '/signup', email: '' })
+  const [forgot, setForgot] = useState<{ open: boolean; email: string }>({ open: false, email: '' })
+  const listNew = () => (user ? navigate('/app/properties?new=1') : setCreate({ open: true, email: '' }))
 
   return (
     <div className="bg-paper">
-      <header className="container-page flex h-[72px] items-center justify-between gap-4">
-        <Logo />
-        <nav aria-label="Page" className="hidden items-center gap-6 text-[15px] font-semibold text-ink-700 md:flex">
-          <a href="#how" className="no-underline hover:text-pine-900">How it works</a>
-          <a href="#fees" className="no-underline hover:text-pine-900">Fees</a>
-          <a href="#faq" className="no-underline hover:text-pine-900">Questions</a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link to={user ? '/app' : '/login'} className="btn-ghost hidden sm:inline-flex">
-            {user ? 'Open panel' : 'Sign in'}
-          </Link>
-          <Link to={start} className="btn-primary">
-            List your property
-          </Link>
-        </div>
-      </header>
-
-      <section className="container-page grid items-center gap-12 pt-8 pb-20 lg:grid-cols-[1.05fr_1fr] lg:pt-16">
-        <div>
-          <h1 className="text-[40px] leading-[1.05] font-extrabold text-pine-950 sm:text-[56px]">Put your hotel in front of {site.marketplace} guests.</h1>
-          <p className="mt-5 max-w-xl text-lg text-ink-700">
-            Add your rooms, photos and prices once. When the checks pass, your listing goes live on {site.marketplace} and bookings arrive here.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to={start} className="btn-brass min-h-12 px-6 text-base">
-              List your property
-            </Link>
-            <a href="#how" className="btn-ghost min-h-12 px-6 text-base">
-              See how it works
-            </a>
-          </div>
-          <p className="mt-6 text-[15px] text-ink-500">
-            Free to list. {pct(site.commissionRate)} commission only on completed stays.
-          </p>
-        </div>
-
-        {/* The owner's future listing, as StayEasy guests will see it, with its key tag. */}
-        <div className="relative mx-auto w-full max-w-[460px] pt-10 pr-4">
-          <div className="overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-black/5">
-            <div className="relative aspect-[16/10]">
-              <img src="/img/hero-room.webp" alt="A guest room as it would appear in a listing" className="h-full w-full object-cover" />
-              <span className="absolute bottom-3 left-3 rounded-md bg-white/95 px-2 py-0.5 text-xs font-semibold text-ink-700">1 of 12 photos</span>
-            </div>
-            <div className="flex flex-col gap-1.5 p-5">
-              <span className="text-[13px] font-semibold text-ink-500">Partner Hotel on {site.marketplace}</span>
-              <strong className="font-display text-[22px] text-ink-900">Hotel Sunrise Residency</strong>
-              <span className="flex items-center gap-1 text-sm text-ink-500">
-                <MapPin className="h-4 w-4" aria-hidden="true" /> Paharganj, New Delhi, 600 m from New Delhi Railway Station
-              </span>
-              <div className="mt-3 flex items-end justify-between gap-3 border-t border-line pt-3">
-                <span className="rounded-md bg-pine-50 px-2 py-1 text-xs font-bold text-pine-800">Couple friendly</span>
-                <span className="text-right">
-                  <strong className="block text-2xl text-ink-900">{inr(1899)}</strong>
-                  <span className="text-xs text-ink-500">per night, before GST</span>
-                </span>
-              </div>
-            </div>
-          </div>
-          <motion.div
-            initial={reduce ? false : { rotate: -24, y: -20, opacity: 0 }}
-            animate={{ rotate: 8, y: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 120, damping: 9, delay: 0.35 }}
-            style={{ transformOrigin: '50% 0%' }}
-            className="absolute top-0 right-10 flex flex-col items-center"
-            aria-hidden="true"
-          >
-            <span className="h-10 w-px bg-ink-400" />
-            <span className="relative flex h-[92px] w-[64px] flex-col items-center justify-end rounded-t-[14px] rounded-b-[32px] bg-brass-500 pb-4 shadow-[0_10px_20px_rgba(143,102,20,0.35)]">
-              <span className="absolute top-3 h-3.5 w-3.5 rounded-full bg-paper ring-2 ring-brass-700/40" />
-              <span className="font-display text-[15px] font-extrabold text-pine-950">Live</span>
+      <section className="relative isolate overflow-hidden text-white">
+        <img src="/img/hero-exterior.webp" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(11,36,27,0.94)_0%,rgba(11,36,27,0.82)_45%,rgba(11,36,27,0.55)_100%)]" />
+        <header className="container-page flex h-[76px] items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-2.5 no-underline" aria-label={`${site.name} home`}>
+            <Mark />
+            <span className="leading-tight">
+              <span className="block text-[22px] font-black text-white">{site.name}</span>
+              <span className="block text-[12px] text-white/70">by {site.marketplace}</span>
             </span>
-          </motion.div>
+          </Link>
+          <nav aria-label="Page" className="flex items-center gap-2 sm:gap-5">
+            <a href="#features" className="hidden text-[15px] font-bold text-white/90 no-underline hover:text-white sm:inline">
+              Features
+            </a>
+            {user && owner && (
+              <Link to="/app" className="hidden min-h-10 items-center rounded-lg px-3 text-[15px] font-bold text-white ring-1 ring-white/30 hover:bg-white/10 sm:inline-flex">
+                Open panel
+              </Link>
+            )}
+            <button type="button" onClick={listNew} className="btn-brass min-h-10 px-3 text-[14px] sm:px-4 sm:text-[15px]">
+              List new property for free
+            </button>
+          </nav>
+        </header>
+
+        <div className="container-page grid items-center gap-10 pt-8 pb-36 lg:grid-cols-[1.1fr_1fr] lg:pt-14 lg:pb-44">
+          <div>
+            <h1 className="text-[30px] leading-[1.25] font-black sm:text-[40px] xl:text-[44px]">
+              <span className="flex flex-wrap items-end gap-x-3 lg:flex-nowrap">
+                <span>List your</span>
+                <RotatingType />
+              </span>
+              <span className="block">for free &amp; grow your business</span>
+            </h1>
+            <p className="mt-6 text-[22px] font-light text-white/95 sm:text-[28px]">Partner with {site.marketplace}</p>
+            <ul className="mt-3 flex flex-wrap gap-2" aria-label={`Where your listing appears`}>
+              {[site.marketplace, `${site.marketplace} for Business`, 'TripDesk for agents'].map((b) => (
+                <li key={b} className="rounded-full bg-white/10 px-3 py-1 text-[13px] font-bold text-white ring-1 ring-white/20">
+                  {b}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[15px] text-white/80">Free to list. Your property goes live once the checks pass.</p>
+          </div>
+          <div className="flex justify-center lg:justify-end">
+            {user && owner ? (
+              <div className="w-full max-w-[440px] rounded-2xl bg-white/12 p-8 text-center ring-1 ring-white/25 backdrop-blur-xl">
+                <h2 className="text-[22px] font-black">Welcome back, {owner.fullName.split(' ')[0]}</h2>
+                <p className="mt-1 text-white/80">Signed in as {user.email}</p>
+                <Link to="/app" className="btn-brass mt-6 min-h-12 w-full text-base">
+                  Go to my properties
+                </Link>
+              </div>
+            ) : (
+              <SignInCard onSignedIn={() => navigate(after, { replace: true })} onCreate={(email) => setCreate({ open: true, email })} onForgot={(email) => setForgot({ open: true, email })} />
+            )}
+          </div>
         </div>
       </section>
 
+      <div className="container-page relative z-10 -mt-24 grid gap-4 md:grid-cols-3">
+        {stats.map((s) => (
+          <div key={s.big} className="rounded-xl bg-white p-6 shadow-panel ring-1 ring-line">
+            <strong className="block text-[26px] font-bold text-brass-700">{s.big}</strong>
+            <p className="mt-2 text-[15px] text-ink-700">{s.text}</p>
+          </div>
+        ))}
+      </div>
+
+      <CreateAccount open={create.open} presetEmail={create.email} onClose={() => setCreate({ open: false, email: '' })} onDone={() => navigate(after, { replace: true })} />
+      <ForgotPassword open={forgot.open} presetEmail={forgot.email} onClose={() => setForgot({ open: false, email: '' })} onDone={() => navigate(after, { replace: true })} />
+
+      <div className="h-16" />
       <section id="how" className="border-y border-line bg-white">
         <div className="container-page grid gap-10 py-16 lg:grid-cols-[1fr_2fr]">
           <h2 className="text-[32px] leading-tight font-bold text-pine-950">From sign-up to your first booking</h2>
@@ -133,7 +177,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="container-page py-16">
+      <section id="features" className="container-page scroll-mt-6 py-16">
         <h2 className="max-w-xl text-[32px] leading-tight font-bold text-pine-950">One panel for the front desk and the back office</h2>
         <dl className="mt-8 divide-y divide-line border-y border-line">
           {manage.map(({ Icon, t, d }) => (
@@ -202,9 +246,9 @@ export default function Landing() {
             <h2 className="text-2xl font-bold text-pine-950">Ready to list?</h2>
             <p className="text-ink-700">Have your room prices, a few photos and your address handy.</p>
           </div>
-          <Link to={start} className="btn-primary min-h-12 px-6 text-base">
+          <button type="button" onClick={listNew} className="btn-primary min-h-12 px-6 text-base">
             List your property
-          </Link>
+          </button>
         </div>
       </section>
 
