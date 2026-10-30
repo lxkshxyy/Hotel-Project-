@@ -203,7 +203,7 @@ export default function Checkout() {
   const lateOpt = site.lateCheckOut.find((o) => o.time === late)
   const { extras, extrasTotal, grand } = price
   const cancelHours = freeCancelHours(hotel)
-  const cancelBy = addDays(search.checkIn, -Math.max(1, Math.ceil((cancelHours ?? 24) / 24)))
+  const cancelBy = cancelHours === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil((cancelHours ?? 24) / 24)))
   const cantBook = !canPayAtHotel && !onlinePayments
 
   const name = `${form.first.trim()} ${form.last.trim()}`.trim()
@@ -457,7 +457,7 @@ export default function Checkout() {
                   {hotel.payAtHotel && <li>Pay at hotel by cash, card or UPI</li>}
                 </ul>
                 <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-leaf-700">
-                  <Check className="h-4 w-4" aria-hidden="true" /> {cancelHours === null ? 'Non-refundable rate' : `Free Cancellation till ${cancelHours} hrs before check in`}
+                  <Check className="h-4 w-4" aria-hidden="true" /> {cancelHours === null ? 'Non-refundable rate' : cancelHours === 0 ? 'Free Cancellation till check-in' : `Free Cancellation till ${cancelHours} hrs before check in`}
                 </p>
                 <div className="mt-3 max-w-md">
                   <div className="flex h-7 overflow-hidden rounded-full text-[11px] font-bold">

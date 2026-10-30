@@ -1170,14 +1170,17 @@ export const photoTags = ['Exterior', 'Lobby', 'Room', 'Bathroom', 'Dining', 'Ot
 export type PhotoTag = (typeof photoTags)[number]
 
 export const cancellationOptions = [
-  { id: 'free24', label: 'Free cancellation until 24 hours before check-in', short: 'Free till 24 hours before' },
-  { id: 'free48', label: 'Free cancellation until 48 hours before check-in', short: 'Free till 48 hours before' },
-  { id: 'free7d', label: 'Free cancellation until 7 days before check-in', short: 'Free till 7 days before' },
-  { id: 'nonref', label: 'Non-refundable', short: 'Non-refundable' },
+  { id: 'freeCheckin', label: 'Free Cancellation till check-in', short: 'Free till check-in' },
+  { id: 'free24', label: 'Free Cancellation till 24 hours before check-in', short: 'Free till 24 hours before' },
+  { id: 'free48', label: 'Free Cancellation till 48 hours before check-in', short: 'Free till 48 hours before' },
+  { id: 'free72', label: 'Free Cancellation till 72 hours before check-in', short: 'Free till 72 hours before' },
+  { id: 'nonref', label: 'Non-Refundable', short: 'Non-refundable' },
 ] as const
 export type CancellationId = (typeof cancellationOptions)[number]['id']
 
-export const checkTimes = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM']
+/** Every hour of the day, stored as "12:00 PM"; shown as "12:00 pm (noon)" by timeLabel. */
+export const checkTimes = Array.from({ length: 24 }, (_, h) => `${h % 12 || 12}:00 ${h < 12 ? 'AM' : 'PM'}`)
+export const timeLabel = (t: string) => (t === '12:00 PM' ? '12:00 pm (noon)' : t === '12:00 AM' ? '12:00 am (midnight)' : t.replace('AM', 'am').replace('PM', 'pm'))
 
 /** Room Details dropdowns. [CONFIRM] lists against the reference screens when available. */
 export const roomTypes = ['Standard Room', 'Deluxe Room', 'Super Deluxe Room', 'Premium Room', 'Executive Room', 'Club Room', 'Junior Suite', 'Suite', 'Family Room', 'Studio', 'Apartment', 'Cottage', 'Villa', 'Dormitory', 'Tent']

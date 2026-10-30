@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BedDouble, CalendarDays, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BedDouble, CalendarDays, Check, ChevronDown, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Star, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
@@ -9,10 +9,10 @@ import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
-import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
+import { Chip, KeyTag, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { attachOptions, autoOccupancy, basicsErrors, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
@@ -1143,69 +1143,195 @@ function Photos({ l, set }: { l: Listing; set: Set }) {
   return <PhotoManager l={l} set={set} />
 }
 
+/** White card with a title bar, as on the extranet policy page. */
+function PolicyCard({ title, optional, intro, children }: { title: string; optional?: boolean; intro?: string; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-lg bg-white ring-1 ring-line">
+      <div className="border-b border-line px-4 py-3.5 sm:px-5">
+        <h3 className="text-[19px] font-medium text-ink-900">
+          {title}
+          {optional && <span className="text-[14px] font-normal text-ink-700">(optional)</span>}
+        </h3>
+        {intro && <p className="mt-0.5 text-[13px] text-ink-500">{intro}</p>}
+      </div>
+      <div className="px-4 py-4 sm:px-5">{children}</div>
+    </section>
+  )
+}
+
+/** A question with No / Yes on the right. */
+function YesNo({ q, hint, value, onChange, name }: { q: string; hint?: string; value: boolean; onChange: (v: boolean) => void; name: string }) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-line py-3.5 first:border-t-0 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <span>
+        <span className="block text-[15px] text-ink-900">{q}</span>
+        {hint && <span className="block text-[13px] text-ink-500">{hint}</span>}
+      </span>
+      <span className="flex shrink-0 gap-6">
+        {[false, true].map((v) => (
+          <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
+            <input type="radio" name={name} checked={value === v} onChange={() => onChange(v)} className="h-[18px] w-[18px] accent-pine-800" />
+            {v ? 'Yes' : 'No'}
+          </label>
+        ))}
+      </span>
+    </div>
+  )
+}
+
+/** Right-hand "Step Detail" panel with a short explainer and FAQs. */
+function StepDetail({ text, faqs }: { text: string; faqs: [string, string][] }) {
+  const [show, setShow] = useState(true)
+  const [open, setOpen] = useState(0)
+  return (
+    <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+      <div className="overflow-hidden rounded-lg bg-white ring-1 ring-line">
+        <div className="relative overflow-hidden bg-pine-800 px-4 py-4">
+          <span aria-hidden="true" className="absolute -top-8 -right-4 h-24 w-40 rounded-full bg-white/10" />
+          <Star className="absolute top-3 right-4 h-10 w-10 fill-brass-500/70 text-brass-500/70" aria-hidden="true" />
+          <h3 className="relative text-[19px] font-medium text-white">Step Detail</h3>
+        </div>
+        <p className="px-4 py-4 text-[14px] leading-relaxed text-ink-700">{text}</p>
+      </div>
+      <div className="overflow-hidden rounded-lg bg-white ring-1 ring-line">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+          <h3 className="text-[15px] font-medium text-ink-900">Frequently Asked Questions</h3>
+          <button type="button" className="text-[14px] font-medium text-pine-800 hover:underline" onClick={() => setShow((x) => !x)} aria-expanded={show}>
+            {show ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {show &&
+          faqs.map(([q, a], i) => (
+            <div key={q} className="border-t border-line">
+              <button type="button" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-[14px] text-pine-800 ${open === i ? 'bg-pine-50' : 'hover:bg-paper'}`}>
+                {q}
+                <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
+              {open === i && <p className="px-4 pt-1 pb-4 text-[14px] leading-relaxed text-ink-700">{a}</p>}
+            </div>
+          ))}
+      </div>
+    </aside>
+  )
+}
+
 function Policies({ l, set }: { l: Listing; set: Set }) {
   const p = l.policies
   const up = (x: Partial<Listing['policies']>) => set((y) => ({ ...y, policies: { ...y.policies, ...x } }))
+  const n = l.rooms.length
   return (
-    <Section title="Policies" intro="These appear under Property Rules on your hotel page and in every booking confirmation.">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          Check-in from
-          <select className="field" value={p.checkIn} onChange={(e) => up({ checkIn: e.target.value })}>
-            {checkTimes.map((t) => (
-              <option key={t}>{t}</option>
+    <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-[30px] font-medium text-ink-900">Policies</h2>
+          <p className="text-[14px] text-ink-500">Mention all the policies applicable at your property.</p>
+        </div>
+
+        <PolicyCard title="Check-in & Check-out Time" intro="Specify the check-in & check-out time at your property">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="label">
+              Check-in Time
+              <select className="field" value={p.checkIn} onChange={(e) => up({ checkIn: e.target.value })}>
+                {checkTimes.map((t) => (
+                  <option key={t} value={t}>
+                    {timeLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="label">
+              Check-out Time
+              <select className="field" value={p.checkOut} onChange={(e) => up({ checkOut: e.target.value })}>
+                {checkTimes.map((t) => (
+                  <option key={t} value={t}>
+                    {timeLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </PolicyCard>
+
+        <PolicyCard title="Cancellation Policy" intro="Offering a flexible cancellation policy helps travellers book in advance.">
+          <div className="flex flex-col gap-1" role="radiogroup" aria-label="Cancellation policy">
+            {cancellationOptions.map((c) => (
+              <label key={c.id} className="flex min-h-9 cursor-pointer items-center gap-3 text-[15px] text-ink-900">
+                <input type="radio" name="cancel" checked={p.cancellation === c.id} onChange={() => up({ cancellation: c.id })} className="h-[18px] w-[18px] accent-pine-800" />
+                {c.label}
+                {c.id === 'freeCheckin' && <span className="rounded bg-pine-50 px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-live">RECOMMENDED</span>}
+              </label>
             ))}
-          </select>
-        </label>
-        <label className="label">
-          Check-out by
-          <select className="field" value={p.checkOut} onChange={(e) => up({ checkOut: e.target.value })}>
-            {checkTimes.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1.5 text-sm font-semibold text-ink-700">Cancellation</legend>
-        {cancellationOptions.map((c) => (
-          <label key={c.id} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 ${p.cancellation === c.id ? 'border-pine-800 bg-pine-50' : 'border-line-strong bg-white'}`}>
-            <input type="radio" name="cancel" checked={p.cancellation === c.id} onChange={() => up({ cancellation: c.id })} className="h-4 w-4 accent-pine-800" />
-            <span className="font-semibold">{c.label}</span>
+          </div>
+          <p className="mt-3 flex items-start gap-2 rounded-md border border-pine-100 bg-pine-50 px-3 py-2 text-[13px] text-ink-700">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />
+            Selected policy applies to {n ? `the ${n} room type${n === 1 ? '' : 's'} you created` : 'all your room types'}. You can change it after completing the listing.
+          </p>
+        </PolicyCard>
+
+        <PolicyCard title="Property Rules" optional intro="Add the rules guests must follow at your property">
+          <h4 className="text-[14px] font-medium text-ink-500 uppercase">Guest profile</h4>
+          <div className="mt-2 mb-5">
+            <YesNo name="couples" q="Are unmarried couples allowed?" hint="Shows the “Couple friendly” tag on StayEasy." value={p.coupleFriendly} onChange={(v) => up({ coupleFriendly: v })} />
+          </div>
+          <h4 className="text-[14px] font-medium text-ink-500 uppercase">ID proof</h4>
+          <div className="mt-2 mb-5">
+            <YesNo name="localids" q="Are local IDs allowed?" hint="Guests whose ID has an address in the same city can stay." value={p.localIds} onChange={(v) => up({ localIds: v })} />
+          </div>
+          <h4 className="text-[14px] font-medium text-ink-500 uppercase">Pets, smoking</h4>
+          <div className="mt-2 mb-5">
+            <YesNo name="pets" q="Are pets allowed at the property?" value={p.pets} onChange={(v) => up({ pets: v })} />
+            <YesNo name="smoking" q="Is smoking allowed in designated areas?" value={p.smoking} onChange={(v) => up({ smoking: v })} />
+          </div>
+          <label className="label">
+            Other rules (one per line)
+            <textarea className="field min-h-[100px]" value={p.rules.join('\n')} onChange={(e) => up({ rules: e.target.value.split('\n').slice(0, 8) })} placeholder={'Visitors are not allowed in rooms after 10 PM.\nOutside food is allowed.'} />
           </label>
-        ))}
-        <span className="text-[13px] text-ink-500">Free cancellation brings noticeably more bookings on {site.marketplace}.</span>
-      </fieldset>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Toggle checked={p.payAtHotel} onChange={(v) => up({ payAtHotel: v })} label="Guests can pay at the hotel" hint="Cash, card or UPI at check-in." />
-        <Toggle checked={p.coupleFriendly} onChange={(v) => up({ coupleFriendly: v })} label="Unmarried couples welcome" hint="Shows the “Couple friendly” tag." />
-        <Toggle checked={p.localIds} onChange={(v) => up({ localIds: v })} label="Local IDs accepted" hint="Guests from the same city can stay." />
-        <Toggle checked={p.pets} onChange={(v) => up({ pets: v })} label="Pets allowed" />
-        <Toggle checked={p.smoking} onChange={(v) => up({ smoking: v })} label="Smoking allowed in designated areas" />
+        </PolicyCard>
+
+        <PolicyCard title="Children & Extra Beds" intro="Who stays free and what an extra bed costs">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="label">
+              Children stay free up to age
+              <select className="field" value={p.childrenFreeAge} onChange={(e) => up({ childrenFreeAge: Number(e.target.value) })}>
+                {Array.from({ length: 18 }, (_, a) => (
+                  <option key={a} value={a}>
+                    {a === 0 ? 'No free stay for children' : `${a} year${a === 1 ? '' : 's'}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="label">
+              Extra bed charge per night
+              <span className="flex items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-white focus-within:border-pine-700">
+                <span className="flex items-center border-r border-line-strong px-3 text-ink-700" aria-hidden="true">
+                  ₹
+                </span>
+                <input className="min-h-11 w-full px-3 text-[15px] outline-none" inputMode="numeric" placeholder="0 if not offered" value={p.extraBed || ''} onChange={(e) => up({ extraBed: Number(e.target.value.replace(/\D/g, '').slice(0, 6)) || 0 })} />
+              </span>
+            </label>
+          </div>
+        </PolicyCard>
+
+        <PolicyCard title="Payment at Property" intro="How guests can pay when they arrive">
+          <YesNo name="payhotel" q="Can guests pay at the property?" hint="Cash, card or UPI at check-in." value={p.payAtHotel} onChange={(v) => up({ payAtHotel: v })} />
+        </PolicyCard>
+
+        <PolicyCard title="What guests will read" intro="Shown under Property Rules on your hotel page and in every booking confirmation">
+          <ul className="list-disc pl-5 text-[14px] leading-relaxed text-ink-700">
+            {guestRules(l).map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </PolicyCard>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          Children stay free up to age
-          <input className="field" type="number" min={0} max={17} value={p.childrenFreeAge} onChange={(e) => up({ childrenFreeAge: Math.max(0, Math.min(17, Number(e.target.value))) })} />
-        </label>
-        <label className="label">
-          Extra bed per night (₹, 0 if not offered)
-          <input className="field" type="number" min={0} step={50} value={p.extraBed} onChange={(e) => up({ extraBed: Math.max(0, Number(e.target.value)) })} />
-        </label>
-      </div>
-      <label className="label">
-        Your own house rules (one per line)
-        <textarea className="field min-h-[110px]" value={p.rules.join('\n')} onChange={(e) => up({ rules: e.target.value.split('\n').slice(0, 8) })} placeholder={'Visitors are not allowed in rooms after 10 PM.\nOutside food is allowed.'} />
-      </label>
-      <div className="rounded-xl bg-white p-4 ring-1 ring-line">
-        <span className="text-sm font-semibold text-ink-700">Guests will read</span>
-        <ul className="mt-2 list-disc pl-5 text-[15px] text-ink-700">
-          {guestRules(l).map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      </div>
-    </Section>
+      <StepDetail
+        text="Add details on check-in/check-out timings, cancellation policies, rules & restrictions applicable to your property. It will set the right expectations for the guests looking forward to booking your property."
+        faqs={[
+          ['Apart from the policies mentioned, can I add a customised policy for my property?', 'Yes. Write it under Other rules in Property Rules, one rule per line. Guests see it on your hotel page and in their booking confirmation. For anything else, contact the StayEasy partner team.'],
+          ['What should I do if I face any dispute, or if a guest violates my property rules?', 'Note the booking ID and contact the StayEasy partner team. Clear property rules help, because guests see them before they book and in their confirmation.'],
+        ]}
+      />
+    </section>
   )
 }
 
@@ -1614,7 +1740,7 @@ export default function Wizard() {
       </div>
 
       <div className="flex-1 px-3 py-8 sm:px-6">
-        <div className={`mx-auto flex flex-col gap-5 ${step === 'photos' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
+        <div className={`mx-auto flex flex-col gap-5 ${step === 'photos' || step === 'policies' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
           {showErrors && !isLive && !stepDone(l, step) && (
             <Notice tone="error">
               <strong className="block">Complete this section to continue:</strong>
@@ -1632,7 +1758,7 @@ export default function Wizard() {
       </div>
 
       <div className="sticky bottom-0 z-30 border-t border-line bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className={`mx-auto flex items-center justify-between gap-3 px-3 py-3 sm:px-0 ${step === 'photos' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
+        <div className={`mx-auto flex items-center justify-between gap-3 px-3 py-3 sm:px-0 ${step === 'photos' || step === 'policies' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
           {roomId ? (
             <button type="button" className="min-h-11 px-2 text-[16px] font-bold text-pine-800 hover:underline" onClick={closeRoom}>
               Cancel

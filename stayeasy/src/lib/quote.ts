@@ -228,6 +228,6 @@ export function cancelTerms(
     hours,
     paidOnline,
     refund: paidOnline && free ? b.amount : 0,
-    reason: b.status !== 'confirmed' ? 'This booking is already cancelled.' : hours === null ? 'This rate is non-refundable.' : free ? '' : `Free cancellation ended ${hours} hours before check-in.`,
+    reason: b.status !== 'confirmed' ? 'This booking is already cancelled.' : hours === null ? 'This rate is non-refundable.' : free ? '' : hours === 0 ? 'Free cancellation ended at check-in.' : `Free cancellation ended ${hours} hours before check-in.`,
   }
 }

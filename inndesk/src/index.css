@@ -1,8 +1,16 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Lato', ui-sans-serif, sans-serif;
+  --font-sans: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Roboto', ui-sans-serif, sans-serif;
+  /*
+   * Extranet look (as on MakeMyTrip Connect): Roboto, with headings and emphasis in Medium (500)
+   * instead of heavy bold/black. Buttons keep their own 700.
+   */
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 500;
+  --font-weight-black: 500;
 
   /* Front-desk palette: ledger-cloth pine, room-key brass, cool paper. */
   --color-pine-950: #0b241b;
@@ -46,7 +54,6 @@
   }
   h1, h2, h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.015em;
     text-wrap: balance;
   }
   :focus-visible {
@@ -125,8 +132,8 @@
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
-  font-weight: 600;
-  color: var(--color-ink-700);
+  font-weight: 400;
+  color: var(--color-ink-900);
 }
 @utility no-scrollbar {
   scrollbar-width: none;

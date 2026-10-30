@@ -77,7 +77,7 @@ export function toHotel(l: Listing) {
   const keyed = l.amenities.map((id) => allAmenities.find((a) => a.id === id)?.key).filter((k): k is string => !!k)
   const extras = l.amenities.map((id) => allAmenities.find((a) => a.id === id)).filter((a) => a && !a.key).map((a) => a!.label)
   const lm = l.location.landmarks.filter((x) => x.name && x.distance)
-  const cancel = cancellationOptions.find((c) => c.id === l.policies.cancellation)!
+  const cancel = cancellationOptions.find((c) => c.id === l.policies.cancellation) ?? cancellationOptions[1]
   return {
     slug,
     name: l.basics.name.trim(),
@@ -124,7 +124,7 @@ export function toHotel(l: Listing) {
       checkIn: l.policies.checkIn,
       checkOut: l.policies.checkOut,
       cancellation: cancel.label + '.',
-      cancelHours: { free24: 24, free48: 48, free7d: 168, nonref: -1 }[cancel.id],
+      cancelHours: { freeCheckin: 0, free24: 24, free48: 48, free72: 72, nonref: -1 }[cancel.id],
       rules: guestRules(l),
     },
   }

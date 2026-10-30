@@ -46,7 +46,7 @@ export default function PropertyOverview() {
     ['Price from', `${inr(fromPrice(l))} a night`],
     ['Photos', String(l.photos.length)],
     ['Check-in / out', `${l.policies.checkIn} / ${l.policies.checkOut}`],
-    ['Cancellation', cancellationOptions.find((c) => c.id === l.policies.cancellation)!.short],
+    ['Cancellation', cancellationOptions.find((c) => c.id === l.policies.cancellation)?.short ?? 'Not set'],
     ['Live since', l.publishedAt ? dayMonth(l.publishedAt.slice(0, 10)) : '—'],
   ]
 

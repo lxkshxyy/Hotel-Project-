@@ -425,7 +425,7 @@ export default function HotelDetail() {
             {hotel.payAtHotel ? 'No payment needed now · Pay at hotel available' : 'Secure online payment'}
           </span>
           <span className="text-center text-[13px] font-semibold text-leaf-700">
-            {cancelHrs === null ? 'Non-refundable rate' : `Free cancellation till ${shortDate(addDays(search.checkIn, -Math.max(1, Math.ceil(cancelHrs / 24))))}, ${site.checkInTime}`}
+            {cancelHrs === null ? 'Non-refundable rate' : `Free cancellation till ${shortDate(cancelHrs === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil(cancelHrs / 24))))}, ${site.checkInTime}`}
           </span>
         </aside>
       </div>
