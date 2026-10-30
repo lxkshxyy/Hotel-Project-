@@ -91,10 +91,15 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative bg-navy-800 pb-36 text-white sm:pb-32">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute -top-32 -right-24 h-96 w-96 rounded-full bg-navy-700/60 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-ember-600/20 blur-3xl" />
+      <section className="relative overflow-hidden bg-navy-800 pb-36 text-white sm:pb-32">
+        {/* Personal-account background photo (public/backgrounds/personal.webp), darkened so the text stays readable. */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/backgrounds/personal-sm.webp" />
+            <img src="/backgrounds/personal.webp" alt="" fetchPriority="high" className="h-full w-full object-cover object-[center_40%]" />
+          </picture>
+          <div className="absolute inset-0 bg-gradient-to-r from-navy-950/85 via-navy-900/60 to-navy-900/20" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-navy-950/70 to-transparent" />
         </div>
         <div className="container-page relative pt-12 sm:pt-16">
           <motion.p

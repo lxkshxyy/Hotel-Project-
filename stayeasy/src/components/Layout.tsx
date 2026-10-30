@@ -3,6 +3,7 @@ import { BedDouble, Briefcase, ClipboardList, Home, Luggage, Menu, Search, Shiel
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { features, isPublicDemo } from '../config/launch'
+import WelcomeLogin, { openLogin } from './WelcomeLogin'
 import { site } from '../config/site'
 import { useAccount } from '../context/AccountContext'
 import { useAuth } from '../context/AuthContext'
@@ -202,7 +203,14 @@ function Header() {
               <AccountMenu />
             </>
           ) : (
-            <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} className="btn-navy">
+            <Link
+              to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+              className="btn-navy"
+              onClick={(e) => {
+                e.preventDefault()
+                openLogin()
+              }}
+            >
               Sign in
             </Link>
           )}
@@ -237,7 +245,15 @@ function Header() {
                   <AccountMenu />
                 </div>
               ) : (
-                <Link to="/login" className="rounded-lg px-2 py-3 font-semibold text-ink-900 no-underline">
+                <Link
+                  to="/login"
+                  className="rounded-lg px-2 py-3 font-semibold text-ink-900 no-underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setOpen(false)
+                    openLogin()
+                  }}
+                >
                   Sign in
                 </Link>
               )}
@@ -397,6 +413,7 @@ export default function Layout() {
       </main>
       {!checkout && <Footer business={isBusiness} />}
       {!hideTabs && <MobileTabBar />}
+      <WelcomeLogin />
       <div className="print:hidden">
         <InstallBanner />
       </div>

@@ -44,8 +44,16 @@ export default function BizHome() {
 
   return (
     <div>
-      <section className="pt-6 pb-14 sm:pt-8">
-        <div className="container-page">
+      <section className="relative pt-6 pb-14 sm:pt-8">
+        {/* Business-account background photo (public/backgrounds/business.webp) behind the booking panel. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[300px] overflow-hidden sm:h-[340px]" aria-hidden="true">
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/backgrounds/business-sm.webp" />
+            <img src="/backgrounds/business.webp" alt="" fetchPriority="high" className="h-full w-full object-cover object-[center_45%]" />
+          </picture>
+          <div className="absolute inset-0 bg-gradient-to-b from-navy-950/30 via-navy-950/10 to-[#FBE4DA]" />
+        </div>
+        <div className="container-page relative">
           <div className="relative z-10 mx-auto -mb-6 flex w-fit gap-1 rounded-2xl bg-white px-3 py-2 shadow-card">
             {products.map(({ id, label, Icon }) => (
               <Link
