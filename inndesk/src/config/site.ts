@@ -18,7 +18,9 @@ export const site = {
   gstOnCommission: 0.18,
   /** [CONFIRM] Payout cycle shown to owners. */
   payoutCycle: 'every Tuesday, for stays that checked out the week before',
-  minPhotos: 5,
+  minPhotos: 10,
+  /** Largest photo file an owner can upload, in MB. */
+  maxPhotoMb: 30,
   /**
    * Live map on the Location step.
    * No key: free OpenStreetMap tiles (fine for demos and light use).

@@ -299,6 +299,7 @@ export function blockers(l: Listing): Check[] {
   })
   if (l.photos.length < site.minPhotos) out.push({ step: 'photos', message: `Upload at least ${site.minPhotos} photos (now ${l.photos.length}).` })
   if (l.photos.length && !l.photos.some((p) => p.tag === 'Room')) out.push({ step: 'photos', message: 'Add at least one photo of a room.' })
+  if (l.photos.length && !l.photos.some((p) => p.landscape ?? true)) out.push({ step: 'photos', message: 'Add at least one photo in landscape mode (wider than it is tall).' })
   if (!l.legal.legalName.trim()) out.push({ step: 'legal', message: 'Add the registered business or owner name.' })
   if (l.legal.gstin && gstinError(l.legal.gstin)) out.push({ step: 'legal', message: `GSTIN: ${gstinError(l.legal.gstin)}` })
   if (l.legal.pan && panError(l.legal.pan)) out.push({ step: 'legal', message: `PAN: ${panError(l.legal.pan)}` })
@@ -311,7 +312,6 @@ export function blockers(l: Listing): Check[] {
 export function tips(l: Listing): Check[] {
   const out: Check[] = []
   if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
-  if (l.photos.length < 10) out.push({ step: 'photos', message: 'Hotels with 10 or more photos get more bookings.' })
   if (l.rooms.some((r) => !r.photoId)) out.push({ step: 'rooms', message: 'Give each room type its own photo.' })
   if (!l.legal.gstin) out.push({ step: 'legal', message: 'Add your GSTIN so commission invoices carry it.' })
   if (!l.legal.accountLast4 || !l.legal.ifsc) out.push({ step: 'legal', message: 'Add payout bank details before your first payout.' })

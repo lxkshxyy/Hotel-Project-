@@ -61,6 +61,8 @@ export interface ListingPhoto {
   id: string
   url: string
   tag: PhotoTag
+  /** Wider than tall. Missing on photos added before this was recorded. */
+  landscape?: boolean
 }
 
 export interface CalendarCell {

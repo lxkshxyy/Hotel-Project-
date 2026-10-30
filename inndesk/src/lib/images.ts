@@ -1,5 +1,10 @@
 /** Shrinks a photo to at most `max` px on its long side and returns a JPEG data URL. */
 export async function resizeImage(file: File, max = 1400, quality = 0.8): Promise<string> {
+  return (await resizePhoto(file, max, quality)).url
+}
+
+/** Shrinks a photo for storage and reports its original shape. */
+export async function resizePhoto(file: File, max = 1400, quality = 0.8): Promise<{ url: string; width: number; height: number }> {
   if (!file.type.startsWith('image/')) throw new Error(`${file.name} isn’t an image.`)
   const url = URL.createObjectURL(file)
   try {
@@ -15,7 +20,7 @@ export async function resizeImage(file: File, max = 1400, quality = 0.8): Promis
     c.width = Math.round(img.width * scale)
     c.height = Math.round(img.height * scale)
     c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-    return c.toDataURL('image/jpeg', quality)
+    return { url: c.toDataURL('image/jpeg', quality), width: img.width, height: img.height }
   } finally {
     URL.revokeObjectURL(url)
   }

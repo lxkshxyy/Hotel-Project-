@@ -7,7 +7,7 @@ import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
 import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
-import PhotoManager from '../components/PhotoManager'
+import PhotoManager, { PhotoInstructions } from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
@@ -1142,9 +1142,13 @@ function Rooms({ l, set, roomId, openRoom }: { l: Listing; set: Set; roomId: str
 function Photos({ l, set }: { l: Listing; set: Set }) {
   const onChange = useCallback((photos: Listing['photos']) => set((x) => ({ ...x, photos, rooms: x.rooms.map((r) => (photos.some((p) => p.id === r.photoId) ? r : { ...r, photoId: undefined })) })), [set])
   return (
-    <Section title="Photos" intro="Bright, straight photos of the building, the reception and every room type. Put your best photo first.">
-      <PhotoManager photos={l.photos} onChange={onChange} />
-    </Section>
+    <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="rounded-xl bg-white p-4 ring-1 ring-line sm:p-5">
+        <h2 className="mb-4 text-[26px] font-bold text-ink-900">Upload Photos &amp; Videos</h2>
+        <PhotoManager photos={l.photos} onChange={onChange} />
+      </div>
+      <PhotoInstructions />
+    </section>
   )
 }
 
@@ -1619,7 +1623,7 @@ export default function Wizard() {
       </div>
 
       <div className="flex-1 px-3 py-8 sm:px-6">
-        <div className="mx-auto flex max-w-[920px] flex-col gap-5">
+        <div className={`mx-auto flex flex-col gap-5 ${step === 'photos' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
           {showErrors && !isLive && !stepDone(l, step) && (
             <Notice tone="error">
               <strong className="block">Complete this section to continue:</strong>
@@ -1637,7 +1641,7 @@ export default function Wizard() {
       </div>
 
       <div className="sticky bottom-0 z-30 border-t border-line bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="mx-auto flex max-w-[920px] items-center justify-between gap-3 px-3 py-3 sm:px-0">
+        <div className={`mx-auto flex items-center justify-between gap-3 px-3 py-3 sm:px-0 ${step === 'photos' ? 'max-w-[1220px]' : 'max-w-[920px]'}`}>
           {roomId ? (
             <button type="button" className="min-h-11 px-2 text-[16px] font-bold text-pine-800 hover:underline" onClick={closeRoom}>
               Cancel
