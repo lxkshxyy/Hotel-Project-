@@ -1182,4 +1182,23 @@ export const checkTimes = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 
 /** Room Details dropdowns. [CONFIRM] lists against the reference screens when available. */
 export const roomTypes = ['Standard Room', 'Deluxe Room', 'Super Deluxe Room', 'Premium Room', 'Executive Room', 'Club Room', 'Junior Suite', 'Suite', 'Family Room', 'Studio', 'Apartment', 'Cottage', 'Villa', 'Dormitory', 'Tent']
 export const roomViews = ['City View', 'Garden View', 'Pool View', 'Sea View', 'Beach View', 'Mountain View', 'Lake View', 'River View', 'Valley View', 'Forest View', 'Courtyard View', 'No View']
-export const mealPlans = ['Room only', 'Breakfast included']
+/** Meal plans for a room type. [CONFIRM] the last two against the full list on the reference. */
+export const mealPlans = [
+  'Accommodation only',
+  'FREE Breakfast',
+  'Free Breakfast and Lunch/Dinner',
+  'FREE Breakfast, Lunch and Dinner',
+  'FREE Breakfast, Lunch, Dinner and Select Beverages',
+  'All-inclusive (all meals, drinks and activities)',
+]
+
+/** Bathroom types with what each has. [CONFIRM] all but the first against the reference list. */
+export const bathCatalog = [
+  { name: 'Bathroom', size: 'Toilet, Sink & Shower' },
+  { name: 'Bathroom with Bathtub', size: 'Toilet, Sink & Bathtub' },
+  { name: 'Bathroom with Shower & Bathtub', size: 'Toilet, Sink, Shower & Bathtub' },
+  { name: 'Half Bathroom', size: 'Toilet & Sink' },
+  { name: 'Shower Room', size: 'Shower & Sink' },
+]
+/** The "attached to" choice for a bathroom outside the room, shared with other guests. */
+export const SHARED_BATH = 'Shared (outside the room)'

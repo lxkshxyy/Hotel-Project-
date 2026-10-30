@@ -1,6 +1,6 @@
 import { site } from '../config/site'
 import { amenityForms } from '../data/amenityDetails'
-import { allAmenities, bedCatalog, cancellationOptions, cities } from '../data/options'
+import { allAmenities, bedCatalog, cancellationOptions, cities, SHARED_BATH } from '../data/options'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
 import type { BedLine, Listing, ListingRoom } from './types'
@@ -206,6 +206,12 @@ export function bedSummary(r: ListingRoom) {
   return Object.entries(t).map(([k, v]) => `${v} ${k}${v > 1 ? 's' : ''}`).join(' + ') || r.bed
 }
 
+/** Rooms a bathroom can be attached to: each bedroom, each living room, or shared outside the room. */
+export function attachOptions(r: ListingRoom) {
+  const b = bedsOf(r)
+  return [...b.bedrooms.map((_, i) => `Bedroom ${i + 1}`), ...b.living.map((_, i) => `Living Room ${i + 1}`), SHARED_BATH]
+}
+
 /** What's missing in one section of a room type, keyed by field. */
 export function roomErrors(r: ListingRoom, section: number): Record<string, string> {
   const e: Record<string, string> = {}
@@ -239,12 +245,21 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
     }
   }
   if (section === 3) {
-    if (!(r.bathrooms && r.bathrooms >= 1)) e.bathrooms = 'Enter the number of bathrooms.'
-    if (!r.bathroomType) e.bathroomType = 'Choose private or shared.'
+    const rooms = attachOptions(r)
+    const baths = r.baths ?? []
+    if (!baths.length) e.baths = 'Add at least one bathroom.'
+    else if (baths.some((x) => !x.type)) e.baths = 'Choose the type of each bathroom.'
+    else if (baths.some((x) => !rooms.includes(x.attached))) e.baths = 'Choose the room each bathroom is attached to.'
   }
   if (section === 4) {
-    if (!(r.price >= site.minPrice)) e.price = `Set a price of at least ₹${site.minPrice} a night.`
-    if (r.mrp && r.mrp < r.price) e.mrp = 'This should be higher than your price, or left empty.'
+    const o = r.occupancy
+    if (!r.mealPlan) e.mealPlan = 'Select a meal plan.'
+    if (!(r.price >= site.minPrice)) e.price = `Enter a base rate of at least ₹${site.minPrice} a night.`
+    if (o && o.maxAdults > o.baseAdults && r.extraAdultCharge == null) e.extraAdultCharge = 'Enter the charge for each extra adult (0 if free).'
+    if (o && o.maxChildren > o.baseChildren && r.childCharge == null) e.childCharge = 'Enter the charge for each paid child (0 if free).'
+    if (!r.saleFrom) e.saleFrom = 'Choose the start date.'
+    if (!r.saleTo) e.saleTo = 'Choose the end date.'
+    else if (r.saleFrom && r.saleTo < r.saleFrom) e.saleTo = 'The end date must be on or after the start date.'
   }
   return e
 }

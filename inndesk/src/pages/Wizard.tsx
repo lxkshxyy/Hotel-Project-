@@ -1,20 +1,21 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BedDouble, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BedDouble, CalendarDays, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
-import { BedPicker } from '../components/BedPicker'
+import { BathPicker, BedPicker } from '../components/BedPicker'
+import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, cancellationOptions, checkTimes, mealPlans, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { autoOccupancy, basicsErrors, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { attachOptions, autoOccupancy, basicsErrors, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { BedLine, Listing, ListingRoom } from '../lib/types'
@@ -620,6 +621,54 @@ function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' 
   )
 }
 
+/** Today (or n days from today) as YYYY-MM-DD in local time. */
+function todayIso(n = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+/** "30 Oct, 2026" */
+function showDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]}, ${y}`
+}
+
+/** Date box that shows "30 Oct, 2026", with a clear button and the browser's calendar behind it. */
+function DateField({ label, value, min, onChange, error }: { label: string; value: string; min?: string; onChange: (v: string) => void; error?: string }) {
+  const input = useRef<HTMLInputElement>(null)
+  const pick = () => {
+    try {
+      input.current?.showPicker()
+    } catch {
+      input.current?.focus()
+    }
+  }
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-[13px] font-bold text-ink-900">{label}</span>
+      <div className={`relative flex min-h-11 items-center rounded-[10px] border bg-white pr-2 pl-3 ${error ? 'border-alert' : 'border-line-strong'}`}>
+        <button type="button" onClick={pick} className={`min-w-0 flex-1 truncate py-2 text-left text-[15px] ${value ? 'text-ink-900' : 'text-ink-400'}`}>
+          {value ? showDate(value) : 'Select date'}
+        </button>
+        {value && (
+          <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange('')} className="flex h-8 w-7 items-center justify-center text-ink-700 hover:text-alert">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+        <button type="button" aria-label={`Open calendar for ${label.toLowerCase()}`} onClick={pick} className="flex h-8 w-7 items-center justify-center text-ink-700 hover:text-pine-800">
+          <CalendarDays className="h-[18px] w-[18px]" aria-hidden="true" />
+        </button>
+        <input ref={input} type="date" tabIndex={-1} aria-label={label} min={min} value={value} onChange={(x) => onChange(x.target.value)} className="pointer-events-none absolute bottom-0 left-3 h-px w-px opacity-0" />
+      </div>
+      {error && (
+        <span role="alert" className="text-[13px] font-semibold text-alert">
+          {error}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listing; set: Set; room: ListingRoom; sec: number; openSec: (n: number) => void; tried: boolean; goPhotos: () => void }) {
   const up = (p: Partial<ListingRoom>) => set((x) => ({ ...x, rooms: x.rooms.map((r) => (r.id === room.id ? { ...r, ...p } : r)) }))
   const r = room
@@ -644,6 +693,22 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     const o = { ...occ, [k]: v }
     up({ occupancy: o, maxGuests: o.maxOccupancy })
   }
+  const rooms = attachOptions(r)
+  const baths = r.baths ?? []
+  const setBaths = (next: { type: string; attached: string }[]) => up({ baths: next, bathrooms: next.length, bathroomType: next.some((x) => x.attached === SHARED_BATH) ? 'Shared' : 'Private' })
+  // First visit to a section: start with one bathroom on Bedroom 1, and a one-year sale window from today.
+  useEffect(() => {
+    if (sec === 3 && !r.baths?.length) setBaths([{ type: '', attached: 'Bedroom 1' }])
+    if (sec === 4 && r.saleFrom === undefined) up({ saleFrom: todayIso(), saleTo: todayIso(365) })
+  }, [sec, r.id])
+  const money = (id: string, value: number | undefined, onChange: (v: number | undefined) => void, placeholder: string, invalid: boolean) => (
+    <span className={`flex items-stretch overflow-hidden rounded-[10px] border bg-white focus-within:border-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${invalid ? 'border-alert' : 'border-line-strong'}`}>
+      <span className="flex items-center border-r border-line-strong px-3 text-[15px] text-ink-700" aria-hidden="true">
+        ₹
+      </span>
+      <input id={id} className="min-h-11 w-full px-3 text-[15px] outline-none" inputMode="numeric" placeholder={placeholder} aria-invalid={invalid} value={value ?? ''} onChange={(x) => { const d = x.target.value.replace(/\D/g, '').slice(0, 7); onChange(d === '' ? undefined : Number(d)) }} />
+    </span>
+  )
   const bedArea = (kind: 'bedrooms' | 'living', idx: number) => {
     const lines = b[kind][idx]
     const name = kind === 'bedrooms' ? `Bedroom ${idx + 1}` : `Living Room ${idx + 1}`
@@ -779,7 +844,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     ),
     2: (
       <>
-        <h4 className="px-4 pt-5 text-[18px] font-bold text-ink-900 sm:px-5">Select the bed type for all the bedrooms below</h4>
+        <h4 className="px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Select the bed type for all the bedrooms below</h4>
         <div className="mt-3">
           {b.bedrooms.map((_, i) => bedArea('bedrooms', i))}
           {b.living.map((_, i) => bedArea('living', i))}
@@ -803,7 +868,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
           </Row>
         )}
         <div className="border-t-8 border-[#f1f3f1] px-4 pt-5 sm:px-5">
-          <h4 className="text-[18px] font-bold text-ink-900">Occupancy</h4>
+          <h4 className="text-[18px] font-black text-ink-900">Occupancy</h4>
           <p className="text-[14px] text-ink-500">Occupancy details have been pre-filled based on the selected bed arrangement above</p>
         </div>
         {(
@@ -823,42 +888,85 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     ),
     3: (
       <>
-        <Row title="Number of bathrooms" error={e.bathrooms}>
-          {stepper(r.bathrooms ?? 0, (v) => up({ bathrooms: v }), 'bathrooms', 10)}
-        </Row>
-        <Row title="Bathroom" error={e.bathroomType}>
-          <div className="flex gap-8">
-            {(['Private', 'Shared'] as const).map((t) => (
-              <label key={t} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
-                <input type="radio" name={`bath-${r.id}`} checked={r.bathroomType === t} onChange={() => up({ bathroomType: t })} className="h-[18px] w-[18px] accent-pine-800" />
-                {t}
-              </label>
-            ))}
+        <h4 className="px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Bathroom options in this room</h4>
+        <div className="grid gap-3 px-4 pt-3 pb-5 sm:grid-cols-[1fr_minmax(0,520px)] sm:gap-6 sm:px-5">
+          <div>
+            <strong className="block text-[16px] text-ink-900">Bathroom</strong>
+            <span className="block text-[14px] text-ink-500">Specify the types of bathroom(s) available in this room</span>
           </div>
-        </Row>
+          <div className="flex flex-col gap-2">
+            {baths.map((x, i) => (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,170px)_auto] items-end gap-2 sm:gap-3">
+                <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold text-ink-700">
+                  Bathroom Type {i + 1}
+                  <BathPicker label={`Bathroom type ${i + 1}`} value={x.type} onChange={(v) => setBaths(baths.map((y, j) => (j === i ? { ...y, type: v } : y)))} />
+                </label>
+                <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold text-ink-700">
+                  Attached to which room?
+                  <select className="field min-h-[52px]" value={rooms.includes(x.attached) ? x.attached : ''} onChange={(ev) => setBaths(baths.map((y, j) => (j === i ? { ...y, attached: ev.target.value } : y)))} aria-label={`Bathroom ${i + 1} attached to`}>
+                    <option value="" disabled hidden>
+                      Select room
+                    </option>
+                    {rooms.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </select>
+                </label>
+                <span className="flex h-[52px] w-9 items-center justify-center">
+                  {baths.length > 1 && (
+                    <button type="button" aria-label={`Remove bathroom ${i + 1}`} onClick={() => setBaths(baths.filter((_, j) => j !== i))} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-700 hover:bg-alert-50 hover:text-alert">
+                      <X className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))}
+            <button type="button" disabled={!baths.every((x) => x.type) || baths.length >= 10} onClick={() => setBaths([...baths, { type: '', attached: rooms.find((o) => o !== SHARED_BATH && !baths.some((y) => y.attached === o)) ?? rooms[0] }])} className="self-start text-[14px] font-bold text-pine-800 hover:underline disabled:text-ink-400 disabled:no-underline">
+              Add Another Bathroom
+            </button>
+            {e.baths && (
+              <span role="alert" className="text-[13px] font-semibold text-alert">
+                {e.baths}
+              </span>
+            )}
+          </div>
+        </div>
       </>
     ),
     4: (
       <>
-        <Row id="r-meal" title="Meal plan" help="What's included in the room price">
-          <select id="r-meal" className="field" value={r.breakfast ? 'Breakfast included' : 'Room only'} onChange={(x) => up({ breakfast: x.target.value === 'Breakfast included' })}>
-            {mealPlans.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
+        <h4 className="px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Meal Options</h4>
+        <Row id="r-meal" title="Select a meal plan" help="Select the meals included with this room type (e.g., breakfast only, breakfast & dinner, or all meals)" error={e.mealPlan}>
+          <SearchSelect id="r-meal" value={r.mealPlan ?? ''} options={mealPlans} onChange={(v) => up({ mealPlan: v, breakfast: v !== mealPlans[0] })} searchPlaceholder="Search for meal plans" invalid={!!e.mealPlan} />
         </Row>
-        <Row id="r-price" title="Price per night" help="In rupees, before GST" error={e.price}>
-          <input id="r-price" className="field max-w-[240px] text-lg font-bold" inputMode="numeric" value={r.price || ''} onChange={(x) => up({ price: Number(x.target.value.replace(/\D/g, '')) || 0 })} aria-invalid={!!e.price} />
+        <h4 className="mt-1 border-t-8 border-[#f1f3f1] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Room Prices</h4>
+        <Row id="r-price" title={`Base Rate for ${occ.baseAdults} adult${occ.baseAdults === 1 ? '' : 's'}`} help={`Enter the standard room rate for ${occ.baseAdults} adult${occ.baseAdults === 1 ? '' : 's'}`} error={e.price}>
+          {money('r-price', r.price || undefined, (v) => up({ price: v ?? 0 }), 'Enter base rate', !!e.price)}
           {r.price >= site.minPrice && <span className="text-[13px] text-ink-500">You receive about {inr(net(r.price))} a night after commission and its GST.</span>}
         </Row>
-        <Row id="r-mrp" title="Price before discount (Optional)" help="Shown crossed out when higher than your price. Use your real rack rate." error={e.mrp}>
-          <input id="r-mrp" className="field max-w-[240px]" inputMode="numeric" value={r.mrp || ''} onChange={(x) => up({ mrp: Number(x.target.value.replace(/\D/g, '')) || undefined })} />
-        </Row>
-        <Row title="Inventory" help="Rooms of this type on sale each night">
-          <span className="text-[15px] text-ink-900">
-            {r.count || 0} room{r.count === 1 ? '' : 's'} <span className="text-ink-500">(from Room Details; change dates later in Rates and availability)</span>
-          </span>
-        </Row>
+        {occ.maxAdults > occ.baseAdults && (
+          <Row id="r-extra" title="Extra Adult Charge" help="Additional charge for each adult guest aged 18 years or older" error={e.extraAdultCharge}>
+            {money('r-extra', r.extraAdultCharge, (v) => up({ extraAdultCharge: v }), 'Enter extra adult charge', !!e.extraAdultCharge)}
+          </Row>
+        )}
+        {occ.maxChildren > occ.baseChildren && (
+          <Row id="r-child" title="Paid Child Charge" help={`Charge per child aged ${Math.min(17, l.policies.childrenFreeAge + 1)} to 17 years`} error={e.childCharge}>
+            {money('r-child', r.childCharge, (v) => up({ childCharge: v }), 'Enter charge for child', !!e.childCharge)}
+          </Row>
+        )}
+        <h4 className="mt-1 border-t-8 border-[#f1f3f1] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Inventory Calendar</h4>
+        <div className="grid gap-3 px-4 py-5 sm:grid-cols-[1fr_minmax(0,480px)] sm:gap-8 sm:px-5">
+          <div>
+            <strong className="block text-[16px] text-ink-900">Select a date range</strong>
+            <span className="block text-[14px] text-ink-500">
+              All {r.count || 0} room{r.count === 1 ? '' : 's'} of this type go on sale for these dates
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <DateField label="Start Date" value={r.saleFrom ?? ''} min={todayIso()} onChange={(v) => up({ saleFrom: v })} error={e.saleFrom} />
+            <DateField label="End Date" value={r.saleTo ?? ''} min={r.saleFrom || todayIso()} onChange={(v) => up({ saleTo: v })} error={e.saleTo} />
+          </div>
+        </div>
       </>
     ),
     5: (
@@ -917,16 +1025,15 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
             ['Maximum occupancy', String(occ.maxOccupancy)],
           ]
         : n === 3
-          ? [
-              ['Number of bathrooms', String(r.bathrooms ?? '-')],
-              ['Bathroom', r.bathroomType ?? '-'],
-            ]
+          ? baths.map((x, i) => [`Bathroom ${i + 1}`, `${x.type} (${bathCatalog.find((c) => c.name === x.type)?.size ?? ''}) · ${x.attached}`] as [string, string])
           : n === 4
             ? [
-                ['Meal plan', r.breakfast ? 'Breakfast included' : 'Room only'],
-                ['Price per night', inr(r.price)],
-                ['Price before discount', r.mrp ? inr(r.mrp) : '-'],
-                ['Inventory', `${r.count} room${r.count === 1 ? '' : 's'}`],
+                ['Meal plan', r.mealPlan ?? '-'],
+                [`Base rate for ${occ.baseAdults} adult${occ.baseAdults === 1 ? '' : 's'}`, inr(r.price)],
+                ...(occ.maxAdults > occ.baseAdults ? [['Extra adult charge', inr(r.extraAdultCharge ?? 0)] as [string, string]] : []),
+                ...(occ.maxChildren > occ.baseChildren ? [['Paid child charge', inr(r.childCharge ?? 0)] as [string, string]] : []),
+                ['On sale', r.saleFrom && r.saleTo ? `${showDate(r.saleFrom)} – ${showDate(r.saleTo)}` : '-'],
+                ['Rooms on sale', `${r.count} room${r.count === 1 ? '' : 's'}`],
               ]
             : [['In the room', r.amenities.join(', ') || '-']]
 
@@ -964,14 +1071,14 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
                 {done && (
                   <dl className="grid gap-x-6 gap-y-4 border-t border-line px-4 py-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
                     {facts(s.id).map(([k, v], fi) => (
-                      <div key={k} className={fi === 0 && s.id === 1 ? 'sm:col-span-2 lg:col-span-4' : k.startsWith('Description') || k === 'In the room' ? 'sm:col-span-2 lg:col-span-4' : ''}>
+                      <div key={k} className={fi === 0 && s.id === 1 ? 'sm:col-span-2 lg:col-span-4' : k.startsWith('Description') || k === 'In the room' ? 'sm:col-span-2 lg:col-span-4' : /^Bathroom \d|^On sale/.test(k) ? 'sm:col-span-2' : ''}>
                         <dt className="text-[13px] text-ink-500">{k}</dt>
                         <dd className="text-[15px] font-bold break-words text-ink-900">{v || '-'}</dd>
                       </div>
                     ))}
                   </dl>
                 )}
-                {open && <div className="border-t border-line">{body[s.id]}</div>}
+                {open && <div className={`border-t border-line ${s.id >= 3 ? '[&>h4+div]:border-t-0' : ''}`}>{body[s.id]}</div>}
               </div>
             </li>
           )

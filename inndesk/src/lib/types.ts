@@ -35,9 +35,18 @@ export interface ListingRoom {
   extraBed?: boolean | null
   extraBedMax?: number
   occupancy?: { baseAdults: number; maxAdults: number; baseChildren: number; maxChildren: number; maxOccupancy: number }
-  /** Bathroom Details section. */
+  /** Bathroom Details section: each bathroom's type and the room it is attached to. */
+  baths?: { type: string; attached: string }[]
+  /** Kept in step with baths for older code: how many, and whether any is shared. */
   bathrooms?: number
   bathroomType?: 'Private' | 'Shared'
+  /** Meal Plan, Rates & Inventory section. price above is the base rate for base adults. */
+  mealPlan?: string
+  extraAdultCharge?: number
+  childCharge?: number
+  /** Dates this room type is on sale (YYYY-MM-DD). */
+  saleFrom?: string
+  saleTo?: string
 }
 
 export type EntryValue = string | string[] | number | boolean | { open: string; close: string; off: string[] } | { depth: string; shallow: boolean }
