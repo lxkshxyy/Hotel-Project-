@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BedDouble, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
@@ -10,10 +10,10 @@ import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
+import { amenityGroups, bedTypes, cancellationOptions, checkTimes, mealPlans, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { basicsErrors, blockers, locationErrors, minAmenities, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { basicsErrors, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
@@ -607,108 +607,270 @@ function Amenities({ l, set }: { l: Listing; set: Set }) {
   )
 }
 
-const newRoom = (): ListingRoom => ({ id: uid(6), name: '', bed: 'Double bed', sizeSqft: 150, maxGuests: 2, count: 1, price: 0, breakfast: false, amenities: ['AC', 'TV', 'Wi-Fi'] })
+const newRoom = (): ListingRoom => ({ id: uid(6), name: '', bed: '', sizeSqft: 0, maxGuests: 2, count: 1, price: 0, breakfast: false, amenities: [] })
+const SQFT_PER_SQM = 10.7639
 
-function Rooms({ l, set, goPhotos }: { l: Listing; set: Set; goPhotos: () => void }) {
-  const up = (id: string, p: Partial<ListingRoom>) => set((x) => ({ ...x, rooms: x.rooms.map((r) => (r.id === id ? { ...r, ...p } : r)) }))
-  const roomPhotos = l.photos.filter((p) => p.tag === 'Room')
-  useEffect(() => {
-    if (l.rooms.length === 0) set((x) => ({ ...x, rooms: [newRoom()] }))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const net = (p: number) => p - p * site.commissionRate - p * site.commissionRate * site.gstOnCommission
+/** The numbered line on the left of Create Room. */
+function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' }) {
   return (
-    <Section title="Rooms and prices" intro="Add each kind of room you sell. Prices are per night, before GST. You can change single dates later in Rates and availability.">
-      {l.rooms.map((r, i) => (
-        <fieldset key={r.id} className="panel flex flex-col gap-4 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <legend className="font-display text-lg font-bold">{r.name.trim() || `Room type ${i + 1}`}</legend>
-            {l.rooms.length > 1 && (
-              <button type="button" onClick={() => set((x) => ({ ...x, rooms: x.rooms.filter((y) => y.id !== r.id) }))} className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-ink-500 hover:bg-alert-50 hover:text-alert">
-                <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
-              </button>
-            )}
+    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-pine-800 text-white' : state === 'done' ? 'bg-pine-800 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
+      {state === 'done' ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Done" /> : n}
+    </span>
+  )
+}
+
+function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listing; set: Set; room: ListingRoom; sec: number; openSec: (n: number) => void; tried: boolean; goPhotos: () => void }) {
+  const up = (p: Partial<ListingRoom>) => set((x) => ({ ...x, rooms: x.rooms.map((r) => (r.id === room.id ? { ...r, ...p } : r)) }))
+  const r = room
+  const e = tried ? roomErrors(r, sec) : {}
+  const unlocked = (n: number) => roomSections.slice(0, n - 1).every((s) => roomSectionDone(r, s.id))
+  const roomPhotos = l.photos.filter((p) => p.tag === 'Room')
+  const net = (p: number) => p - p * site.commissionRate - p * site.commissionRate * site.gstOnCommission
+  const setSize = (unit: 'sqft' | 'sqm' | undefined, size: number | undefined) => up({ sizeUnit: unit, size, sizeSqft: size ? Math.round(unit === 'sqm' ? size * SQFT_PER_SQM : size) : 0 })
+  const stepper = (value: number, onChange: (v: number) => void, label: string, max = 20) => (
+    <span className="flex w-fit items-center overflow-hidden rounded-lg border border-line-strong bg-white">
+      <button type="button" aria-label={`Fewer ${label}`} disabled={value <= 0} onClick={() => onChange(Math.max(0, value - 1))} className="flex h-11 w-11 items-center justify-center hover:bg-paper disabled:text-ink-400">
+        −
+      </button>
+      <input aria-label={label} inputMode="numeric" className="h-11 w-14 border-x border-line-strong text-center outline-none" value={value} onChange={(x) => onChange(Math.min(max, Number(x.target.value.replace(/\D/g, '')) || 0))} />
+      <button type="button" aria-label={`More ${label}`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} className="flex h-11 w-11 items-center justify-center hover:bg-paper disabled:text-ink-400">
+        +
+      </button>
+    </span>
+  )
+
+  const body: Record<number, ReactNode> = {
+    1: (
+      <>
+        <Row id="r-type" title="Room type" help="Choose the type that best describes this room" error={e.roomType}>
+          <select id="r-type" className="field" value={r.roomType ?? ''} onChange={(x) => up({ roomType: x.target.value })} aria-invalid={!!e.roomType}>
+            <option value="" disabled hidden>
+              Select room type
+            </option>
+            {roomTypes.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </Row>
+        <Row id="r-view" title="Room view" help="Describe what the guest will see from this room, like pool, garden, or city views" error={e.view}>
+          <select id="r-view" className="field" value={r.view ?? ''} onChange={(x) => up({ view: x.target.value })} aria-invalid={!!e.view}>
+            <option value="" disabled hidden>
+              Select room view
+            </option>
+            {roomViews.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </Row>
+        <Row id="r-size" title="Room Size (Area)" help="Specify the indoor area only, excluding shared & outdoor spaces" error={e.size}>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {(
+              [
+                ['sqft', 'Square Feet'],
+                ['sqm', 'Square Meter'],
+              ] as const
+            ).map(([u, t]) => (
+              <label key={u} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
+                <input type="radio" name={`unit-${r.id}`} checked={r.sizeUnit === u} onChange={() => setSize(u, r.size)} className="h-[18px] w-[18px] accent-pine-800" />
+                <span>
+                  {t}
+                  {u === 'sqft' && <span className="ml-1.5 rounded bg-paper px-1.5 py-0.5 text-[11px] text-ink-500">Recommended</span>}
+                </span>
+              </label>
+            ))}
+            <input id="r-size" className="field max-w-[180px] disabled:bg-paper" inputMode="numeric" placeholder="Enter size (Area)" disabled={!r.sizeUnit} value={r.size || ''} onChange={(x) => setSize(r.sizeUnit, Number(x.target.value.replace(/\D/g, '')) || undefined)} aria-invalid={!!e.size} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="label">
-              Room name
-              <input className="field" value={r.name} onChange={(e) => up(r.id, { name: e.target.value })} placeholder="e.g. Deluxe Double Room" maxLength={50} />
-            </label>
-            <label className="label">
-              Bed
-              <select className="field" value={r.bed} onChange={(e) => up(r.id, { bed: e.target.value })}>
-                {bedTypes.map((b) => (
-                  <option key={b}>{b}</option>
-                ))}
-              </select>
-            </label>
+        </Row>
+        <Row id="r-name" title={`Room Name (as displayed on ${site.marketplace} & partner websites)`} help="Add a room name that looks attractive to travellers" error={e.name}>
+          <input id="r-name" className="field" maxLength={60} placeholder="Example: Luxury room with private pool" value={r.name} onChange={(x) => up({ name: x.target.value })} aria-invalid={!!e.name} />
+        </Row>
+        <Row id="r-count" title="Number of rooms (of this type)" help="Total rooms/units available in this property" error={e.count}>
+          <input id="r-count" className="field max-w-[320px]" inputMode="numeric" value={r.count || ''} onChange={(x) => up({ count: Math.min(999, Number(x.target.value.replace(/\D/g, '')) || 0) })} aria-invalid={!!e.count} />
+        </Row>
+        <Row id="r-desc" title="Description of the room (Optional)" help="Describe the room by highlighting its features, sleeping arrangement, amenities, and view">
+          <textarea id="r-desc" className="field min-h-[110px]" maxLength={800} placeholder="Write the description" value={r.description ?? ''} onChange={(x) => up({ description: x.target.value })} />
+        </Row>
+      </>
+    ),
+    2: (
+      <>
+        <Row id="r-bed" title="Bed type" help="The main bed in this room" error={e.bed}>
+          <select id="r-bed" className="field" value={r.bed} onChange={(x) => up({ bed: x.target.value })} aria-invalid={!!e.bed}>
+            <option value="" disabled hidden>
+              Select bed type
+            </option>
+            {bedTypes.map((b) => (
+              <option key={b}>{b}</option>
+            ))}
+          </select>
+        </Row>
+        <Row title="Maximum guests" help="Adults and children together" error={e.maxGuests}>
+          {stepper(r.maxGuests || 0, (v) => up({ maxGuests: v }), 'guests')}
+        </Row>
+      </>
+    ),
+    3: (
+      <>
+        <Row title="Number of bathrooms" error={e.bathrooms}>
+          {stepper(r.bathrooms ?? 0, (v) => up({ bathrooms: v }), 'bathrooms', 10)}
+        </Row>
+        <Row title="Bathroom" error={e.bathroomType}>
+          <div className="flex gap-8">
+            {(['Private', 'Shared'] as const).map((t) => (
+              <label key={t} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
+                <input type="radio" name={`bath-${r.id}`} checked={r.bathroomType === t} onChange={() => up({ bathroomType: t })} className="h-[18px] w-[18px] accent-pine-800" />
+                {t}
+              </label>
+            ))}
           </div>
-          <div className="grid grid-cols-3 items-end gap-3">
-            <label className="label">
-              Size (sq ft)
-              <input className="field" type="number" min={60} value={r.sizeSqft || ''} onChange={(e) => up(r.id, { sizeSqft: Number(e.target.value) })} />
-            </label>
-            <label className="label">
-              Max guests
-              <input className="field" type="number" min={1} max={10} value={r.maxGuests || ''} onChange={(e) => up(r.id, { maxGuests: Number(e.target.value) })} />
-            </label>
-            <label className="label">
-              Rooms of this type
-              <input className="field" type="number" min={1} max={500} value={r.count || ''} onChange={(e) => up(r.id, { count: Number(e.target.value) })} />
-            </label>
+        </Row>
+      </>
+    ),
+    4: (
+      <>
+        <Row id="r-meal" title="Meal plan" help="What's included in the room price">
+          <select id="r-meal" className="field" value={r.breakfast ? 'Breakfast included' : 'Room only'} onChange={(x) => up({ breakfast: x.target.value === 'Breakfast included' })}>
+            {mealPlans.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </select>
+        </Row>
+        <Row id="r-price" title="Price per night" help="In rupees, before GST" error={e.price}>
+          <input id="r-price" className="field max-w-[240px] text-lg font-bold" inputMode="numeric" value={r.price || ''} onChange={(x) => up({ price: Number(x.target.value.replace(/\D/g, '')) || 0 })} aria-invalid={!!e.price} />
+          {r.price >= site.minPrice && <span className="text-[13px] text-ink-500">You receive about {inr(net(r.price))} a night after commission and its GST.</span>}
+        </Row>
+        <Row id="r-mrp" title="Price before discount (Optional)" help="Shown crossed out when higher than your price. Use your real rack rate." error={e.mrp}>
+          <input id="r-mrp" className="field max-w-[240px]" inputMode="numeric" value={r.mrp || ''} onChange={(x) => up({ mrp: Number(x.target.value.replace(/\D/g, '')) || undefined })} />
+        </Row>
+        <Row title="Inventory" help="Rooms of this type on sale each night">
+          <span className="text-[15px] text-ink-900">
+            {r.count || 0} room{r.count === 1 ? '' : 's'} <span className="text-ink-500">(from Room Details; change dates later in Rates and availability)</span>
+          </span>
+        </Row>
+      </>
+    ),
+    5: (
+      <>
+        <Row title="In the room" help="Tick what guests get in this room">
+          <div className="flex flex-wrap gap-2">
+            {roomAmenities.map((a) => (
+              <Chip key={a} on={r.amenities.includes(a)} onClick={() => up({ amenities: r.amenities.includes(a) ? r.amenities.filter((x) => x !== a) : [...r.amenities, a] })}>
+                {a}
+              </Chip>
+            ))}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="label">
-              Price per night (₹, before GST)
-              <input className="field text-lg font-bold" type="number" min={site.minPrice} step={50} value={r.price || ''} onChange={(e) => up(r.id, { price: Number(e.target.value) })} />
-              {r.price >= site.minPrice ? (
-                <span className="text-[13px] font-normal text-ink-500">You receive about {inr(net(r.price))} a night after commission and its GST.</span>
-              ) : (
-                err(r.price > 0, `The lowest price ${site.marketplace} accepts is ${inr(site.minPrice)}.`)
-              )}
-            </label>
-            <label className="label">
-              Price before discount (optional)
-              <input className="field" type="number" min={0} step={50} value={r.mrp || ''} onChange={(e) => up(r.id, { mrp: Number(e.target.value) || undefined })} />
-              <span className="text-[13px] font-normal text-ink-500">Shown crossed out when higher than your price. Use your real rack rate.</span>
-            </label>
-          </div>
-          <Toggle checked={r.breakfast} onChange={(v) => up(r.id, { breakfast: v })} label="Breakfast included" hint="Shows “Free breakfast” on this room." />
-          <div>
-            <span className="mb-2 block text-sm font-semibold text-ink-700">In the room</span>
-            <div className="flex flex-wrap gap-2">
-              {roomAmenities.map((a) => (
-                <Chip key={a} on={r.amenities.includes(a)} onClick={() => up(r.id, { amenities: r.amenities.includes(a) ? r.amenities.filter((x) => x !== a) : [...r.amenities, a] })}>
-                  {a}
-                </Chip>
+        </Row>
+        <Row title="Photo for this room type (Optional)">
+          {roomPhotos.length ? (
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Room photo">
+              {roomPhotos.map((p) => (
+                <button key={p.id} type="button" role="radio" aria-checked={r.photoId === p.id} aria-label="Room photo" onClick={() => up({ photoId: p.id })} className={`h-16 w-24 overflow-hidden rounded-lg ring-offset-2 ${r.photoId === p.id ? 'ring-3 ring-brass-500' : 'ring-1 ring-line'}`}>
+                  <img src={p.url} alt="" className="h-full w-full object-cover" />
+                </button>
               ))}
             </div>
-          </div>
-          <div>
-            <span className="mb-2 block text-sm font-semibold text-ink-700">Photo for this room type</span>
-            {roomPhotos.length ? (
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`Photo for ${r.name || `room type ${i + 1}`}`}>
-                {roomPhotos.map((p) => (
-                  <button key={p.id} type="button" role="radio" aria-checked={r.photoId === p.id} aria-label="Room photo" onClick={() => up(r.id, { photoId: p.id })} className={`h-16 w-24 overflow-hidden rounded-lg ring-offset-2 ${r.photoId === p.id ? 'ring-3 ring-brass-500' : 'ring-1 ring-line'}`}>
-                    <img src={p.url} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
+          ) : (
+            <p className="text-sm text-ink-500">
+              Upload room photos in the{' '}
+              <button type="button" className="font-bold text-pine-800 underline" onClick={goPhotos}>
+                Photos And Videos
+              </button>{' '}
+              step, then pick one here.
+            </p>
+          )}
+        </Row>
+      </>
+    ),
+  }
+
+  const summary = (n: number) =>
+    n === 1 ? [r.roomType, r.view, r.size ? `${r.size} ${r.sizeUnit === 'sqm' ? 'sq m' : 'sq ft'}` : '', `${r.count} room${r.count === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
+    : n === 2 ? `${r.bed} · up to ${r.maxGuests} guests`
+    : n === 3 ? `${r.bathrooms} ${r.bathroomType?.toLowerCase()} bathroom${r.bathrooms === 1 ? '' : 's'}`
+    : n === 4 ? `${r.breakfast ? 'Breakfast included' : 'Room only'} · ${inr(r.price)} a night`
+    : `${r.amenities.length} in-room amenities`
+
+  return (
+    <section className="flex flex-col gap-5">
+      <h2 className="text-[32px] font-black text-ink-900">{r.name.trim() ? r.name : 'Create Room'}</h2>
+      <ol className="relative flex flex-col gap-4">
+        {roomSections.map((s, i) => {
+          const open = s.id === sec
+          const can = unlocked(s.id)
+          const done = can && roomSectionDone(r, s.id) && !open
+          const state = open ? 'active' : done ? 'done' : 'locked'
+          return (
+            <li key={s.id} className="relative flex gap-3 sm:gap-5">
+              {i < roomSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-16px] left-4 w-0.5 -translate-x-1/2 ${unlocked(s.id + 1) ? 'bg-pine-800' : 'bg-line-strong'}`} />}
+              <div className="pt-4">
+                <StepDot n={s.id} state={state} />
               </div>
-            ) : (
-              <p className="text-sm text-ink-500">
-                Upload room photos in the{' '}
-                <button type="button" className="font-bold text-pine-800 underline" onClick={goPhotos}>
-                  Photos
-                </button>{' '}
-                step, then pick one here.
-              </p>
-            )}
-          </div>
-        </fieldset>
-      ))}
-      <button type="button" className="btn-ghost self-start" onClick={() => set((x) => ({ ...x, rooms: [...x.rooms, newRoom()] }))}>
-        <Plus className="h-4 w-4" aria-hidden="true" /> Add another room type
-      </button>
-    </Section>
+              <div className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white ring-1 ${open ? 'shadow-panel ring-line' : 'ring-line'} ${!can ? 'opacity-70' : ''}`}>
+                <button type="button" disabled={!can || open} onClick={() => openSec(s.id)} className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left disabled:cursor-default sm:px-5" aria-expanded={open}>
+                  <span className="min-w-0">
+                    <strong className="block text-[22px] leading-tight font-black text-ink-900">{s.title}</strong>
+                    <span className="block truncate text-[14px] text-ink-700">{done ? summary(s.id) : s.intro}</span>
+                  </span>
+                  {!can ? <Lock className="h-4 w-4 shrink-0 text-ink-400" aria-label="Locked" /> : done ? <span className="shrink-0 text-[14px] font-bold text-pine-800">Edit</span> : null}
+                </button>
+                {open && <div className="border-t border-line">{body[s.id]}</div>}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
+}
+
+function Rooms({ l, set, roomId, openRoom }: { l: Listing; set: Set; roomId: string | null; openRoom: (id: string, sec: number) => void }) {
+  if (roomId) return null
+  return (
+    <section className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-[30px] font-black text-ink-900 sm:text-[32px]">Rooms</h2>
+        <p className="text-[14px] text-ink-500">Add each kind of room you sell. Each room type is filled in step by step.</p>
+      </div>
+      {l.rooms.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl bg-white px-4 py-14 text-center ring-1 ring-line">
+          <BedDouble className="h-8 w-8 text-pine-700" aria-hidden="true" />
+          <strong className="text-[18px] text-ink-900">No rooms yet</strong>
+          <p className="max-w-sm text-[14px] text-ink-500">Create your first room type: details, beds and guests, bathroom, price and amenities.</p>
+          <button type="button" className="btn-brass" onClick={() => { const r = newRoom(); set((x) => ({ ...x, rooms: [...x.rooms, r] })); openRoom(r.id, 1) }}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Create Room
+          </button>
+        </div>
+      ) : (
+        <>
+          <ul className="flex flex-col gap-3">
+            {l.rooms.map((r, i) => {
+              const done = roomDone(r)
+              const firstOpen = roomSections.find((s) => !roomSectionDone(r, s.id))?.id ?? 1
+              return (
+                <li key={r.id} className="flex flex-col gap-3 rounded-xl bg-white p-4 ring-1 ring-line sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1">
+                    <strong className="block text-[17px] text-ink-900">{r.name.trim() || `Room type ${i + 1}`}</strong>
+                    <span className="block text-[14px] text-ink-500">{[r.roomType, r.count ? `${r.count} room${r.count === 1 ? '' : 's'}` : '', r.price ? `${inr(r.price)} a night` : ''].filter(Boolean).join(' · ') || 'Not filled in yet'}</span>
+                    <span className={`mt-1 block text-[13px] font-semibold ${done ? 'text-live' : 'text-brass-700'}`}>{done ? 'Complete' : `${roomSections.filter((s) => roomSectionDone(r, s.id)).length} of ${roomSections.length} sections done`}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" className={done ? 'btn-ghost' : 'btn-brass'} onClick={() => openRoom(r.id, done ? 1 : firstOpen)}>
+                      {done ? 'Edit' : 'Continue'}
+                    </button>
+                    <button type="button" aria-label={`Remove ${r.name || `room type ${i + 1}`}`} onClick={() => set((x) => ({ ...x, rooms: x.rooms.filter((y) => y.id !== r.id) }))} className="flex h-11 w-11 items-center justify-center rounded-lg text-ink-500 hover:bg-alert-50 hover:text-alert">
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          <button type="button" className="btn-ghost self-start" onClick={() => { const r = newRoom(); set((x) => ({ ...x, rooms: [...x.rooms, r] })); openRoom(r.id, 1) }}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Create another room
+          </button>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -996,6 +1158,10 @@ export default function Wizard() {
   const [changingType, setChangingType] = useState(false)
   const top = useRef<HTMLDivElement>(null)
   const step = (steps.some((s) => s.id === params.get('step')) ? params.get('step') : 'basics') as StepId
+  // Create Room: which room type is open and which of its five sections.
+  const roomId = step === 'rooms' ? params.get('room') : null
+  const sec = Math.min(5, Math.max(1, Number(params.get('sec')) || 1))
+  const [roomTried, setRoomTried] = useState(false)
   const index = steps.findIndex((s) => s.id === step)
 
   useEffect(() => {
@@ -1050,6 +1216,34 @@ export default function Wizard() {
     window.scrollTo({ top: 0 })
   }
 
+  const openRoom = (id: string, n: number) => {
+    setRoomTried(false)
+    setShowErrors(false)
+    setParams({ step: 'rooms', room: id, sec: String(n) })
+    window.scrollTo({ top: 0 })
+  }
+  const closeRoom = () => {
+    // A room left completely empty is dropped when the owner cancels.
+    if (l && roomId) {
+      const r = l.rooms.find((x) => x.id === roomId)
+      if (r && !r.name.trim() && !r.roomType && !r.view && !r.size) set((x) => ({ ...x, rooms: x.rooms.filter((y) => y.id !== roomId) }))
+    }
+    setRoomTried(false)
+    setParams({ step: 'rooms' })
+    window.scrollTo({ top: 0 })
+  }
+  const roomNext = () => {
+    const r = l?.rooms.find((x) => x.id === roomId)
+    if (!r) return closeRoom()
+    if (!roomSectionDone(r, sec)) {
+      setRoomTried(true)
+      return
+    }
+    if (l && saveState === 'dirty' && l.status === 'draft') save(l)
+    if (sec < 5) openRoom(r.id, sec + 1)
+    else closeRoom()
+  }
+
   const next = () => {
     if (!l) return
     if (!isLive && !stepDone(l, step)) {
@@ -1092,7 +1286,11 @@ export default function Wizard() {
     basics: <Basics l={l} set={set} show={showErrors} onChangeType={() => setChangingType(true)} />,
     location: <Location l={l} set={set} show={showErrors} />,
     amenities: <Amenities l={l} set={set} />,
-    rooms: <Rooms l={l} set={set} goPhotos={() => go('photos')} />,
+    rooms: roomId && l.rooms.some((r) => r.id === roomId) ? (
+      <RoomEditor l={l} set={set} room={l.rooms.find((r) => r.id === roomId)!} sec={sec} openSec={(n) => openRoom(roomId, n)} tried={roomTried} goPhotos={() => go('photos')} />
+    ) : (
+      <Rooms l={l} set={set} roomId={null} openRoom={openRoom} />
+    ),
     photos: <Photos l={l} set={set} />,
     policies: <Policies l={l} set={set} />,
     legal: <Legal l={l} set={set} />,
@@ -1167,7 +1365,11 @@ export default function Wizard() {
 
       <div className="sticky bottom-0 z-30 border-t border-line bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="mx-auto flex max-w-[920px] items-center justify-between gap-3 px-3 py-3 sm:px-0">
-          {index === 0 ? (
+          {roomId ? (
+            <button type="button" className="min-h-11 px-2 text-[16px] font-bold text-pine-800 hover:underline" onClick={closeRoom}>
+              Cancel
+            </button>
+          ) : index === 0 ? (
             <Link to="/app/properties" className="min-h-11 px-2 py-2.5 text-[16px] font-bold text-pine-800 hover:underline">
               Back
             </Link>
@@ -1187,10 +1389,16 @@ export default function Wizard() {
                 Skip
               </button>
             )}
-            {index < steps.length - 1 && (
-              <button type="button" className="btn-brass min-h-11 px-6" onClick={next}>
-                {step === 'basics' ? 'Continue' : 'Save And Continue'}
+            {roomId ? (
+              <button type="button" className="btn-brass min-h-11 px-6" onClick={roomNext}>
+                {sec < 5 ? 'Next' : 'Save Room'}
               </button>
+            ) : (
+              index < steps.length - 1 && (
+                <button type="button" className="btn-brass min-h-11 px-6" onClick={next}>
+                  {step === 'basics' ? 'Continue' : 'Save And Continue'}
+                </button>
+              )
             )}
           </div>
         </div>

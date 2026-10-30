@@ -1165,3 +1165,8 @@ export const cancellationOptions = [
 export type CancellationId = (typeof cancellationOptions)[number]['id']
 
 export const checkTimes = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM']
+
+/** Room Details dropdowns. [CONFIRM] lists against the reference screens when available. */
+export const roomTypes = ['Standard Room', 'Deluxe Room', 'Super Deluxe Room', 'Premium Room', 'Executive Room', 'Club Room', 'Junior Suite', 'Suite', 'Family Room', 'Studio', 'Apartment', 'Cottage', 'Villa', 'Dormitory', 'Tent']
+export const roomViews = ['City View', 'Garden View', 'Pool View', 'Sea View', 'Beach View', 'Mountain View', 'Lake View', 'River View', 'Valley View', 'Forest View', 'Courtyard View', 'No View']
+export const mealPlans = ['Room only', 'Breakfast included']

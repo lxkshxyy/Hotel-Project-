@@ -3,7 +3,7 @@ import { amenityForms } from '../data/amenityDetails'
 import { allAmenities, cancellationOptions, cities } from '../data/options'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
-import type { Listing } from './types'
+import type { Listing, ListingRoom } from './types'
 
 export const steps = [
   { id: 'basics', label: 'Basic Info' },
@@ -165,6 +165,44 @@ export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).fil
  */
 export const minAmenities = (l: Listing) => (l.basics.category === 'homestay' || !l.basics.stars ? 0 : l.basics.stars * 2)
 
+/* ---------------- rooms ---------------- */
+
+export const roomSections = [
+  { id: 1, title: 'Room Details', intro: 'Add the name and key features of this room type' },
+  { id: 2, title: 'Sleeping Arrangement & Occupancy', intro: 'Select bed types and how many guests this room can host' },
+  { id: 3, title: 'Bathroom Details', intro: 'Add details of bathroom(s) for this room type' },
+  { id: 4, title: 'Meal Plan, Rates & Inventory Details', intro: 'Set up the meal plan, pricing, and inventory to make this room ready to sell.' },
+  { id: 5, title: 'Amenity Details', intro: 'Select the amenities to help guests know what to expect during their stay' },
+] as const
+
+/** What's missing in one section of a room type, keyed by field. */
+export function roomErrors(r: ListingRoom, section: number): Record<string, string> {
+  const e: Record<string, string> = {}
+  if (section === 1) {
+    if (!r.roomType) e.roomType = 'Choose the room type.'
+    if (!r.view) e.view = 'Choose the room view.'
+    if (!r.sizeUnit) e.size = 'Choose square feet or square meter, then enter the size.'
+    else if (!r.size || r.size < (r.sizeUnit === 'sqm' ? 5 : 50)) e.size = `Enter the indoor area in ${r.sizeUnit === 'sqm' ? 'square meters' : 'square feet'}.`
+    if (r.name.trim().length < 3) e.name = 'Enter the room name guests will see.'
+    if (!(r.count >= 1)) e.count = 'Enter how many rooms of this type you have.'
+  }
+  if (section === 2) {
+    if (!r.bed) e.bed = 'Choose the bed type.'
+    if (!(r.maxGuests >= 1)) e.maxGuests = 'Set how many guests can stay.'
+  }
+  if (section === 3) {
+    if (!(r.bathrooms && r.bathrooms >= 1)) e.bathrooms = 'Enter the number of bathrooms.'
+    if (!r.bathroomType) e.bathroomType = 'Choose private or shared.'
+  }
+  if (section === 4) {
+    if (!(r.price >= site.minPrice)) e.price = `Set a price of at least ₹${site.minPrice} a night.`
+    if (r.mrp && r.mrp < r.price) e.mrp = 'This should be higher than your price, or left empty.'
+  }
+  return e
+}
+export const roomSectionDone = (r: ListingRoom, section: number) => !Object.keys(roomErrors(r, section)).length
+export const roomDone = (r: ListingRoom) => roomSections.every((s) => roomSectionDone(r, s.id))
+
 /** What's missing on the Location tab, keyed by field. */
 export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
   const loc = l.location
@@ -192,10 +230,9 @@ export function blockers(l: Listing): Check[] {
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`
-    if (!r.name.trim()) out.push({ step: 'rooms', message: `Room type ${i + 1} needs a name.` })
-    if (!(r.price >= site.minPrice)) out.push({ step: 'rooms', message: `${n}: set a price of at least ₹${site.minPrice} a night.` })
-    if (!(r.count >= 1)) out.push({ step: 'rooms', message: `${n}: how many of these rooms do you have?` })
-    if (!(r.maxGuests >= 1)) out.push({ step: 'rooms', message: `${n}: set how many guests fit.` })
+    roomSections.forEach((sec) => {
+      if (Object.keys(roomErrors(r, sec.id)).length) out.push({ step: 'rooms', message: `${n}: finish “${sec.title}”.` })
+    })
   })
   if (l.photos.length < site.minPhotos) out.push({ step: 'photos', message: `Upload at least ${site.minPhotos} photos (now ${l.photos.length}).` })
   if (l.photos.length && !l.photos.some((p) => p.tag === 'Room')) out.push({ step: 'photos', message: 'Add at least one photo of a room.' })

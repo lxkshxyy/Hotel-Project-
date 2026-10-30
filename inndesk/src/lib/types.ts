@@ -17,6 +17,15 @@ export interface ListingRoom {
   breakfast: boolean
   amenities: string[]
   photoId?: string
+  /** Room Details section. */
+  roomType?: string
+  view?: string
+  sizeUnit?: 'sqft' | 'sqm'
+  size?: number
+  description?: string
+  /** Bathroom Details section. */
+  bathrooms?: number
+  bathroomType?: 'Private' | 'Shared'
 }
 
 export type EntryValue = string | string[] | number | boolean | { open: string; close: string; off: string[] } | { depth: string; shallow: boolean }
