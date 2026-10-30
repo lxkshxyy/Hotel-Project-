@@ -2,6 +2,11 @@ import type { CancellationId, PhotoTag } from '../data/options'
 
 export type ListingStatus = 'draft' | 'live' | 'paused'
 
+export interface BedLine {
+  type: string
+  count: number
+}
+
 export interface ListingRoom {
   id: string
   name: string
@@ -23,6 +28,13 @@ export interface ListingRoom {
   sizeUnit?: 'sqft' | 'sqm'
   size?: number
   description?: string
+  bedrooms?: number
+  livingRooms?: number
+  /** Sleeping Arrangement: beds in each bedroom and each living room. */
+  beds?: { bedrooms: BedLine[][]; living: BedLine[][] }
+  extraBed?: boolean | null
+  extraBedMax?: number
+  occupancy?: { baseAdults: number; maxAdults: number; baseChildren: number; maxChildren: number; maxOccupancy: number }
   /** Bathroom Details section. */
   bathrooms?: number
   bathroomType?: 'Private' | 'Shared'

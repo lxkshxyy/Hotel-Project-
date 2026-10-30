@@ -4,19 +4,20 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
+import { BedPicker } from '../components/BedPicker'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bedTypes, cancellationOptions, checkTimes, mealPlans, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, cancellationOptions, checkTimes, mealPlans, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { basicsErrors, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { autoOccupancy, basicsErrors, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
-import type { Listing, ListingRoom } from '../lib/types'
+import type { BedLine, Listing, ListingRoom } from '../lib/types'
 
 type Set = (fn: (l: Listing) => Listing) => void
 
@@ -607,13 +608,13 @@ function Amenities({ l, set }: { l: Listing; set: Set }) {
   )
 }
 
-const newRoom = (): ListingRoom => ({ id: uid(6), name: '', bed: '', sizeSqft: 0, maxGuests: 2, count: 1, price: 0, breakfast: false, amenities: [] })
+const newRoom = (): ListingRoom => ({ id: uid(6), name: '', bed: '', sizeSqft: 0, maxGuests: 0, count: 1, price: 0, breakfast: false, amenities: [], bedrooms: 1, livingRooms: 0, extraBed: null })
 const SQFT_PER_SQM = 10.7639
 
 /** The numbered line on the left of Create Room. */
 function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' }) {
   return (
-    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-pine-800 text-white' : state === 'done' ? 'bg-pine-800 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
+    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-pine-800 text-white ring-4 ring-pine-100' : state === 'done' ? 'bg-brass-500 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
       {state === 'done' ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Done" /> : n}
     </span>
   )
@@ -626,6 +627,84 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
   const unlocked = (n: number) => roomSections.slice(0, n - 1).every((s) => roomSectionDone(r, s.id))
   const roomPhotos = l.photos.filter((p) => p.tag === 'Room')
   const net = (p: number) => p - p * site.commissionRate - p * site.commissionRate * site.gstOnCommission
+  const b = bedsOf(r)
+  /** Saves new beds and refreshes the occupancy worked out from them. */
+  const setBeds = (beds: { bedrooms: BedLine[][]; living: BedLine[][] }, extra?: Partial<ListingRoom>) => {
+    const next = { ...r, ...extra, beds }
+    const occupancy = autoOccupancy(next)
+    up({ ...extra, beds, occupancy, maxGuests: occupancy.maxOccupancy, bed: bedSummary(next) })
+  }
+  const setRooms = (bedrooms: number, livingRooms: number) => {
+    const next = { ...r, bedrooms, livingRooms }
+    const nb = bedsOf(next)
+    up({ bedrooms, livingRooms, beds: nb })
+  }
+  const occ = r.occupancy ?? autoOccupancy(r)
+  const setOcc = (k: keyof typeof occ, v: number) => {
+    const o = { ...occ, [k]: v }
+    up({ occupancy: o, maxGuests: o.maxOccupancy })
+  }
+  const bedArea = (kind: 'bedrooms' | 'living', idx: number) => {
+    const lines = b[kind][idx]
+    const name = kind === 'bedrooms' ? `Bedroom ${idx + 1}` : `Living Room ${idx + 1}`
+    const err = e[`${kind === 'bedrooms' ? 'bedroom' : 'living'}${idx}`]
+    const put = (li: number, p: Partial<BedLine>) => setBeds({ ...b, [kind]: b[kind].map((ls, i) => (i === idx ? ls.map((x, j) => (j === li ? { ...x, ...p, count: p.type && !x.count ? 1 : (p.count ?? x.count) } : x)) : ls)) })
+    const canDelete = kind === 'living' || b.bedrooms.length > 1
+    return (
+      <div key={`${kind}${idx}`} className="grid gap-3 border-t border-line px-4 py-5 sm:grid-cols-[1fr_minmax(0,460px)] sm:gap-6 sm:px-5">
+        <div>
+          <strong className="block text-[16px] text-ink-900">
+            {name}
+            {kind === 'living' && <span className="font-normal text-ink-500"> (Optional)</span>}
+          </strong>
+          <span className="block text-[14px] text-ink-500">Select the types of beds available in this room</span>
+          {canDelete && (
+            <button
+              type="button"
+              className="mt-1 text-[14px] font-bold text-pine-800 hover:underline"
+              onClick={() => {
+                const beds = { ...b, [kind]: b[kind].filter((_, i) => i !== idx) }
+                setBeds(beds, kind === 'bedrooms' ? { bedrooms: beds.bedrooms.length } : { livingRooms: beds.living.length })
+              }}
+            >
+              Delete {kind === 'bedrooms' ? 'Bedroom' : 'Living Room'}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          {lines.map((x, li) => (
+            <div key={li} className="grid grid-cols-[1fr_auto_auto] items-end gap-2 sm:gap-3">
+              <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold text-ink-700">
+                Bed Type {li + 1}
+                <BedPicker label={`${name}, bed type ${li + 1}`} value={x.type} onChange={(v) => put(li, { type: v })} />
+              </label>
+              <span className="flex h-[52px] items-center">
+                {lines.length > 1 ? (
+                  <button type="button" aria-label={`Remove bed type ${li + 1}`} onClick={() => setBeds({ ...b, [kind]: b[kind].map((ls, i) => (i === idx ? ls.filter((_, j) => j !== li) : ls)) })} className="flex h-9 w-9 items-center justify-center rounded-full text-ink-700 hover:bg-alert-50 hover:text-alert">
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <X className="h-5 w-5 text-ink-700" aria-hidden="true" />
+                )}
+              </span>
+              <span className="flex flex-col gap-1 text-[13px] font-semibold text-ink-700">
+                Number of beds
+                <span className={!x.type ? 'pointer-events-none opacity-50' : ''}>{stepper(x.count, (v) => put(li, { count: v }), `${name} beds`, 10)}</span>
+              </span>
+            </div>
+          ))}
+          <button type="button" disabled={!lines.every((x) => x.type)} onClick={() => setBeds({ ...b, [kind]: b[kind].map((ls, i) => (i === idx ? [...ls, { type: '', count: 0 }] : ls)) })} className="self-start text-[14px] font-bold text-pine-800 hover:underline disabled:text-ink-400 disabled:no-underline">
+            Add Another Bed Type
+          </button>
+          {err && (
+            <span role="alert" className="text-[13px] font-semibold text-alert">
+              {err}
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
   const setSize = (unit: 'sqft' | 'sqm' | undefined, size: number | undefined) => up({ sizeUnit: unit, size, sizeSqft: size ? Math.round(unit === 'sqm' ? size * SQFT_PER_SQM : size) : 0 })
   const stepper = (value: number, onChange: (v: number) => void, label: string, max = 20) => (
     <span className="flex w-fit items-center overflow-hidden rounded-lg border border-line-strong bg-white">
@@ -684,6 +763,12 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
         <Row id="r-name" title={`Room Name (as displayed on ${site.marketplace} & partner websites)`} help="Add a room name that looks attractive to travellers" error={e.name}>
           <input id="r-name" className="field" maxLength={60} placeholder="Example: Luxury room with private pool" value={r.name} onChange={(x) => up({ name: x.target.value })} aria-invalid={!!e.name} />
         </Row>
+        <Row title="Number of bedroom(s)" help="Bedrooms in one room/unit of this type" error={e.bedrooms}>
+          {stepper(r.bedrooms ?? 1, (v) => setRooms(Math.max(1, v), r.livingRooms ?? 0), 'bedrooms', 10)}
+        </Row>
+        <Row title="Number of living room(s)" help="Living rooms in one room/unit of this type, if any">
+          {stepper(r.livingRooms ?? 0, (v) => setRooms(r.bedrooms ?? 1, v), 'living rooms', 5)}
+        </Row>
         <Row id="r-count" title="Number of rooms (of this type)" help="Total rooms/units available in this property" error={e.count}>
           <input id="r-count" className="field max-w-[320px]" inputMode="numeric" value={r.count || ''} onChange={(x) => up({ count: Math.min(999, Number(x.target.value.replace(/\D/g, '')) || 0) })} aria-invalid={!!e.count} />
         </Row>
@@ -694,19 +779,46 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     ),
     2: (
       <>
-        <Row id="r-bed" title="Bed type" help="The main bed in this room" error={e.bed}>
-          <select id="r-bed" className="field" value={r.bed} onChange={(x) => up({ bed: x.target.value })} aria-invalid={!!e.bed}>
-            <option value="" disabled hidden>
-              Select bed type
-            </option>
-            {bedTypes.map((b) => (
-              <option key={b}>{b}</option>
+        <h4 className="px-4 pt-5 text-[18px] font-bold text-ink-900 sm:px-5">Select the bed type for all the bedrooms below</h4>
+        <div className="mt-3">
+          {b.bedrooms.map((_, i) => bedArea('bedrooms', i))}
+          {b.living.map((_, i) => bedArea('living', i))}
+        </div>
+        <Row title="Can this room/unit accommodate extra bed(s)?" error={e.extraBed}>
+          <div className="flex gap-8">
+            {[
+              [false, 'No'],
+              [true, 'Yes'],
+            ].map(([v, t]) => (
+              <label key={t as string} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
+                <input type="radio" name={`extra-${r.id}`} checked={r.extraBed === v} onChange={() => setBeds(b, { extraBed: v as boolean, extraBedMax: v ? Math.max(1, r.extraBedMax ?? 1) : 0 })} className="h-[18px] w-[18px] accent-pine-800" />
+                {t as string}
+              </label>
             ))}
-          </select>
+          </div>
         </Row>
-        <Row title="Maximum guests" help="Adults and children together" error={e.maxGuests}>
-          {stepper(r.maxGuests || 0, (v) => up({ maxGuests: v }), 'guests')}
-        </Row>
+        {r.extraBed && (
+          <Row title="What is the maximum number of extra bed(s) that can be accommodated in this room/unit?">
+            {stepper(r.extraBedMax ?? 1, (v) => setBeds(b, { extraBedMax: Math.max(1, v) }), 'extra beds', 5)}
+          </Row>
+        )}
+        <div className="border-t-8 border-[#f1f3f1] px-4 pt-5 sm:px-5">
+          <h4 className="text-[18px] font-bold text-ink-900">Occupancy</h4>
+          <p className="text-[14px] text-ink-500">Occupancy details have been pre-filled based on the selected bed arrangement above</p>
+        </div>
+        {(
+          [
+            ['baseAdults', 'Base adults', 'Ideal number of adults supported by the standard sleeping arrangement'],
+            ['maxAdults', 'Maximum adults', 'Maximum number of adults that can be accommodated in this room'],
+            ['baseChildren', 'Base children', 'Maximum number of children allowed to stay for free within the free child age limit'],
+            ['maxChildren', 'Maximum children', 'Maximum number of children that can be accommodated in this room'],
+            ['maxOccupancy', 'Maximum occupancy', 'Maximum number of guests that can be accommodated in this room'],
+          ] as const
+        ).map(([k, t, h]) => (
+          <Row key={k} title={t} help={h} error={e[k]}>
+            {stepper(occ[k], (v) => setOcc(k, v), t.toLowerCase(), 30)}
+          </Row>
+        ))}
       </>
     ),
     3: (
@@ -783,12 +895,40 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     ),
   }
 
-  const summary = (n: number) =>
-    n === 1 ? [r.roomType, r.view, r.size ? `${r.size} ${r.sizeUnit === 'sqm' ? 'sq m' : 'sq ft'}` : '', `${r.count} room${r.count === 1 ? '' : 's'}`].filter(Boolean).join(' · ')
-    : n === 2 ? `${r.bed} · up to ${r.maxGuests} guests`
-    : n === 3 ? `${r.bathrooms} ${r.bathroomType?.toLowerCase()} bathroom${r.bathrooms === 1 ? '' : 's'}`
-    : n === 4 ? `${r.breakfast ? 'Breakfast included' : 'Room only'} · ${inr(r.price)} a night`
-    : `${r.amenities.length} in-room amenities`
+  const facts = (n: number): [string, string][] =>
+    n === 1
+      ? [
+          [`Room Name (as displayed on ${site.marketplace} & partner websites)`, r.name],
+          ['Room type', r.roomType ?? '-'],
+          ['Room view', r.view ?? '-'],
+          ['Number of bedroom(s)', String(r.bedrooms ?? 1)],
+          ['Number of living room(s)', String(r.livingRooms ?? 0)],
+          ['Number of rooms (of this type)', String(r.count)],
+          ['Room Size', r.size ? `${r.size} ${r.sizeUnit === 'sqm' ? 'sq m' : 'sq ft'}` : '-'],
+          ['Description of the room', r.description?.trim() || '-'],
+        ]
+      : n === 2
+        ? [
+            ...b.bedrooms.map((ls, i) => [`Bedroom ${i + 1}`, ls.filter((x) => x.type).map((x) => `${x.count} × ${x.type}`).join(', ')] as [string, string]),
+            ...b.living.map((ls, i) => [`Living Room ${i + 1}`, ls.filter((x) => x.type).map((x) => `${x.count} × ${x.type}`).join(', ') || '-'] as [string, string]),
+            ['Extra beds', r.extraBed ? `Up to ${r.extraBedMax}` : 'No'],
+            ['Adults (base / max)', `${occ.baseAdults} / ${occ.maxAdults}`],
+            ['Children (base / max)', `${occ.baseChildren} / ${occ.maxChildren}`],
+            ['Maximum occupancy', String(occ.maxOccupancy)],
+          ]
+        : n === 3
+          ? [
+              ['Number of bathrooms', String(r.bathrooms ?? '-')],
+              ['Bathroom', r.bathroomType ?? '-'],
+            ]
+          : n === 4
+            ? [
+                ['Meal plan', r.breakfast ? 'Breakfast included' : 'Room only'],
+                ['Price per night', inr(r.price)],
+                ['Price before discount', r.mrp ? inr(r.mrp) : '-'],
+                ['Inventory', `${r.count} room${r.count === 1 ? '' : 's'}`],
+              ]
+            : [['In the room', r.amenities.join(', ') || '-']]
 
   return (
     <section className="flex flex-col gap-5">
@@ -799,20 +939,38 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
           const can = unlocked(s.id)
           const done = can && roomSectionDone(r, s.id) && !open
           const state = open ? 'active' : done ? 'done' : 'locked'
+          const nextOpen = i < roomSections.length - 1 && unlocked(s.id + 1)
           return (
             <li key={s.id} className="relative flex gap-3 sm:gap-5">
-              {i < roomSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-16px] left-4 w-0.5 -translate-x-1/2 ${unlocked(s.id + 1) ? 'bg-pine-800' : 'bg-line-strong'}`} />}
+              {/* The line runs from this dot's centre to the next dot's centre, so it touches both. */}
+              {i < roomSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-48px] left-4 w-[3px] -translate-x-1/2 ${done && nextOpen ? 'bg-brass-500' : open ? 'bg-pine-800' : 'bg-line-strong'}`} />}
               <div className="pt-4">
                 <StepDot n={s.id} state={state} />
               </div>
-              <div className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white ring-1 ${open ? 'shadow-panel ring-line' : 'ring-line'} ${!can ? 'opacity-70' : ''}`}>
-                <button type="button" disabled={!can || open} onClick={() => openSec(s.id)} className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left disabled:cursor-default sm:px-5" aria-expanded={open}>
+              <div className={`min-w-0 flex-1 overflow-visible rounded-xl bg-white ring-1 ${open ? 'shadow-panel ring-line' : 'ring-line'} ${!can ? 'opacity-70' : ''}`}>
+                <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
                   <span className="min-w-0">
                     <strong className="block text-[22px] leading-tight font-black text-ink-900">{s.title}</strong>
-                    <span className="block truncate text-[14px] text-ink-700">{done ? summary(s.id) : s.intro}</span>
+                    {!done && <span className="block text-[14px] text-ink-700">{s.intro}</span>}
                   </span>
-                  {!can ? <Lock className="h-4 w-4 shrink-0 text-ink-400" aria-label="Locked" /> : done ? <span className="shrink-0 text-[14px] font-bold text-pine-800">Edit</span> : null}
-                </button>
+                  {!can ? (
+                    <Lock className="h-4 w-4 shrink-0 text-ink-400" aria-label="Locked" />
+                  ) : done ? (
+                    <button type="button" onClick={() => openSec(s.id)} className="shrink-0 rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50">
+                      Edit
+                    </button>
+                  ) : null}
+                </div>
+                {done && (
+                  <dl className="grid gap-x-6 gap-y-4 border-t border-line px-4 py-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
+                    {facts(s.id).map(([k, v], fi) => (
+                      <div key={k} className={fi === 0 && s.id === 1 ? 'sm:col-span-2 lg:col-span-4' : k.startsWith('Description') || k === 'In the room' ? 'sm:col-span-2 lg:col-span-4' : ''}>
+                        <dt className="text-[13px] text-ink-500">{k}</dt>
+                        <dd className="text-[15px] font-bold break-words text-ink-900">{v || '-'}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 {open && <div className="border-t border-line">{body[s.id]}</div>}
               </div>
             </li>
@@ -1162,6 +1320,12 @@ export default function Wizard() {
   const roomId = step === 'rooms' ? params.get('room') : null
   const sec = Math.min(5, Math.max(1, Number(params.get('sec')) || 1))
   const [roomTried, setRoomTried] = useState(false)
+  const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast((x) => (x && x.n > 1 ? { ...x, n: x.n - 1 } : null)), 1000)
+    return () => clearTimeout(t)
+  }, [toast])
   const index = steps.findIndex((s) => s.id === step)
 
   useEffect(() => {
@@ -1240,6 +1404,8 @@ export default function Wizard() {
       return
     }
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
+    const title = roomSections[sec - 1].title
+    setToast({ text: `${title.charAt(0)}${title.slice(1).toLowerCase()} ${sec === 5 ? '— room saved' : 'have been saved'}`, n: 3 })
     if (sec < 5) openRoom(r.id, sec + 1)
     else closeRoom()
   }
@@ -1403,6 +1569,18 @@ export default function Wizard() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className="fixed inset-x-3 bottom-20 z-[90] mx-auto flex max-w-[600px] items-center gap-3 rounded-lg bg-pine-800 px-4 py-3.5 text-white shadow-lift">
+            <CircleCheck className="h-6 w-6 shrink-0" aria-hidden="true" />
+            <strong className="flex-1 text-[15px]">{toast.text}</strong>
+            <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full text-[12px] ring-2 ring-white/50">
+              {toast.n}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <PropertyTypePicker
         open={changingType}

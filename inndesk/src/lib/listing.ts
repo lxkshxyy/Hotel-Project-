@@ -1,9 +1,9 @@
 import { site } from '../config/site'
 import { amenityForms } from '../data/amenityDetails'
-import { allAmenities, cancellationOptions, cities } from '../data/options'
+import { allAmenities, bedCatalog, cancellationOptions, cities } from '../data/options'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
-import type { Listing, ListingRoom } from './types'
+import type { BedLine, Listing, ListingRoom } from './types'
 
 export const steps = [
   { id: 'basics', label: 'Basic Info' },
@@ -99,7 +99,7 @@ export function toHotel(l: Listing) {
     rooms: l.rooms.map((r, i) => ({
       id: `${slug}-${r.id}`,
       name: r.name.trim(),
-      size: `${r.sizeSqft} sq ft · ${r.bed}`,
+      size: `${r.sizeSqft} sq ft · ${bedSummary(r)}`,
       features: [...(r.breakfast ? ['Free breakfast'] : []), ...r.amenities].slice(0, 4),
       price: r.price,
       mrp: r.mrp && r.mrp > r.price ? r.mrp : r.price,
@@ -175,6 +175,37 @@ export const roomSections = [
   { id: 5, title: 'Amenity Details', intro: 'Select the amenities to help guests know what to expect during their stay' },
 ] as const
 
+/** Bedrooms and living rooms with their bed lines, sized to the counts in Room Details. */
+export function bedsOf(r: ListingRoom) {
+  const nb = Math.max(1, r.bedrooms ?? 1)
+  const nl = Math.max(0, r.livingRooms ?? 0)
+  const pad = (rows: BedLine[][] | undefined, n: number) => Array.from({ length: n }, (_, i) => (rows?.[i]?.length ? rows[i] : [{ type: '', count: 0 }]))
+  return { bedrooms: pad(r.beds?.bedrooms, nb), living: pad(r.beds?.living, nl) }
+}
+
+const sleeps = (type: string) => bedCatalog.find((b) => b.name === type)?.sleeps ?? 0
+
+/** Occupancy worked out from the beds, the way the reference pre-fills it. The owner can change every number. */
+export function autoOccupancy(r: ListingRoom): NonNullable<ListingRoom['occupancy']> {
+  const b = bedsOf(r)
+  const all = [...b.bedrooms, ...b.living].flat()
+  const cap = all.reduce((n, x) => n + sleeps(x.type) * (x.count || 0), 0)
+  const rooms = [...b.bedrooms, ...b.living].filter((lines) => lines.some((x) => x.type && x.count)).length
+  const extra = r.extraBed ? r.extraBedMax ?? 0 : 0
+  const baseChildren = Math.max(rooms, cap ? 1 : 0)
+  const maxChildren = Math.max(baseChildren, Math.ceil(cap / 2) + extra)
+  const maxAdults = cap + extra
+  return { baseAdults: cap, maxAdults, baseChildren, maxChildren, maxOccupancy: Math.min(maxAdults + maxChildren, maxAdults + baseChildren) }
+}
+
+/** "1 King Bed + 2 Single Bed" across the whole unit. */
+export function bedSummary(r: ListingRoom) {
+  const b = bedsOf(r)
+  const t: Record<string, number> = {}
+  for (const x of [...b.bedrooms, ...b.living].flat()) if (x.type && x.count) t[x.type] = (t[x.type] ?? 0) + x.count
+  return Object.entries(t).map(([k, v]) => `${v} ${k}${v > 1 ? 's' : ''}`).join(' + ') || r.bed
+}
+
 /** What's missing in one section of a room type, keyed by field. */
 export function roomErrors(r: ListingRoom, section: number): Record<string, string> {
   const e: Record<string, string> = {}
@@ -185,10 +216,27 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
     else if (!r.size || r.size < (r.sizeUnit === 'sqm' ? 5 : 50)) e.size = `Enter the indoor area in ${r.sizeUnit === 'sqm' ? 'square meters' : 'square feet'}.`
     if (r.name.trim().length < 3) e.name = 'Enter the room name guests will see.'
     if (!(r.count >= 1)) e.count = 'Enter how many rooms of this type you have.'
+    if (!((r.bedrooms ?? 1) >= 1)) e.bedrooms = 'At least 1 bedroom.'
   }
   if (section === 2) {
-    if (!r.bed) e.bed = 'Choose the bed type.'
-    if (!(r.maxGuests >= 1)) e.maxGuests = 'Set how many guests can stay.'
+    const b = bedsOf(r)
+    b.bedrooms.forEach((lines, i) => {
+      if (!lines.some((x) => x.type && x.count > 0)) e[`bedroom${i}`] = 'Choose a bed type and the number of beds.'
+      else if (lines.some((x) => (x.type && !x.count) || (!x.type && x.count))) e[`bedroom${i}`] = 'Each bed type needs a number of beds.'
+    })
+    b.living.forEach((lines, i) => {
+      if (lines.some((x) => (x.type && !x.count) || (!x.type && x.count))) e[`living${i}`] = 'Each bed type needs a number of beds.'
+    })
+    if (r.extraBed == null) e.extraBed = 'Choose No or Yes.'
+    else if (r.extraBed && !(r.extraBedMax && r.extraBedMax >= 1)) e.extraBed = 'Enter how many extra beds fit.'
+    const o = r.occupancy
+    if (!o || o.baseAdults < 1) e.baseAdults = 'At least 1 adult.'
+    else {
+      if (o.maxAdults < o.baseAdults) e.maxAdults = 'Can’t be less than base adults.'
+      if (o.maxChildren < o.baseChildren) e.maxChildren = 'Can’t be less than base children.'
+      if (o.maxOccupancy < Math.max(1, o.maxAdults)) e.maxOccupancy = 'Can’t be less than maximum adults.'
+      else if (o.maxOccupancy > o.maxAdults + o.maxChildren) e.maxOccupancy = 'Can’t be more than maximum adults and children together.'
+    }
   }
   if (section === 3) {
     if (!(r.bathrooms && r.bathrooms >= 1)) e.bathrooms = 'Enter the number of bathrooms.'
