@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import Layout from './components/Layout'
+import WelcomeLogin from './components/WelcomeLogin'
 import { features } from './config/launch'
 import { Spinner } from './components/ui'
 import { AccountProvider, useAccount } from './context/AccountContext'
@@ -12,7 +13,8 @@ import Home from './pages/Home'
 const Results = lazy(() => import('./pages/Results'))
 const HotelDetail = lazy(() => import('./pages/HotelDetail'))
 const Checkout = lazy(() => import('./pages/Checkout'))
-const Login = lazy(() => import('./pages/Login'))
+// The /login address shows the same photo sign-in pop-up as the Sign in buttons.
+const Login = () => <WelcomeLogin page />
 const MyBookings = lazy(() => import('./pages/Bookings'))
 const BookingDetail = lazy(() => import('./pages/Bookings').then((m) => ({ default: m.BookingDetail })))
 const info = (name: 'Offers' | 'Business' | 'Partner' | 'About' | 'Help' | 'NotFound') =>
@@ -61,7 +63,7 @@ const router = createBrowserRouter([
       { path: '/hotels', element: s(<Results />) },
       { path: '/hotel/:slug', element: s(<HotelDetail />) },
       { path: '/checkout', element: s(<Checkout />) },
-      { path: '/login', element: s(<Login />) },
+      { path: '/login', element: <Login /> },
       { path: '/bookings', element: s(<MyBookings />) },
       { path: '/bookings/:id', element: s(<BookingDetail />) },
       { path: '/account', element: s(<Profile />) },

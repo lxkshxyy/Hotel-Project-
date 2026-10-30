@@ -9,16 +9,19 @@ import { useAuth } from '../context/AuthContext'
 import { isDemoMode } from '../lib/supabase'
 
 /*
- * Sign-in pop-up with a photo panel, like the big travel sites.
- * It opens by itself only for NEW visitors: not signed in, and nobody has ever signed in on this
- * browser. It shows once per visit; after a first sign-in it never opens by itself again.
- * The "Sign in" buttons keep going to the normal /login page.
- * (A website can't know who someone is before they sign in, so a returning customer on a new
- * phone or browser sees it once, and simply signs in.)
+ * The one sign-in screen: a pop-up with a photo panel, like the big travel sites.
+ * - Every "Sign in" button opens it (openLogin()).
+ * - The /login address shows it too (used by checkout and other "sign in to continue" links).
+ * - It also opens by itself for NEW visitors: not signed in, and nobody has signed in on this
+ *   browser before. Closed once, it stays closed for that visit.
  */
 
 const SEEN = 'stayeasy.welcome.seen' // sessionStorage: closed during this visit
 const KNOWN = 'stayeasy.signed-in-before' // localStorage: someone has signed in on this browser
+const EVT = 'stayeasy-open-login'
+
+/** Opens the sign-in pop-up from anywhere. */
+export const openLogin = (tab: 'personal' | 'business' = 'personal') => window.dispatchEvent(new CustomEvent(EVT, { detail: tab }))
 
 const panels = {
   personal: {
@@ -37,15 +40,23 @@ const panels = {
   },
 }
 
-export default function WelcomeLogin() {
+/**
+ * `page` = shown on the /login address: opens straight away, and closing it goes back to where
+ * the visitor was heading (or home).
+ */
+export default function WelcomeLogin({ page = false }: { page?: boolean }) {
   const { user, loading, sendCode, verifyCode } = useAuth()
-  const { hasCompanyFor, switchTo } = useAccount()
+  const { hasCompanyFor, switchTo, createCompany } = useAccount()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const reduce = useReducedMotion()
-  const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<'personal' | 'business'>('personal')
-  const [step, setStep] = useState<'email' | 'code'>('email')
+  const params = new URLSearchParams(search)
+  const rawNext = params.get('next') || ''
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/login') ? rawNext : '/'
+  const [open, setOpen] = useState(page)
+  const [tab, setTab] = useState<'personal' | 'business'>(features.business && params.get('type') === 'business' ? 'business' : 'personal')
+  const [step, setStep] = useState<'email' | 'code' | 'company'>('email')
+  const [coName, setCoName] = useState('')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -65,9 +76,36 @@ export default function WelcomeLogin() {
     }
   }, [user])
 
+  // Opened by a Sign in button (the /login page has its own copy, so it ignores these).
+  useEffect(() => {
+    if (page || pathname.startsWith('/login')) return
+    const on = (e: Event) => {
+      const t = (e as CustomEvent<'personal' | 'business'>).detail
+      setTab(t === 'business' && features.business ? 'business' : 'personal')
+      setStep('email')
+      setError('')
+      setOpen(true)
+    }
+    window.addEventListener(EVT, on)
+    return () => window.removeEventListener(EVT, on)
+  }, [page, pathname])
+
+  // On /login while already signed in: carry on, or finish setting up the business account.
+  useEffect(() => {
+    if (!page || loading || !user || step !== 'email') return
+    if (tab !== 'business') navigate(next.startsWith('/biz') && !features.business ? '/' : next, { replace: true })
+    else if (hasCompanyFor(user.email)) {
+      switchTo('business')
+      navigate(next.startsWith('/biz') ? next : '/biz', { replace: true })
+    } else {
+      setEmail(user.email)
+      setStep('company')
+    }
+  }, [page, loading, user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // New visitor: open a moment after the page has loaded.
   useEffect(() => {
-    if (loading || user || quiet) return
+    if (page || loading || user || quiet) return
     let skip = false
     try {
       skip = !!localStorage.getItem(KNOWN) || !!sessionStorage.getItem(SEEN)
@@ -77,7 +115,7 @@ export default function WelcomeLogin() {
     if (skip) return
     const t = setTimeout(() => setOpen(true), 2500)
     return () => clearTimeout(t)
-  }, [loading, user, quiet])
+  }, [page, loading, user, quiet])
 
   useEffect(() => {
     if (open) setTimeout(() => emailRef.current?.focus(), 80)
@@ -90,6 +128,10 @@ export default function WelcomeLogin() {
   }, [cooldown])
 
   const close = () => {
+    if (page) {
+      navigate(user ? next : next.startsWith('/bookings') || next.startsWith('/checkout') || next.startsWith('/account') || next.startsWith('/biz') ? '/' : next, { replace: true })
+      return
+    }
     setOpen(false)
     setError('')
     try {
@@ -113,10 +155,10 @@ export default function WelcomeLogin() {
 
   // Signed in somewhere else (e.g. the /login page): no pop-up needed.
   useEffect(() => {
-    if (user && open && step === 'email') setOpen(false)
+    if (!page && user && open && step === 'email') setOpen(false)
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (user && !open) return null
+  if (!page && user && !open) return null
 
   const send = async (e?: FormEvent) => {
     e?.preventDefault()
@@ -141,15 +183,13 @@ export default function WelcomeLogin() {
     setBusy(true)
     try {
       await verifyCode(email.trim(), code.trim())
-      close()
-      setStep('email')
       setCode('')
-      if (tab === 'business') {
-        if (hasCompanyFor(email.trim())) {
-          switchTo('business')
-          navigate('/biz')
-        } else navigate('/login?type=business&next=/biz') // asks for the company name
+      if (tab === 'business' && !hasCompanyFor(email.trim())) {
+        setStep('company') // first business sign-in: ask for the company name
+        return
       }
+      if (tab === 'business') switchTo('business')
+      finish(tab === 'business' ? (next.startsWith('/biz') ? next : '/biz') : page ? next : null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That code didn’t work.')
     } finally {
@@ -157,8 +197,27 @@ export default function WelcomeLogin() {
     }
   }
 
+  /** Signed in: close and go on (null = stay on this page). */
+  function finish(to: string | null) {
+    setStep('email')
+    setOpen(page)
+    try {
+      sessionStorage.setItem(SEEN, '1')
+    } catch {
+      /* ignore */
+    }
+    if (to) navigate(to, { replace: page })
+    else setOpen(false)
+  }
+
+  const saveCompany = (e: FormEvent) => {
+    e.preventDefault()
+    if (coName.trim().length < 2) return setError('Enter your company’s name.')
+    createCompany(email.trim(), coName.trim())
+    finish('/biz')
+  }
+
   const p = panels[tab]
-  const loginPage = `/login?next=${encodeURIComponent(pathname + search)}${tab === 'business' ? '&type=business' : ''}`
 
   return (
     <AnimatePresence>
@@ -243,11 +302,26 @@ export default function WelcomeLogin() {
               )}
 
               <h2 id="welcome-h" className="mt-6 text-[24px] font-extrabold text-navy-800">
-                {step === 'email' ? (tab === 'business' ? 'Sign in to your business account' : `Sign in or create your ${site.name} account`) : 'Check your email'}
+                {step === 'company' ? 'Set up your business account' : step === 'email' ? (tab === 'business' ? 'Sign in to your business account' : `Sign in or create your ${site.name} account`) : 'Check your email'}
               </h2>
-              <p className="mt-1 text-[15px] text-ink-500">{step === 'email' ? 'We’ll email you a 6-digit code. No password needed.' : `We sent a 6-digit code to ${email.trim()}.`}</p>
+              <p className="mt-1 text-[15px] text-ink-500">{step === 'company' ? `${email.trim()} isn’t linked to a company yet. Add your company to get corporate rates.` : step === 'email' ? 'We’ll email you a 6-digit code. No password needed.' : `We sent a 6-digit code to ${email.trim()}.`}</p>
 
-              {step === 'email' ? (
+              {step === 'company' ? (
+                <form onSubmit={saveCompany} noValidate className="mt-6 flex flex-col gap-4">
+                  <label className="label">
+                    Company name
+                    <input className="field" autoFocus value={coName} onChange={(e) => setCoName(e.target.value)} placeholder="e.g. Acme Logistics Pvt Ltd" />
+                  </label>
+                  {error && (
+                    <p role="alert" className="text-sm font-semibold text-ember-600">
+                      {error}
+                    </p>
+                  )}
+                  <button type="submit" className="btn-primary min-h-12 text-[16px] font-black tracking-wide uppercase">
+                    Create business account
+                  </button>
+                </form>
+              ) : step === 'email' ? (
                 <form onSubmit={send} noValidate className="mt-6 flex flex-col gap-4">
                   <label className="label">
                     {tab === 'business' ? 'Work email' : 'Email address'}
@@ -323,10 +397,7 @@ export default function WelcomeLogin() {
                 <Link to="/cancellation-policy" onClick={close}>
                   Cancellation Policy
                 </Link>
-                .{' '}
-                <Link to={loginPage} onClick={close} className="sr-only focus:not-sr-only">
-                  Open the full sign-in page
-                </Link>
+                .
               </p>
             </div>
           </motion.div>
