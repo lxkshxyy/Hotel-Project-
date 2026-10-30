@@ -82,6 +82,8 @@ export interface Listing {
   }
   /** Ids of the amenities the owner ticked. */
   amenities: string[]
+  /** Answers to the extra questions under a ticked amenity: amenity id → question id → choice. */
+  amenityDetails?: Record<string, Record<string, string>>
   rooms: ListingRoom[]
   photos: ListingPhoto[]
   policies: {

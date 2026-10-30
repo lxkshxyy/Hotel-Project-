@@ -1149,6 +1149,17 @@ export const amenityGroups: { group: string; items: { id: string; label: string;
 ]
 export const allAmenities = amenityGroups.flatMap((g) => g.items)
 
+/**
+ * Extra questions that open under an amenity once it is ticked. Add an entry here to give
+ * another amenity its own details box. [Option lists to be confirmed from the reference screens.]
+ */
+export const amenityDetails: Record<string, { id: string; label: string; options: string[] }[]> = {
+  ac: [
+    { id: 'control', label: 'Select type', options: ['Room controlled', 'Centralized'] },
+    { id: 'climate', label: 'Select mode', options: ['All-Weather (Hot & Cold)', 'Cooling only', 'Heating only'] },
+  ],
+}
+
 export const bedTypes = ['Double bed', 'Queen bed', 'King bed', 'Two single beds', 'King + single', 'Bunk beds']
 export const roomAmenities = ['AC', 'TV', 'Wi-Fi', 'Work desk', 'Mini fridge', 'Kettle', 'Balcony', 'City view', 'Bathtub', 'Sofa', 'Wardrobe', 'Geyser']
 
