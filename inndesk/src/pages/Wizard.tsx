@@ -3,13 +3,14 @@ import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbu
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
+import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityDetails, amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
+import { amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { basicsErrors, blockers, locationErrors, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
@@ -530,37 +531,12 @@ function Amenities({ l, set }: { l: Listing; set: Set }) {
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {g.items.map((a) => {
                 const on = l.amenities.includes(a.id)
-                const qs = amenityDetails[a.id]
                 return (
                   <Fragment key={a.id}>
                     <Chip on={on} onClick={() => toggle(a.id)}>
                       {a.label}
                     </Chip>
-                    <AnimatePresence initial={false}>
-                      {on && qs && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="col-span-full overflow-hidden">
-                          <div className="grid gap-2 rounded-xl bg-[#eef0ee] p-3 sm:grid-cols-2 sm:p-4">
-                            <span className="text-[13px] font-semibold text-ink-700 sm:col-span-2">{a.label} details</span>
-                            {qs.map((qq) => (
-                              <select
-                                key={qq.id}
-                                aria-label={`${a.label}: ${qq.label}`}
-                                className="field"
-                                value={l.amenityDetails?.[a.id]?.[qq.id] ?? ''}
-                                onChange={(x) => set((y) => ({ ...y, amenityDetails: { ...y.amenityDetails, [a.id]: { ...y.amenityDetails?.[a.id], [qq.id]: x.target.value } } }))}
-                              >
-                                <option value="" disabled hidden>
-                                  {qq.label}
-                                </option>
-                                {qq.options.map((o) => (
-                                  <option key={o}>{o}</option>
-                                ))}
-                              </select>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <AnimatePresence initial={false}>{on && hasExtras(a.id) && <AmenityExtrasBox key={`x-${a.id}`} l={l} set={set} id={a.id} label={a.label} />}</AnimatePresence>
                   </Fragment>
                 )
               })}

@@ -1,4 +1,5 @@
 import { site } from '../config/site'
+import { amenityForms } from '../data/amenityDetails'
 import { allAmenities, cancellationOptions, cities } from '../data/options'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
@@ -179,6 +180,7 @@ export function blockers(l: Listing): Check[] {
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
   if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. Ask the ${site.marketplace} team to add the city.` })
+  for (const id of l.amenities) if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) out.push({ step: 'amenities', message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`

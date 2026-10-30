@@ -19,6 +19,14 @@ export interface ListingRoom {
   photoId?: string
 }
 
+export type EntryValue = string | string[] | number | boolean | { open: string; close: string; off: string[] } | { depth: string; shallow: boolean }
+export interface AmenityEntry {
+  id: string
+  values: Record<string, EntryValue>
+  /** Ids of photos in listing.photos. */
+  photoIds: string[]
+}
+
 export interface ListingPhoto {
   id: string
   url: string
@@ -82,8 +90,10 @@ export interface Listing {
   }
   /** Ids of the amenities the owner ticked. */
   amenities: string[]
-  /** Answers to the extra questions under a ticked amenity: amenity id → question id → choice. */
-  amenityDetails?: Record<string, Record<string, string>>
+  /** Answers to the dropdowns under a ticked amenity: amenity id → question id → choice(s). */
+  amenityDetails?: Record<string, Record<string, string | string[]>>
+  /** Entries added with "+ Add …" (parking, pool, kitchen…): amenity id → entries. */
+  amenityEntries?: Record<string, AmenityEntry[]>
   rooms: ListingRoom[]
   photos: ListingPhoto[]
   policies: {
