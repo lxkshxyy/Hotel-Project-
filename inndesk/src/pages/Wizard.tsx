@@ -943,7 +943,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
           return (
             <li key={s.id} className="relative flex gap-3 sm:gap-5">
               {/* The line runs from this dot's centre to the next dot's centre, so it touches both. */}
-              {i < roomSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-48px] left-4 w-[3px] -translate-x-1/2 ${done && nextOpen ? 'bg-brass-500' : open ? 'bg-pine-800' : 'bg-line-strong'}`} />}
+              {i < roomSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-48px] left-4 w-[3px] -translate-x-1/2 ${done && nextOpen ? 'bg-pine-800' : open ? 'bg-brass-500' : 'bg-line-strong'}`} />}
               <div className="pt-4">
                 <StepDot n={s.id} state={state} />
               </div>
