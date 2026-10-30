@@ -1,5 +1,5 @@
 import { site } from '../config/site'
-import { allAmenities, cancellationOptions, cities } from '../data/options'
+import { allAmenities, amenityGroups, cancellationOptions, cities } from '../data/options'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
 import type { Listing } from './types'
@@ -27,7 +27,8 @@ export function blankListing(ownerId: string, owner?: { phone?: string; email?: 
     updatedAt: now,
     basics: { name: '', propertyType: 'Hotel', stars: 0, description: '', highlights: [], phone: owner?.phone ?? '', email: owner?.email ?? '', channelManager: null },
     location: { city: '', area: '', address: '', pincode: '', landmarks: [] },
-    amenities: ['wifi', 'ac', 'hotWater'],
+    amenities: [],
+    amenityAnswers: {},
     rooms: [],
     photos: [],
     policies: {
@@ -158,6 +159,10 @@ export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yea
 }
 export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).filter((m): m is string => !!m)
 
+export const mandatoryAmenities = amenityGroups.filter((g) => g.mandatory).flatMap((g) => g.items)
+/** Mandatory amenities not answered yet. Older listings count a ticked amenity as answered Yes. */
+export const mandatoryLeft = (l: Listing) => mandatoryAmenities.filter((a) => l.amenityAnswers?.[a.id] === undefined && !l.amenities.includes(a.id)).length
+
 /** What's missing on the Location tab, keyed by field. */
 export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
   const loc = l.location
@@ -179,6 +184,8 @@ export function blockers(l: Listing): Check[] {
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
   if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. Ask the ${site.marketplace} team to add the city.` })
+  const left = mandatoryLeft(l)
+  if (left) out.push({ step: 'amenities', message: `Answer No or Yes for all ${mandatoryAmenities.length} mandatory amenities (${left} left).` })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`
@@ -200,7 +207,7 @@ export function blockers(l: Listing): Check[] {
 /** Optional improvements that help a listing sell. */
 export function tips(l: Listing): Check[] {
   const out: Check[] = []
-  if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
+  if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Answer the other amenity groups too. Guests filter by them.' })
   if (l.photos.length < 10) out.push({ step: 'photos', message: 'Hotels with 10 or more photos get more bookings.' })
   if (l.rooms.some((r) => !r.photoId)) out.push({ step: 'rooms', message: 'Give each room type its own photo.' })
   if (!l.legal.gstin) out.push({ step: 'legal', message: 'Add your GSTIN so commission invoices carry it.' })
