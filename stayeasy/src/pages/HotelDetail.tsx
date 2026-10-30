@@ -15,7 +15,7 @@ import type { Hotel, Room } from '../data/types'
 import { getHotel } from '../lib/api'
 import { ratingSummary } from '../lib/reviews'
 import { addDays, inr, nightsBetween, plural, ratingWord, shortDate, ratingsText } from '../lib/format'
-import { freeCancelHours, hotelForStay, quote } from '../lib/quote'
+import { cancelTerms, freeCancelHours, hotelForStay, quote } from '../lib/quote'
 import { guestsLabel, readSearch, searchToQuery } from '../lib/search'
 
 /** Gallery caption from a photo's file name, e.g. /hotels/x/room-2.webp -> "Room". */
@@ -76,6 +76,8 @@ export default function HotelDetail() {
   const price = quote({ hotel: rawHotel!, roomId: room.id, checkIn: search.checkIn, checkOut: search.checkOut, rooms: search.rooms, adults: search.adults, children: search.children })
   const tooMany = guests > room.maxGuests * search.rooms
   const cancelHrs = freeCancelHours(hotel)
+  // Free cancellation only if the window is still open for the chosen check-in date.
+  const freeNow = cancelTerms({ status: 'confirmed', check_in: search.checkIn, pay_mode: 'hotel', amount: 0 }, hotel).free
   const blocked = tooMany || !!room.unavailable
   const update = (patch: Partial<typeof search>) => {
     const next = { ...search, ...patch }
@@ -339,7 +341,7 @@ export default function HotelDetail() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-[13px] font-semibold text-leaf-700">{freeCancelHours(hotel) === null ? 'Non-refundable' : '✓ Free cancellation'}{hotel.payAtHotel ? ' · ✓ Pay at hotel' : ''}</span>
+                      <span className="text-[13px] font-semibold text-leaf-700">{freeCancelHours(hotel) === null ? 'Non-refundable' : freeNow ? '✓ Free cancellation' : 'Non-refundable for these dates'}{hotel.payAtHotel ? ' · ✓ Pay at hotel' : ''}</span>
                       {r.unavailable && <span className="text-[13px] font-bold text-ember-700">{r.unavailable}</span>}
                     </div>
                     <div className="flex items-end justify-between gap-1 sm:w-[170px] sm:flex-col sm:items-end sm:text-right">
@@ -425,7 +427,7 @@ export default function HotelDetail() {
             {hotel.payAtHotel ? 'No payment needed now · Pay at hotel available' : 'Secure online payment'}
           </span>
           <span className="text-center text-[13px] font-semibold text-leaf-700">
-            {cancelHrs === null ? 'Non-refundable rate' : `Free cancellation till ${shortDate(cancelHrs === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil(cancelHrs / 24))))}, ${site.checkInTime}`}
+            {cancelHrs === null ? 'Non-refundable rate' : !freeNow ? 'Non-refundable for these dates: free cancellation has closed' : `Free cancellation till ${shortDate(cancelHrs === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil(cancelHrs / 24))))}, ${site.checkInTime}`}
           </span>
         </aside>
       </div>

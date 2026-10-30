@@ -1,6 +1,6 @@
 import { BadgePercent, Mail, Phone } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Reveal } from '../components/ui'
 import { features } from '../config/launch'
 import { site } from '../config/site'
@@ -154,14 +154,18 @@ export function Business() {
   )
 }
 
-/** Hotel listing lives only on the separate hotel-owner panel (InnDesk), never on this site. */
+/**
+ * Hotel listing lives only on the separate hotel-owner panel (InnDesk), never on this site.
+ * Old /partner links forward there; with no panel address they go to the home page.
+ */
 export function Partner() {
   useEffect(() => {
     if (site.partnerPanelUrl) window.location.replace(site.partnerPanelUrl)
   }, [])
+  if (!site.partnerPanelUrl) return <Navigate to="/" replace />
   return (
-    <Page eyebrow="Hotel owners" title="Manage your property on the partner panel">
-      <p className="max-w-2xl text-ink-700">{site.partnerPanelUrl ? 'Taking you to the partner panel…' : 'The partner panel is opening soon. Please contact us to list your property.'}</p>
+    <Page eyebrow="Hotel owners" title="Opening the partner panel">
+      <p className="max-w-2xl text-ink-700">Taking you to the partner panel…</p>
     </Page>
   )
 }

@@ -153,7 +153,7 @@ export function BookingDetail() {
             <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-ink-700">
               <li>Carry a government photo ID for every adult guest.</li>
               <li>Show booking ID {booking.id} at the front desk.</li>
-              <li>Any issue with your room? Call us — we sort it within 30 minutes.</li>
+              <li>Any issue with your room? {site.supportPhone ? 'Call us' : 'Tell the front desk'} — we sort it within 30 minutes.</li>
             </ol>
             <div className="mt-1 flex flex-wrap gap-2">
               <button type="button" className="btn-navy min-h-10 text-sm" disabled={!!pdf} onClick={() => makePdf('download')}>
@@ -274,29 +274,60 @@ function ManageBooking({ booking, hotel, onChange }: { booking: Booking; hotel: 
           </button>
         </form>
       </Modal>
-      <Modal open={dlg === 'cancel'} onClose={close} title="Cancel this booking?">
-        <dl className="flex flex-col gap-2 rounded-xl bg-canvas p-4 text-[15px]">
-          <div className="flex justify-between gap-3">
-            <dt>Booking amount</dt>
-            <dd className="font-semibold">{inr(booking.amount)}</dd>
+      <Modal open={dlg === 'cancel'} onClose={close} title={t.allowed ? 'Cancel this booking?' : 'This booking can’t be cancelled online'}>
+        {t.allowed ? (
+          <>
+            <dl className="flex flex-col gap-2 rounded-xl bg-canvas p-4 text-[15px]">
+              <div className="flex justify-between gap-3">
+                <dt>Booking amount</dt>
+                <dd className="font-semibold">{inr(booking.amount)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>{t.paidOnline ? 'Paid online' : 'Paid so far'}</dt>
+                <dd className="font-semibold">{t.paidOnline ? inr(booking.amount) : inr(0)}</dd>
+              </div>
+              <div className="flex justify-between gap-3 border-t border-line pt-2 font-bold">
+                <dt>{t.paidOnline ? 'Refund to your original payment method' : 'Cancellation charge'}</dt>
+                <dd className="text-leaf-700">{t.paidOnline ? inr(t.refund) : inr(0)}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-sm text-ink-700">
+              {t.paidOnline ? 'Refunds usually reach your account in 5–7 working days. ' : 'Nothing has been charged, so there is nothing to refund. '}
+              {booking.points_used > 0 ? `The ${booking.points_used} Club points you used go back to your account.` : ''}
+            </p>
+          </>
+        ) : (
+          <div className="flex flex-col gap-2 text-[15px] text-ink-700">
+            <p>
+              {t.reason}
+              {t.hours !== null && booking.status === 'confirmed' ? ' After that, the first night is charged and no-shows are charged in full.' : ''}
+            </p>
+            <p>
+              {site.supportPhone || site.supportEmail ? (
+                <>
+                  To ask about changing or cancelling, contact us
+                  {site.supportPhone && (
+                    <>
+                      {' '}
+                      on <a href={`tel:${site.supportPhone.replace(/\s/g, '')}`}>{site.supportPhone}</a>
+                    </>
+                  )}
+                  {site.supportEmail && (
+                    <>
+                      {site.supportPhone ? ' or ' : ' at '}
+                      <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
+                    </>
+                  )}{' '}
+                  and we’ll check with the hotel.
+                </>
+              ) : (
+                <>
+                  To ask about changing or cancelling, see the <Link to="/help">Help centre</Link>.
+                </>
+              )}
+            </p>
           </div>
-          <div className="flex justify-between gap-3">
-            <dt>{t.paidOnline ? 'Paid online' : 'Paid so far'}</dt>
-            <dd className="font-semibold">{t.paidOnline ? inr(booking.amount) : inr(0)}</dd>
-          </div>
-          <div className="flex justify-between gap-3 border-t border-line pt-2 font-bold">
-            <dt>{t.paidOnline ? 'Refund to your original payment method' : 'Cancellation charge'}</dt>
-            <dd className={t.allowed ? 'text-leaf-700' : ''}>{t.paidOnline ? inr(t.refund) : inr(0)}</dd>
-          </div>
-        </dl>
-        <p className="mt-3 text-sm text-ink-700">
-          {t.allowed
-            ? t.paidOnline
-              ? 'Refunds usually reach your account in 5–7 working days. '
-              : 'Nothing has been charged, so there is nothing to refund. '
-            : `${t.reason} Please contact support to cancel.`}
-          {t.allowed && booking.points_used > 0 ? `The ${booking.points_used} Club points you used go back to your account.` : ''}
-        </p>
+        )}
         {err && (
           <p role="alert" className="mt-3 text-sm font-semibold text-ember-600">
             {err}
@@ -304,7 +335,7 @@ function ManageBooking({ booking, hotel, onChange }: { booking: Booking; hotel: 
         )}
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button type="button" className="btn-outline" onClick={close}>
-            Keep booking
+            {t.allowed ? 'Keep booking' : 'Close'}
           </button>
           {t.allowed && (
             <button type="button" className="btn-primary" disabled={busy} onClick={cancel}>

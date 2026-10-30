@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, ZoomControl } from 'react-leaflet'
 import type { Hotel } from '../../data/types'
 import { landmarkKinds, type Landmark } from '../../data/landmarks'
@@ -37,12 +37,20 @@ const priceTag = (text: string) =>
 
 function Fit({ hotel, points, focus }: { hotel: Hotel; points: { lat: number; lng: number }[]; focus: Props['focus'] }) {
   const map = useMap()
+  const first = useRef(true)
+  // Re-fit only when the pins really change (the points array is rebuilt on every render).
+  const key = JSON.stringify([hotel.lat, hotel.lng, focus?.lat, focus?.lng, ...points.map((p) => [p.lat, p.lng])])
   useEffect(() => {
-    const all = [[hotel.lat, hotel.lng] as [number, number], ...points.map((p) => [p.lat, p.lng] as [number, number])]
+    const all: [number, number][] = [[hotel.lat, hotel.lng], ...points.map((p) => [p.lat, p.lng] as [number, number])]
     if (focus) all.push([focus.lat, focus.lng])
-    if (all.length === 1) map.setView(all[0], 15)
-    else map.fitBounds(L.latLngBounds(all), { padding: [40, 40], maxZoom: 15 })
-  }, [map, hotel, points, focus])
+    // No animation for the first fit: leaving the page mid-animation made Leaflet throw
+    // "Cannot read properties of undefined (reading '_leaflet_pos')".
+    const animate = !first.current
+    first.current = false
+    if (all.length === 1) map.setView(all[0], 15, { animate })
+    else map.fitBounds(L.latLngBounds(all), { padding: [40, 40], maxZoom: 15, animate })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, key])
   return null
 }
 

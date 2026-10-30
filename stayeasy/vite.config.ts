@@ -40,7 +40,15 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/__partner\//],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Big parts only some guests need (voucher PDF, maps) are cached when first used,
+        // not downloaded by every new visitor.
+        globIgnores: ['**/voucherPdf-*.js', '**/html2canvas-*.js', '**/index.es-*.js', '**/purify.es-*.js', '**/HotelMap-*.js', '**/Biz*.js', '**/biz*.js'],
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'app-chunks', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
             handler: 'CacheFirst',

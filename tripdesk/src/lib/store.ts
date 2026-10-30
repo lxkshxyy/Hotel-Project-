@@ -5,7 +5,7 @@ import { agentQuote, markupFor } from '@stayeasy/lib/agentRates'
 import { bookedNights } from '@stayeasy/lib/booked'
 import { bookingId } from '@stayeasy/lib/format'
 import { availability, cancelTerms } from '@stayeasy/lib/quote'
-import { site } from '../config/site'
+import { onLocalMachine, site } from '../config/site'
 import { isDemoMode, supabase } from './supabase'
 import type { Agency, AgentBooking, Customer, LedgerEntry, Quote, Staff } from './types'
 
@@ -64,11 +64,13 @@ export function getHotels(): Promise<Hotel[]> {
     if (isDemoMode || !supabase) {
       // Partner hotels listed through InnDesk, when StayEasy is running on this computer.
       let partners: Hotel[] = []
-      try {
-        const r = await fetch(`${site.mainSiteUrl}/__partner/listings`)
-        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) partners = ((await r.json()) as { hotel: Hotel }[]).map((x) => x.hotel).filter((h) => h?.rooms?.length)
-      } catch {
-        /* StayEasy not running: bundled hotels only */
+      if (onLocalMachine) {
+        try {
+          const r = await fetch(`${site.mainSiteUrl}/__partner/listings`)
+          if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) partners = ((await r.json()) as { hotel: Hotel }[]).map((x) => x.hotel).filter((h) => h?.rooms?.length)
+        } catch {
+          /* StayEasy not running: bundled hotels only */
+        }
       }
       return [...bundledHotels, ...partners]
     }
@@ -359,6 +361,7 @@ export async function cancelBooking(a: Agency, b: AgentBooking): Promise<AgentBo
 
 /** Demo mode: let a partner hotel's owner see the booking in InnDesk (via StayEasy on this computer). */
 function reportToHotel(b: AgentBooking) {
+  if (!onLocalMachine) return
   fetch(`${site.mainSiteUrl}/__partner/bookings`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...b, guest_name: `${b.guest_name} (via agent)` }) }).catch(() => {})
 }
 

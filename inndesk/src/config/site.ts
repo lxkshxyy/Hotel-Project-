@@ -3,15 +3,29 @@
  * Values in [BRACKETS] are placeholders the client must confirm before launch.
  */
 const mapTilerKey = (import.meta.env.VITE_MAPTILER_KEY as string | undefined)?.trim()
+const env = (k: string) => ((import.meta.env[k] as string | undefined) ?? '').trim()
+
+/** True when InnDesk runs on this computer or the local network (where StayEasy's local publish channel lives). */
+export const onLocalMachine = typeof window === 'undefined' || /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(window.location.hostname)
+
+/**
+ * The StayEasy address when VITE_MAIN_SITE_URL isn't set: on this computer the local StayEasy (port 5173);
+ * on a real domain the same domain without "partner." (partner.yourdomain.com -> yourdomain.com).
+ */
+function guessMainSite() {
+  if (onLocalMachine) return 'http://localhost:5173'
+  return `${window.location.protocol}//${window.location.hostname.replace(/^(partners?|inndesk|hotels?)\./, '')}`
+}
 
 export const site = {
   name: 'InnDesk',
   tagline: 'The property panel for StayEasy partners',
   marketplace: 'StayEasy',
   /** The customer website that listings publish to. */
-  mainSiteUrl: ((import.meta.env.VITE_MAIN_SITE_URL as string | undefined) || 'http://localhost:5173').replace(/\/$/, ''),
-  supportPhone: '+91 [PARTNER SUPPORT NUMBER]',
-  supportEmail: 'partners@[yourdomain].com',
+  mainSiteUrl: (env('VITE_MAIN_SITE_URL') || guessMainSite()).replace(/\/$/, ''),
+  /** Partner support contacts (VITE_SUPPORT_PHONE / VITE_SUPPORT_EMAIL). Empty = hidden. */
+  supportPhone: env('VITE_SUPPORT_PHONE'),
+  supportEmail: env('VITE_SUPPORT_EMAIL'),
   /** [CONFIRM] Commission StayEasy keeps on each completed stay, before GST. */
   commissionRate: 0.15,
   /** GST charged on the commission (services by StayEasy to the hotel). */

@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { brandLabel } from '@stayeasy/data/hotels'
 import { agentQuote, type Markup } from '@stayeasy/lib/agentRates'
 import { addDays, inr, plural, shortDate } from '@stayeasy/lib/format'
-import { freeCancelHours, hotelForStay } from '@stayeasy/lib/quote'
+import { cancelTerms, freeCancelHours, hotelForStay } from '@stayeasy/lib/quote'
 import { Notice, Pill, RateSlip, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
@@ -62,6 +62,8 @@ export default function HotelPage() {
     )
   const m = markup ?? markupForHotel(agency, hotel)
   const hours = freeCancelHours(hotel)
+  // Closed already for these dates (e.g. check-in tomorrow morning)?
+  const freeNow = hours !== null && cancelTerms({ status: 'confirmed', check_in: s.checkIn, pay_mode: 'hotel', amount: 0 }, hotel).free
   const photos = hotel.photos ?? []
   const guests = s.adults + s.children
 
@@ -122,7 +124,7 @@ export default function HotelPage() {
             </div>
             <div>
               <dt className="text-muted">Cancellation</dt>
-              <dd className={`font-bold ${hours === null ? 'text-alert' : 'text-earn'}`}>{hours === null ? 'Non-refundable' : `Free till ${shortDate(addDays(s.checkIn, -Math.max(1, Math.ceil(hours / 24))))}`}</dd>
+              <dd className={`font-bold ${!freeNow ? 'text-alert' : 'text-earn'}`}>{hours === null ? 'Non-refundable' : !freeNow ? 'Non-refundable for these dates' : `Free till ${shortDate(addDays(s.checkIn, -Math.max(1, Math.ceil(hours / 24))))}`}</dd>
             </div>
           </dl>
         </div>
@@ -182,7 +184,7 @@ export default function HotelPage() {
                         children: s.children,
                         netTotal: q.netTotal,
                         sellingTotal: q.sellingTotal,
-                        freeCancel: hours === null ? 'Non-refundable' : `Free cancellation until ${hours} hours before check-in`,
+                        freeCancel: !freeNow ? 'Non-refundable' : `Free cancellation until ${hours} hours before check-in`,
                       })
                     }
                   >

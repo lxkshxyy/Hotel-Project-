@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { site } from '../config/site'
+import { onLocalMachine, site } from '../config/site'
 import { dataUrlToBlob } from './images'
 import { blockers, makeSlug, toHotel } from './listing'
 import { isDemoMode, supabase } from './supabase'
@@ -16,6 +16,8 @@ import type { Listing, Owner, Reservation } from './types'
 const EVT = 'inndesk-data'
 const changed = () => window.dispatchEvent(new Event(EVT))
 const CHANNEL = `${site.mainSiteUrl}/__partner`
+/** The local publish channel only exists when both sites run on this computer (no database). */
+const localChannel = onLocalMachine
 
 /* ---------------- IndexedDB (local mode) ---------------- */
 
@@ -113,6 +115,12 @@ async function pushToStayEasy(l: Listing): Promise<Listing['sync']> {
   const published = l.status === 'live'
   try {
     if (isDemoMode || !supabase) {
+      if (!localChannel)
+        return {
+          ok: false,
+          at,
+          message: `Demo mode: this listing is saved in this browser only. To show it on ${site.marketplace}, connect the shared database (Supabase keys).`,
+        }
       const r = await fetch(`${CHANNEL}/listings/${l.slug}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -169,8 +177,9 @@ export async function retrySync(input: Listing) {
 /** Drafts are deleted outright; a published listing is taken off StayEasy first. */
 export async function deleteListing(l: Listing) {
   if (l.slug && l.status !== 'draft') {
-    if (isDemoMode || !supabase) await fetch(`${CHANNEL}/listings/${l.slug}?owner=${encodeURIComponent(l.ownerId)}`, { method: 'DELETE' }).catch(() => null)
-    else await supabase.from('hotels').update({ published: false }).eq('slug', l.slug)
+    if (isDemoMode || !supabase) {
+      if (localChannel) await fetch(`${CHANNEL}/listings/${l.slug}?owner=${encodeURIComponent(l.ownerId)}`, { method: 'DELETE' }).catch(() => null)
+    } else await supabase.from('hotels').update({ published: false }).eq('slug', l.slug)
   }
   if (isDemoMode || !supabase) await idb('readwrite', (s) => s.delete(l.id))
   else await supabase.from('partner_listings').delete().eq('id', l.id)
@@ -206,6 +215,8 @@ export async function checkContactCode(channel: 'email' | 'phone', to: string, c
 export async function listReservations(slugs: string[]): Promise<{ list: Reservation[]; offline: boolean }> {
   if (!slugs.length) return { list: [], offline: false }
   if (isDemoMode || !supabase) {
+    // Hosted demo without a database: bookings from StayEasy can't reach this browser.
+    if (!localChannel) return { list: [], offline: false }
     try {
       const r = await fetch(`${CHANNEL}/bookings?slugs=${slugs.map(encodeURIComponent).join(',')}`)
       if (!r.ok) return { list: [], offline: true }
@@ -239,6 +250,7 @@ export const setMark = (id: string, m: DeskMark | null) => {
 
 export async function channelOnline() {
   if (!isDemoMode && supabase) return true
+  if (!localChannel) return false
   try {
     const r = await fetch(`${CHANNEL}/health`)
     return r.ok

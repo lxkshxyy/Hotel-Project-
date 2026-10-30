@@ -257,9 +257,7 @@ export default function Landing() {
           <span>
             {site.name}, {site.tagline.toLowerCase()}.
           </span>
-          <span>
-            {site.supportPhone}, {site.supportEmail}
-          </span>
+          {(site.supportPhone || site.supportEmail) && <span>{[site.supportPhone, site.supportEmail].filter(Boolean).join(', ')}</span>}
         </div>
       </footer>
     </div>

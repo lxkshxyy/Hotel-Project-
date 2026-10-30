@@ -15,7 +15,7 @@ import { BookingError, confirmPayment, createBooking, getHotel, getPoints, listB
 import { clubStatus, clubTiers, isAtLeast, type ClubTier } from '../lib/club'
 import { addDays, inr, nightsBetween, parseISODate, plural, shortDate } from '../lib/format'
 import { onlinePayments, openRazorpay } from '../lib/payments'
-import { checkCoupon, freeCancelHours, quote } from '../lib/quote'
+import { cancelTerms, checkCoupon, freeCancelHours, quote } from '../lib/quote'
 import { readSearch, searchToQuery } from '../lib/search'
 
 interface Form {
@@ -204,6 +204,8 @@ export default function Checkout() {
   const { extras, extrasTotal, grand } = price
   const cancelHours = freeCancelHours(hotel)
   const cancelBy = cancelHours === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil((cancelHours ?? 24) / 24)))
+  // Same rule as the cancel button in My bookings: is the free window still open for these dates?
+  const freeNow = cancelTerms({ status: 'confirmed', check_in: search.checkIn, pay_mode: 'hotel', amount: 0 }, hotel).free
   const cantBook = !canPayAtHotel && !onlinePayments
 
   const name = `${form.first.trim()} ${form.last.trim()}`.trim()
@@ -447,7 +449,7 @@ export default function Checkout() {
                   </a>
                 </div>
                 <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-ink-700">
-                  <li>Room with free cancellation</li>
+                  <li>{freeNow ? 'Room with free cancellation' : 'Non-refundable for these dates'}</li>
                   <li>{breakfastIncluded ? 'Breakfast included' : 'No meals included'}</li>
                   {room.features
                     .filter((f) => !/breakfast/i.test(f))
@@ -456,9 +458,20 @@ export default function Checkout() {
                     ))}
                   {hotel.payAtHotel && <li>Pay at hotel by cash, card or UPI</li>}
                 </ul>
-                <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-leaf-700">
-                  <Check className="h-4 w-4" aria-hidden="true" /> {cancelHours === null ? 'Non-refundable rate' : cancelHours === 0 ? 'Free Cancellation till check-in' : `Free Cancellation till ${cancelHours} hrs before check in`}
-                </p>
+                {freeNow ? (
+                  <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-leaf-700">
+                    <Check className="h-4 w-4" aria-hidden="true" /> {cancelHours === 0 ? 'Free Cancellation till check-in' : `Free Cancellation till ${cancelHours} hrs before check in`}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-sm font-bold text-[#9A6B12]">
+                    {cancelHours === null
+                      ? 'Non-refundable rate: this booking can’t be cancelled for a refund.'
+                      : cancelHours === 0
+                        ? 'Check-in time has already passed, so this booking can’t be cancelled online.'
+                        : `Check-in is less than ${cancelHours} hours away, so the free-cancellation window has already closed. This booking can’t be cancelled online.`}
+                  </p>
+                )}
+                {freeNow && (
                 <div className="mt-3 max-w-md">
                   <div className="flex h-7 overflow-hidden rounded-full text-[11px] font-bold">
                     <span className="flex flex-1 items-center justify-center bg-[#1F8A7A] text-white">100% Refund</span>
@@ -478,6 +491,7 @@ export default function Checkout() {
                     </span>
                   </div>
                 </div>
+                )}
               </div>
             </section>
 
@@ -921,7 +935,7 @@ export default function Checkout() {
                       <p className="text-[13px] text-ink-700">{c.d}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <strong className="text-sm">{inr(c.off(price.roomTotal))} off</strong>
+                      <strong className="text-sm">{c.code === 'LONGSTAY' && nights < 5 ? '5+ nights' : `${inr(c.off(price.roomTotal))} off`}</strong>
                       <button type="button" disabled={!!coupon} onClick={() => tryCoupon(c.code)} className="text-sm font-black text-navy-800 disabled:text-ink-400">
                         {applied ? 'Applied' : 'Apply'}
                       </button>

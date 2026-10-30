@@ -371,13 +371,23 @@ export default function Results() {
           {!all ? (
             <Spinner label="Finding stays" />
           ) : results.length === 0 ? (
-            <div className="card flex flex-col items-center gap-3 p-10 text-center">
-              <strong className="text-lg">No stays match these filters</strong>
-              <p className="text-ink-500">Try removing a filter or searching another city.</p>
-              <button type="button" className="btn-navy" onClick={() => setF(emptyFilters(100000))}>
-                Clear filters
-              </button>
-            </div>
+            inPlace.length === 0 ? (
+              <div className="card flex flex-col items-center gap-3 p-10 text-center">
+                <strong className="text-lg">{search.city ? `No StayEasy stays in ${search.city} for these dates` : 'No stays available for these dates'}</strong>
+                <p className="text-ink-500">Try other dates, or one of the cities we serve.</p>
+                <Link to="/hotels" className="btn-navy no-underline">
+                  See all hotels
+                </Link>
+              </div>
+            ) : (
+              <div className="card flex flex-col items-center gap-3 p-10 text-center">
+                <strong className="text-lg">No stays match these filters</strong>
+                <p className="text-ink-500">Try removing a filter or searching another city.</p>
+                <button type="button" className="btn-navy" onClick={() => setF(emptyFilters(100000))}>
+                  Clear filters
+                </button>
+              </div>
+            )
           ) : (
             <AnimatePresence mode="popLayout">
               {results.map((h) => (

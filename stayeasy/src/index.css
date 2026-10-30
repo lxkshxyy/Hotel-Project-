@@ -134,3 +134,9 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Map labels, pop-ups and zoom buttons use the site font instead of Leaflet's own. */
+.leaflet-container,
+.leaflet-container .leaflet-bar a {
+  font-family: var(--font-sans);
+}

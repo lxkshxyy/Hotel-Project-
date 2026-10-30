@@ -25,18 +25,24 @@ export default function Help() {
           </details>
         ))}
       </div>
-      <section className="rounded-2xl bg-pine-900 p-6 text-white">
-        <h2 className="text-xl font-bold">Partner support</h2>
-        <p className="mt-1 text-pine-100">Monday to Saturday, 9 AM to 8 PM.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <a href={`tel:${site.supportPhone.replace(/[^\d+]/g, '')}`} className="btn-brass">
-            <Phone className="h-4 w-4" aria-hidden="true" /> {site.supportPhone}
-          </a>
-          <a href={`mailto:${site.supportEmail}`} className="btn bg-white/10 text-white hover:bg-white/20">
-            <Mail className="h-4 w-4" aria-hidden="true" /> {site.supportEmail}
-          </a>
-        </div>
-      </section>
+      {(site.supportPhone || site.supportEmail) && (
+        <section className="rounded-2xl bg-pine-900 p-6 text-white">
+          <h2 className="text-xl font-bold">Partner support</h2>
+          <p className="mt-1 text-pine-100">Monday to Saturday, 9 AM to 8 PM.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {site.supportPhone && (
+              <a href={`tel:${site.supportPhone.replace(/[^\d+]/g, '')}`} className="btn-brass">
+                <Phone className="h-4 w-4" aria-hidden="true" /> {site.supportPhone}
+              </a>
+            )}
+            {site.supportEmail && (
+              <a href={`mailto:${site.supportEmail}`} className="btn bg-white/10 text-white hover:bg-white/20">
+                <Mail className="h-4 w-4" aria-hidden="true" /> {site.supportEmail}
+              </a>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

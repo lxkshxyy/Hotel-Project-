@@ -45,6 +45,8 @@ const norm = (e: string) => e.trim().toLowerCase()
 const demoId = (email: string) => `owner-${norm(email)}`
 
 async function sha(s: string) {
+  // Browsers only allow this on secure (https://) addresses.
+  if (!globalThis.crypto?.subtle) throw new Error('Please open InnDesk on its secure https:// address to sign in.')
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }

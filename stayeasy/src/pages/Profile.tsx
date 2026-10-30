@@ -134,7 +134,7 @@ export default function Profile() {
     flash('Profile saved.')
   }
 
-  const banner = cities.find((c) => c.name === draft.city)?.image ?? '/destinations/new-delhi.jpg'
+  const banner = cities.find((c) => c.name === draft.city)?.image ?? '/destinations/new-delhi.webp'
   const set = <K extends keyof P>(k: K, v: P[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const setPref = <K extends keyof P['prefs']>(k: K, v: P['prefs'][K]) => setDraft((d) => ({ ...d, prefs: { ...d.prefs, [k]: v } }))
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])

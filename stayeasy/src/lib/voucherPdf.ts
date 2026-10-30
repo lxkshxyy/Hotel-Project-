@@ -7,6 +7,7 @@ import { brandLabel } from '../data/hotels'
 import { kmLabel, landmarksNear } from '../data/landmarks'
 import type { Booking, Hotel } from '../data/types'
 import { addDays, parseISODate, ratingWord } from './format'
+import { cancelTerms, freeCancelHours } from './quote'
 
 /*
  * Booking voucher as a real A4 PDF (drawn with jsPDF, not a screenshot of the page),
@@ -156,7 +157,7 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
   } else {
     hy += text(b.hotel_city, hx, hy, { size: 9, maxW: hw }) + 2
   }
-  text(`Front desk & support: ${site.supportPhone}`, hx, hy, { size: 8.5, color: C.grey, maxW: hw })
+  if (site.supportPhone) text(`Front desk & support: ${site.supportPhone}`, hx, hy, { size: 8.5, color: C.grey, maxW: hw })
   // QR
   doc.addImage(qr, 'PNG', W - M - 29, y, 29, 29)
   text('Show at check-in', W - M - 14.5, y + 33, { size: 7.5, color: C.grey, align: 'center' })
@@ -229,7 +230,7 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
   ;[
     'Carry a government photo ID (Aadhaar, passport, driving licence or voter ID) for every adult guest.',
     `Show booking ID ${b.id} or the QR code on this voucher at the front desk.`,
-    `Room not as promised? Call ${site.supportPhone} — we fix it within 30 minutes or the night is free.`,
+    `Room not as promised? ${site.supportPhone ? `Call ${site.supportPhone}` : 'Tell the front desk'} — we fix it within 30 minutes or the night is free.`,
   ].forEach((x, i) => {
     ensure(7)
     y += text(`${i + 1}.  ${x}`, M, y, { size: 9, maxW: W - 2 * M }) + 2
@@ -266,22 +267,35 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
   }
 
   section('Cancellation policy')
-  const deadline = addDays(b.check_in, -1)
+  // Same rule as the website: the hotel's own window (partner hotels can differ), and a booking made
+  // after the window closed can't be cancelled for a refund.
+  const hours = hotel ? freeCancelHours(hotel) : site.freeCancelHours
+  const refundable = hours !== null && cancelTerms({ ...b, status: 'confirmed' }, hotel, new Date(b.created_at).getTime()).free
+  const deadline = hours ? addDays(b.check_in, -Math.ceil(hours / 24)) : b.check_in
+  const cancelHow = `Cancel from My bookings on ${window.location.host}${site.supportPhone ? ` or call ${site.supportPhone}` : ''}.`
   ensure(22)
   const half = (W - 2 * M) / 2
-  doc.setFillColor('#1F8A7A')
-  doc.rect(M, y, half, 6, 'F')
-  doc.setFillColor('#FFF1D6')
-  doc.rect(M + half, y, half, 6, 'F')
-  text('100% refund', M + half / 2, y + 4.1, { size: 8, bold: true, color: '#FFFFFF', align: 'center' })
-  text('Non-refundable', M + half * 1.5, y + 4.1, { size: 8, bold: true, color: '#9A6B12', align: 'center' })
-  text('Now', M, y + 10, { size: 7.5, color: C.grey })
-  text(`${day(deadline)}, ${site.checkInTime}`, M + half, y + 10, { size: 7.5, bold: true, align: 'center' })
+  if (refundable) {
+    doc.setFillColor('#1F8A7A')
+    doc.rect(M, y, half, 6, 'F')
+    doc.setFillColor('#FFF1D6')
+    doc.rect(M + half, y, half, 6, 'F')
+    text('100% refund', M + half / 2, y + 4.1, { size: 8, bold: true, color: '#FFFFFF', align: 'center' })
+    text('Non-refundable', M + half * 1.5, y + 4.1, { size: 8, bold: true, color: '#9A6B12', align: 'center' })
+    text('Now', M, y + 10, { size: 7.5, color: C.grey })
+    text(`${day(deadline)}, ${site.checkInTime}`, M + half, y + 10, { size: 7.5, bold: true, align: 'center' })
+  } else {
+    doc.setFillColor('#FFF1D6')
+    doc.rect(M, y, 2 * half, 6, 'F')
+    text('Non-refundable', M + half, y + 4.1, { size: 8, bold: true, color: '#9A6B12', align: 'center' })
+  }
   text(`Check-in ${day(b.check_in)}`, W - M, y + 10, { size: 7.5, color: C.grey, align: 'right' })
   y += 15
   y +=
     text(
-      `Free cancellation until ${site.freeCancelHours} hours before check-in (${day(deadline)}, ${site.checkInTime}). After that the first night is charged, and no-shows are charged in full. Cancel from My bookings on ${window.location.host} or call ${site.supportPhone}.`,
+      refundable
+        ? `Free cancellation until ${hours === 0 ? 'check-in' : `${hours} hours before check-in`} (${day(deadline)}, ${site.checkInTime}). After that the first night is charged, and no-shows are charged in full. ${cancelHow}`
+        : `${hours === null ? 'This is a non-refundable rate.' : 'This booking was made after the free-cancellation window closed.'} It can't be cancelled for a refund, and no-shows are charged in full.`,
       M,
       y,
       { size: 9, maxW: W - 2 * M },
@@ -325,7 +339,7 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
     doc.setPage(p)
     doc.setDrawColor(C.line)
     doc.line(M, H - 13, W - M, H - 13)
-    text(`${site.name}  ·  ${site.supportPhone}  ·  ${site.supportEmail}`, M, H - 8, { size: 7.5, color: C.grey })
+    text([site.name, site.supportPhone, site.supportEmail].filter(Boolean).join('  ·  '), M, H - 8, { size: 7.5, color: C.grey })
     text(`Computer-generated voucher, no signature needed  ·  Page ${p} of ${pages}`, W - M, H - 8, { size: 7.5, color: C.grey, align: 'right' })
   }
   return doc

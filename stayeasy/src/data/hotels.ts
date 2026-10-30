@@ -135,14 +135,14 @@ export const hotels: Hotel[] = seeds.map((s) => ({
 }))
 
 export const cities = [
-  { name: 'New Delhi', hue: 218, image: '/destinations/new-delhi.jpg' },
-  { name: 'Mumbai', hue: 28, image: '/destinations/mumbai.jpg' },
-  { name: 'Bengaluru', hue: 130, image: '/destinations/bengaluru.jpg' },
-  { name: 'Goa', hue: 196, image: '/destinations/goa.jpg' },
-  { name: 'Jaipur', hue: 350, image: '/destinations/jaipur.jpg' },
-  { name: 'Hyderabad', hue: 262, image: '/destinations/hyderabad.jpg' },
-  { name: 'Pune', hue: 98, image: '/destinations/pune.jpg' },
-  { name: 'Kolkata', hue: 0, image: '/destinations/kolkata.jpg' },
+  { name: 'New Delhi', hue: 218, image: '/destinations/new-delhi.webp' },
+  { name: 'Mumbai', hue: 28, image: '/destinations/mumbai.webp' },
+  { name: 'Bengaluru', hue: 130, image: '/destinations/bengaluru.webp' },
+  { name: 'Goa', hue: 196, image: '/destinations/goa.webp' },
+  { name: 'Jaipur', hue: 350, image: '/destinations/jaipur.webp' },
+  { name: 'Hyderabad', hue: 262, image: '/destinations/hyderabad.webp' },
+  { name: 'Pune', hue: 98, image: '/destinations/pune.webp' },
+  { name: 'Kolkata', hue: 0, image: '/destinations/kolkata.webp' },
 ]
 
 export const brands = [

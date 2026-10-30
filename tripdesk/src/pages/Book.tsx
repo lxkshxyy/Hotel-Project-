@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { agentQuote, type Markup } from '@stayeasy/lib/agentRates'
 import { inr, plural, shortDate } from '@stayeasy/lib/format'
-import { freeCancelHours } from '@stayeasy/lib/quote'
+import { cancelTerms, freeCancelHours } from '@stayeasy/lib/quote'
 import { Notice, RateSlip, Spinner } from '../components/ui'
 import { useSession } from '../context/Session'
 import { useCustomers, useHotels, useWallet } from '../lib/hooks'
@@ -51,6 +51,7 @@ export default function Book() {
   }
   const short = q.netTotal - wallet.available
   const hours = freeCancelHours(hotel)
+  const freeNow = hours !== null && cancelTerms({ status: 'confirmed', check_in: s.checkIn, pay_mode: 'hotel', amount: 0 }, hotel).free
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -166,7 +167,7 @@ export default function Book() {
             <span className="text-[15px]">
               {shortDate(s.checkIn)} to {shortDate(s.checkOut)}, {plural(q.nights, 'night')}, {plural(q.guests, 'guest')}
             </span>
-            <span className={`text-sm font-semibold ${hours === null ? 'text-alert' : 'text-earn'}`}>{hours === null ? 'Non-refundable' : `Free cancellation until ${hours} hours before check-in`}</span>
+            <span className={`text-sm font-semibold ${!freeNow ? 'text-alert' : 'text-earn'}`}>{hours === null ? 'Non-refundable' : !freeNow ? 'Non-refundable for these dates (free cancellation has closed)' : `Free cancellation until ${hours} hours before check-in`}</span>
           </div>
           <RateSlip net={q.netTotal} markup={q.markupAmount} selling={q.sellingTotal} size="md" note={`incl. ${inr(q.netTax)} GST`} />
           <div className="card flex items-center justify-between gap-3 p-4 text-[15px]">

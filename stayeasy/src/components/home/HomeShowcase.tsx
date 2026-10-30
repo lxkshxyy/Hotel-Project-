@@ -19,14 +19,14 @@ const tabs: Tab[] = ['All Offers', 'Hotels', 'Long Stays', 'Members', 'Business'
  * add new ones only when the matching coupon or price rule exists.
  */
 const offers: { tab: Exclude<Tab, 'All Offers'>; title: string; text: string; img: string; to: string }[] = [
-  { tab: 'Hotels', title: 'For your first getaway:', text: `Use code FIRSTSTAY for flat ${inr(site.firstStayDiscount)} off your first booking.`, img: '/destinations/goa.jpg', to: q({}, 'Goa') },
+  { tab: 'Hotels', title: 'For your first getaway:', text: `Use code FIRSTSTAY for flat ${inr(site.firstStayDiscount)} off your first booking.`, img: '/destinations/goa.webp', to: q({}, 'Goa') },
   { tab: 'Long Stays', title: 'Staying 5 nights or more?', text: 'Use code LONGSTAY for 10% off long stays in every city.', img: '/hotels/csfc/room-4.webp', to: q() },
   { tab: 'Members', title: 'Members save more:', text: 'Sign in for an extra 5% off every booking and earn Club points.', img: '/hotels/orange-oasis/room-1.webp', to: '/club' },
   { tab: 'Hotels', title: 'StayEasy Prime stays:', text: `Pools, breakfast and bigger rooms from ${from((h) => h.brand === 'Prime')} a night.`, img: '/hotels/prime-oasis-blue/exterior-1.webp', to: q({ brand: 'Prime' }) },
   { tab: 'Business', title: 'Travelling for work?', text: 'Corporate rates 12% below public prices, GST invoices and team booking.', img: '/hotels/red-vibe/banquet-1.webp', to: '/business' },
-  { tab: 'Hotels', title: 'Heritage Jaipur:', text: `Stays near Hawa Mahal and the Old City from ${from((h) => h.city === 'Jaipur')} a night.`, img: '/destinations/jaipur.jpg', to: q({}, 'Jaipur') },
+  { tab: 'Hotels', title: 'Heritage Jaipur:', text: `Stays near Hawa Mahal and the Old City from ${from((h) => h.city === 'Jaipur')} a night.`, img: '/destinations/jaipur.webp', to: q({}, 'Jaipur') },
   { tab: 'Hotels', title: 'Pay at hotel:', text: 'Reserve now with no prepayment on most stays. Pay by cash, card or UPI.', img: '/hotels/red-vibe/lobby-1.webp', to: q() },
-  { tab: 'Long Stays', title: 'Work-from-anywhere weeks:', text: 'Work desks, fast Wi-Fi and LONGSTAY savings in Bengaluru and Hyderabad.', img: '/destinations/bengaluru.jpg', to: q({}, 'Bengaluru') },
+  { tab: 'Long Stays', title: 'Work-from-anywhere weeks:', text: 'Work desks, fast Wi-Fi and LONGSTAY savings in Bengaluru and Hyderabad.', img: '/destinations/bengaluru.webp', to: q({}, 'Bengaluru') },
 ]
 
 export function OffersPanel() {

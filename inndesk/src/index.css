@@ -142,6 +142,7 @@
   }
 }
 
-.leaflet-container {
+.leaflet-container,
+.leaflet-container .leaflet-bar a {
   font-family: var(--font-sans);
 }
