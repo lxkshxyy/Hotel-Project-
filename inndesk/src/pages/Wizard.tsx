@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
@@ -516,31 +516,54 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
   )
 }
 
+/** How many tiles fit in a row at the current width (matches the grid below). */
+function useColumns() {
+  const get = () => (typeof window === 'undefined' ? 3 : window.innerWidth >= 1024 ? 3 : window.innerWidth >= 640 ? 2 : 1)
+  const [n, setN] = useState(get)
+  useEffect(() => {
+    const on = () => setN(get())
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  return n
+}
+
 function Amenities({ l, set }: { l: Listing; set: Set }) {
-  const toggle = (id: string) => set((x) => ({ ...x, amenities: x.amenities.includes(id) ? x.amenities.filter((a) => a !== id) : [...x.amenities, id] }))
+  const cols = useColumns()
+  const [justTicked, setJustTicked] = useState('')
+  const toggle = (id: string) => {
+    const on = l.amenities.includes(id)
+    if (!on) setJustTicked(id)
+    set((x) => ({ ...x, amenities: on ? x.amenities.filter((a) => a !== id) : [...x.amenities, id] }))
+  }
   return (
     <Section title="Amenities" intro={`Tick everything guests can use. Guests filter by these on ${site.marketplace}.`}>
       {amenityGroups.map((g) => {
         const ticked = g.items.filter((a) => l.amenities.includes(a.id)).length
+        // Tiles stay in their rows; the details of ticked tiles open under the row they sit in.
+        const rows = Array.from({ length: Math.ceil(g.items.length / cols) }, (_, i) => g.items.slice(i * cols, i * cols + cols))
         return (
-          <fieldset key={g.group} className="flex flex-col gap-2.5">
+          <fieldset key={g.group} className="flex flex-col gap-2">
             <legend className="mb-2.5 flex items-baseline gap-2 text-[20px] font-bold text-ink-900">
               {g.group}
               {ticked > 0 && <span className="text-[13px] font-semibold text-live">{ticked} selected</span>}
             </legend>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {g.items.map((a) => {
-                const on = l.amenities.includes(a.id)
-                return (
-                  <Fragment key={a.id}>
-                    <Chip on={on} onClick={() => toggle(a.id)}>
-                      {a.label}
-                    </Chip>
-                    <AnimatePresence initial={false}>{on && hasExtras(a.id) && <AmenityExtrasBox key={`x-${a.id}`} l={l} set={set} id={a.id} label={a.label} />}</AnimatePresence>
-                  </Fragment>
-                )
-              })}
-            </div>
+            {rows.map((row, ri) => (
+              <div key={ri} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {row.map((a) => (
+                  <Chip key={a.id} on={l.amenities.includes(a.id)} onClick={() => toggle(a.id)}>
+                    {a.label}
+                  </Chip>
+                ))}
+                <AnimatePresence initial={false}>
+                  {row
+                    .filter((a) => l.amenities.includes(a.id) && hasExtras(a.id))
+                    .map((a) => (
+                      <AmenityExtrasBox key={`x-${a.id}`} l={l} set={set} id={a.id} label={a.label} autoOpen={justTicked === a.id} />
+                    ))}
+                </AnimatePresence>
+              </div>
+            ))}
           </fieldset>
         )
       })}

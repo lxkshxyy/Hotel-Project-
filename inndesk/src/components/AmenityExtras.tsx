@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronDown, Clock, ImagePlus, Minus, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, CircleAlert, Clock, ImagePlus, Minus, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { amenityDetails, amenityForms, formIntro, poolDepths, weekDays, type AmenityForm, type DetailField, type FormField } from '../data/amenityDetails'
 import { uid } from '../lib/format'
@@ -64,15 +64,18 @@ export function MultiSelect({ label, options, value, onChange }: { label: string
 
 /* ---------------- the grey box under a ticked tile ---------------- */
 
+export const hasForm = (id: string) => !!amenityForms[id]
+
 export function hasExtras(id: string) {
   return !!amenityDetails[id] || !!amenityForms[id]
 }
 
-export function AmenityExtrasBox({ l, set, id, label }: { l: Listing; set: Set; id: string; label: string }) {
+export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: Listing; set: Set; id: string; label: string; autoOpen?: boolean }) {
   const fields = amenityDetails[id]
   const form = amenityForms[id]
-  const [editing, setEditing] = useState<AmenityEntry | 'new' | null>(null)
   const entries = l.amenityEntries?.[id] ?? []
+  // Ticking an amenity with its own form opens the form straight away (like answering Yes).
+  const [editing, setEditing] = useState<AmenityEntry | 'new' | null>(() => (autoOpen && form && !entries.length ? 'new' : null))
   const setDetail = (f: DetailField, v: string | string[]) => set((x) => ({ ...x, amenityDetails: { ...x.amenityDetails, [id]: { ...x.amenityDetails?.[id], [f.id]: v } } }))
 
   return (
@@ -180,15 +183,21 @@ function AmenityFormModal({ form, entry, l, onClose, onSave }: { form?: AmenityF
   const [tried, setTried] = useState(false)
   const [photoErr, setPhotoErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const close = useRef(onClose)
-  close.current = onClose
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const start = useRef('')
+  const dirty = () => JSON.stringify(d) !== start.current
+  const tryClose = () => (dirty() ? setConfirmLeave(true) : onClose())
+  const close = useRef(tryClose)
+  close.current = tryClose
 
   useEffect(() => {
     if (!open || !form) return
     setTried(false)
     setPhotoErr('')
-    if (entry === 'new') setD({ values: { name: form.title }, photos: [] })
-    else if (entry) setD({ values: { ...entry.values }, photos: entry.photoIds.map((pid) => ({ id: pid, url: l.photos.find((p) => p.id === pid)?.url ?? '' })).filter((p) => p.url) })
+    setConfirmLeave(false)
+    const init: Draft = entry === 'new' ? { values: { name: form.title }, photos: [] } : entry ? { values: { ...entry.values }, photos: entry.photoIds.map((pid) => ({ id: pid, url: l.photos.find((p) => p.id === pid)?.url ?? '' })).filter((p) => p.url) } : { values: {}, photos: [] }
+    setD(init)
+    start.current = JSON.stringify(init)
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && close.current()
     document.addEventListener('keydown', esc)
     const prev = document.body.style.overflow
@@ -384,10 +393,10 @@ function AmenityFormModal({ form, entry, l, onClose, onSave }: { form?: AmenityF
   return (
     <AnimatePresence>
       {open && form && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-[100] flex items-end justify-center bg-pine-950/60 sm:items-center sm:p-4">
-          <motion.div role="dialog" aria-modal="true" aria-labelledby="af-h" initial={{ y: 24 }} animate={{ y: 0 }} exit={{ y: 24 }} onClick={(e) => e.stopPropagation()} className="flex max-h-[94dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={tryClose} className="fixed inset-0 z-[100] flex items-end justify-center bg-pine-950/60 sm:items-center sm:p-4">
+          <motion.div role="dialog" aria-modal="true" aria-labelledby="af-h" initial={{ y: 24 }} animate={{ y: 0 }} exit={{ y: 24 }} onClick={(e) => e.stopPropagation()} className="relative flex max-h-[94dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl">
             <div className="relative border-b border-line px-5 pt-5 pb-3 sm:px-6">
-              <button type="button" aria-label="Close" onClick={onClose} className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
+              <button type="button" aria-label="Close" onClick={tryClose} className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
               <h2 id="af-h" className="pr-10 text-[26px] font-black text-ink-900">
@@ -444,13 +453,41 @@ function AmenityFormModal({ form, entry, l, onClose, onSave }: { form?: AmenityF
               </div>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 sm:px-6">
-              <button type="button" onClick={onClose} className="min-h-11 px-2 text-[15px] font-bold text-pine-800 hover:underline">
+              <button type="button" onClick={tryClose} className="min-h-11 px-2 text-[15px] font-bold text-pine-800 hover:underline">
                 Cancel
               </button>
               <button type="button" onClick={save} disabled={busy} className="btn-brass min-h-11 px-6">
                 Save &amp; Close
               </button>
             </div>
+            {confirmLeave && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-pine-950/40 p-4" onClick={(e) => e.stopPropagation()}>
+                <div role="alertdialog" aria-modal="true" aria-labelledby="leave-h" className="relative w-full max-w-[360px] rounded-xl bg-white p-5 shadow-lift">
+                  <button type="button" aria-label="Keep editing" onClick={() => setConfirmLeave(false)} className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <div className="flex gap-3 pr-6">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass-500 text-white">
+                      <CircleAlert className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <strong id="leave-h" className="block text-[16px] text-ink-900">
+                        You have unsaved changes
+                      </strong>
+                      <span className="text-[13px] text-ink-500">Leaving now will discard your unsaved changes</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button type="button" autoFocus onClick={() => setConfirmLeave(false)} className="btn-ghost min-h-10">
+                      Cancel
+                    </button>
+                    <button type="button" onClick={onClose} className="btn-brass min-h-10">
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}
