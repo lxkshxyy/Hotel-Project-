@@ -404,8 +404,9 @@ export default function Checkout() {
                       <strong className="block">Add Early Check-in</strong>
                       <span className="text-sm text-ink-700">{earlyOpt ? `From ${earlyOpt.time} · ${inr(extras.find((x) => x.label.startsWith('Early'))!.amount)}` : `Starting ${site.earlyCheckIn[0].time}`}</span>
                     </span>
-                    <select value={early} onChange={(e) => setEarly(e.target.value)} aria-label="Early check-in time" className="rounded-lg border border-line-strong bg-white px-2 py-2 text-sm font-bold text-navy-800">
-                      <option value="">Select time +</option>
+                    <select value={early} onChange={(e) => setEarly(e.target.value === 'none' ? '' : e.target.value)} aria-label="Early check-in time" className="rounded-lg border border-line-strong bg-white px-2 py-2 text-sm font-bold text-navy-800">
+                      <option value="" disabled hidden>Select time +</option>
+                      {early && <option value="none">No early check-in</option>}
                       {site.earlyCheckIn.map((o) => (
                         <option key={o.time} value={o.time}>
                           {o.time} · {earlyFee(o) === 0 ? 'Free (Club)' : inr(earlyFee(o))}
@@ -420,8 +421,9 @@ export default function Checkout() {
                       </strong>
                       <span className="text-sm text-ink-700">{lateOpt ? `Until ${lateOpt.time} · ${inr(extras.find((x) => x.label.startsWith('Late'))!.amount)}` : `Until ${site.lateCheckOut[site.lateCheckOut.length - 1].time}`}</span>
                     </span>
-                    <select value={late} onChange={(e) => setLate(e.target.value)} aria-label="Late check-out time" className="rounded-lg border border-line-strong bg-white px-2 py-2 text-sm font-bold text-navy-800">
-                      <option value="">Select time +</option>
+                    <select value={late} onChange={(e) => setLate(e.target.value === 'none' ? '' : e.target.value)} aria-label="Late check-out time" className="rounded-lg border border-line-strong bg-white px-2 py-2 text-sm font-bold text-navy-800">
+                      <option value="" disabled hidden>Select time +</option>
+                      {late && <option value="none">No late check-out</option>}
                       {site.lateCheckOut.map((o) => (
                         <option key={o.time} value={o.time}>
                           {o.time} · {inr(Math.round(o.share * room.price * search.rooms))}

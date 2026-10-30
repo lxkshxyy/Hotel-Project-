@@ -159,7 +159,7 @@ export default function ReviewsSection({ hotel }: { hotel: Hotel }) {
               All Reviews
             </button>
             <select value={room} onChange={(e) => setRoom(e.target.value)} aria-label="Room type" className="rounded-lg border border-line-strong bg-white px-3 py-2 text-sm">
-              <option value="">Room Type</option>
+              <option value="" disabled hidden>Room Type</option>
               {hotel.rooms.map((r) => (
                 <option key={r.id}>{r.name}</option>
               ))}

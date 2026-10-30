@@ -177,6 +177,30 @@ export async function deleteListing(l: Listing) {
   changed()
 }
 
+/* ---------------- guest contact verification ---------------- */
+
+export const CONTACT_CODE_LENGTH = 4
+const NOT_READY = 'Mobile and email verification isn’t switched on yet. It needs an SMS and email service connected to the live server.'
+
+/**
+ * Sends a one-time code to the guest contact email or mobile on a listing.
+ * Demo mode: nothing is sent and any 4 digits work. Live mode calls the `contact-otp` edge
+ * function, which needs an SMS service (for mobiles) and an email service.
+ */
+export async function sendContactCode(channel: 'email' | 'phone', to: string) {
+  if (isDemoMode || !supabase) return
+  const { error } = await supabase.functions.invoke('contact-otp', { body: { action: 'send', channel, to } })
+  if (error) throw new Error(NOT_READY)
+}
+
+export async function checkContactCode(channel: 'email' | 'phone', to: string, code: string) {
+  if (!new RegExp(`^\\d{${CONTACT_CODE_LENGTH}}$`).test(code)) throw new Error(`Enter the ${CONTACT_CODE_LENGTH}-digit OTP.`)
+  if (isDemoMode || !supabase) return
+  const { data, error } = await supabase.functions.invoke('contact-otp', { body: { action: 'check', channel, to, code } })
+  if (error) throw new Error(NOT_READY)
+  if (!(data as { ok?: boolean } | null)?.ok) throw new Error('That OTP is wrong or has expired. Ask for a new one.')
+}
+
 /* ---------------- reservations ---------------- */
 
 export async function listReservations(slugs: string[]): Promise<{ list: Reservation[]; offline: boolean }> {

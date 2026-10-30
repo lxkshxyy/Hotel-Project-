@@ -60,8 +60,12 @@ export interface Listing {
     channelManager?: boolean | null
     channelManagerName?: string
     landline?: string
-    /** The guest contact email the owner has confirmed. */
+    /** The guest contact email / mobile the owner confirmed with an OTP. */
     emailVerified?: string
+    phoneVerified?: string
+    /** WhatsApp on the same mobile number (default) or a different one. */
+    whatsappSame?: boolean
+    whatsapp?: string
   }
   location: {
     city: string

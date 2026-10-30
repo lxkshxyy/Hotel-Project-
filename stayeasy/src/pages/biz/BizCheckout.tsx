@@ -279,7 +279,7 @@ export default function BizCheckout() {
                               onChange={(e) => setWho((w) => w.map((x, j) => (j === i ? e.target.value : x)))}
                               className="w-full min-w-[180px] rounded-lg border border-line-strong bg-white px-2.5 py-2"
                             >
-                              <option value="">Choose a traveller…</option>
+                              <option value="" disabled hidden>Choose a traveller…</option>
                               <optgroup label={c.name}>
                                 {staff.map((p) => (
                                   <option key={p}>{p}</option>

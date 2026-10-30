@@ -118,7 +118,7 @@ export default function Settings() {
               <label className="label">
                 Add a city
                 <select className="field w-48" value={newCity} onChange={(e) => setNewCity(e.target.value)}>
-                  <option value="">Choose</option>
+                  <option value="" disabled hidden>Choose</option>
                   {cities
                     .filter((c) => !a.cityMarkup[c])
                     .map((c) => (

@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, CircleAlert, ExternalLink, Lightbulb, Lock, MapPin, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Lightbulb, Lock, MapPin, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { CodeBoxes, Popup } from '../components/Auth'
+import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import MapPicker from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
@@ -13,7 +13,7 @@ import { amenityGroups, bedTypes, cancellationOptions, checkTimes, cities, roomA
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { basicsErrors, blockers, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
-import { getListing, publishListing, PublishError, retrySync, saveListing } from '../lib/store'
+import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
 
@@ -77,23 +77,88 @@ function Card({ title, intro, children }: { title: string; intro?: string; child
   )
 }
 
+/** "Verify your email ID / mobile number" pop-up: sends an OTP, then checks it. */
+function VerifyOtp({ target, onClose, onVerified }: { target: { channel: 'email' | 'phone'; to: string } | null; onClose: () => void; onVerified: () => void }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const timer = useCountdown(30)
+  const send = useCallback(async (t: { channel: 'email' | 'phone'; to: string }) => {
+    setError('')
+    try {
+      await sendContactCode(t.channel, t.to)
+      timer.restart()
+    } catch (x) {
+      setError(x instanceof Error ? x.message : 'Couldn’t send the OTP.')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!target) return
+    setCode('')
+    send(target)
+  }, [target, send])
+  const ok = new RegExp(`^\\d{${CONTACT_CODE_LENGTH}}$`).test(code)
+  const shown = target ? (target.channel === 'phone' ? `+91 ${target.to}` : target.to) : ''
+  return (
+    <Popup open={!!target} onClose={onClose} mark={false} title={target?.channel === 'phone' ? 'Verify your mobile number' : 'Verify your email ID'} intro={`Enter the OTP sent to ${shown}`}>
+      <form
+        onSubmit={async (ev) => {
+          ev.preventDefault()
+          if (!target || !ok) return
+          setBusy(true)
+          setError('')
+          try {
+            await checkContactCode(target.channel, target.to, code)
+            onVerified()
+          } catch (x) {
+            setError(x instanceof Error ? x.message : 'That OTP didn’t work.')
+          } finally {
+            setBusy(false)
+          }
+        }}
+        className="flex flex-col gap-4"
+      >
+        {target && <CodeBoxes key={target.channel + target.to} value={code} onChange={setCode} length={CONTACT_CODE_LENGTH} />}
+        {timer.left > 0 ? (
+          <span className="text-[13px] font-semibold text-pine-700/60">Resend OTP in 0:{String(timer.left).padStart(2, '0')} seconds</span>
+        ) : (
+          <button type="button" className="self-start text-[13px] font-bold text-pine-800 hover:underline" onClick={() => target && send(target)}>
+            Resend OTP
+          </button>
+        )}
+        {isDemoMode && <span className="rounded-lg bg-pine-50 px-3 py-2 text-[13px] text-pine-900">Demo mode: nothing is sent, any {CONTACT_CODE_LENGTH} digits work.</span>}
+        {error && (
+          <p role="alert" className="text-[13px] font-semibold text-alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="btn-brass min-h-12" disabled={busy || !ok}>
+          {busy ? 'Checking…' : 'Verify'}
+        </button>
+      </form>
+    </Popup>
+  )
+}
+
+function VerifiedBadge() {
+  return (
+    <span className="flex items-center gap-1 text-[13px] font-bold text-live">
+      <CircleCheck className="h-4 w-4 fill-live text-white" aria-hidden="true" /> Verified
+    </span>
+  )
+}
+
 function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: boolean; onChangeType: () => void }) {
-  const { user } = useSession()
   const b = l.basics
   const up = (p: Partial<Listing['basics']>) => set((x) => ({ ...x, basics: { ...x.basics, ...p } }))
   const e = show ? basicsErrors(l) : {}
-  const len = b.description.trim().length
-  const [verify, setVerify] = useState<'idle' | 'code' | 'later'>('idle')
-  const [code, setCode] = useState('')
-  const verified = !!b.email.trim() && b.emailVerified === b.email.trim().toLowerCase()
-  const startVerify = () => {
-    const em = b.email.trim().toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return
-    // The sign-in email was confirmed at sign-up, so it counts as verified straight away.
-    if (em === user?.email) return up({ emailVerified: em })
-    setCode('')
-    setVerify(isDemoMode ? 'code' : 'later')
-  }
+  const [target, setTarget] = useState<{ channel: 'email' | 'phone'; to: string } | null>(null)
+  const email = b.email.trim().toLowerCase()
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const emailVerified = emailOk && b.emailVerified === email
+  const phoneOk = /^[6-9]\d{9}$/.test(b.phone)
+  const phoneVerified = phoneOk && b.phoneVerified === b.phone
+  const sameWa = b.whatsappSame !== false
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -114,7 +179,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         {b.category !== 'homestay' && (
           <Row id="b-stars" title="Hotel star rating" error={e.stars}>
             <select id="b-stars" className="field" value={b.starsChosen ? String(b.stars) : ''} onChange={(x) => up({ stars: Number(x.target.value), starsChosen: x.target.value !== '' })} aria-invalid={!!e.stars}>
-              <option value="">Select rating</option>
+              <option value="" disabled hidden>Select rating</option>
               <option value="0">Not rated</option>
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -126,7 +191,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         )}
         <Row id="b-built" title="When was the property built?" error={e.yearBuilt}>
           <select id="b-built" className="field" value={b.yearBuilt ?? ''} onChange={(x) => up({ yearBuilt: Number(x.target.value) || undefined })} aria-invalid={!!e.yearBuilt}>
-            <option value="">Select a year</option>
+            <option value="" disabled hidden>Select a year</option>
             {years.map((y) => (
               <option key={y}>{y}</option>
             ))}
@@ -134,7 +199,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         </Row>
         <Row id="b-since" title="Accepting bookings since?" help="Since when guests have been able to book this property" error={e.bookingSince}>
           <select id="b-since" className="field" value={b.bookingSince ?? ''} onChange={(x) => up({ bookingSince: Number(x.target.value) || undefined })} aria-invalid={!!e.bookingSince}>
-            <option value="">Select a year</option>
+            <option value="" disabled hidden>Select a year</option>
             {years.filter((y) => !b.yearBuilt || y >= b.yearBuilt).map((y) => (
               <option key={y}>{y}</option>
             ))}
@@ -154,7 +219,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
           </div>
           {b.channelManager && (
             <select className="field" aria-label="Which channel manager" value={b.channelManagerName ?? ''} onChange={(x) => up({ channelManagerName: x.target.value })} aria-invalid={!!e.channelName}>
-              <option value="">Select your channel manager</option>
+              <option value="" disabled hidden>Select your channel manager</option>
               {channelManagers.map((c) => (
                 <option key={c}>{c}</option>
               ))}
@@ -168,59 +233,71 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         </div>
         <Row id="b-email" title="Email ID" error={e.email}>
           <span className="relative">
-            <input id="b-email" className="field pr-24" type="email" value={b.email} onChange={(x) => up({ email: x.target.value })} placeholder="Enter email ID" aria-invalid={!!e.email} />
-            {verified ? (
-              <span className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 text-[14px] font-bold text-live">
-                <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /> Verified
-              </span>
-            ) : (
-              <button type="button" onClick={startVerify} disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())} className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
-                Verify
-              </button>
-            )}
-          </span>
-          {verify === 'later' && <span className="text-[13px] text-ink-500">We’ll confirm this email with you before the property goes live. Your sign-in email is verified instantly.</span>}
-        </Row>
-        <Row id="b-phone" title="Mobile number" help="For guests to call about their booking" error={e.phone}>
-          <span className={`flex overflow-hidden rounded-[10px] border bg-white focus-within:border-pine-700 ${e.phone ? 'border-alert' : 'border-line-strong'}`}>
-            <span className="flex items-center bg-paper px-3 text-sm font-bold text-ink-700">+91</span>
-            <input id="b-phone" className="min-h-[46px] min-w-0 flex-1 px-3 text-[15px] outline-none" inputMode="numeric" autoComplete="tel-national" placeholder="10-digit mobile number" value={b.phone} onChange={(x) => up({ phone: x.target.value.replace(/\D/g, '').slice(0, 10) })} />
+            <input id="b-email" className={`field pr-28 ${emailVerified ? 'bg-pine-50/60' : ''}`} type="email" value={b.email} onChange={(x) => up({ email: x.target.value })} placeholder="Enter email ID" aria-invalid={!!e.email} />
+            <span className="absolute top-1/2 right-2 -translate-y-1/2">
+              {emailVerified ? (
+                <VerifiedBadge />
+              ) : (
+                <button type="button" onClick={() => setTarget({ channel: 'email', to: email })} disabled={!emailOk} className="rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
+                  Verify
+                </button>
+              )}
+            </span>
           </span>
         </Row>
-        <Row id="b-land" title="Landline number" help="Optional" error={e.landline}>
-          <input id="b-land" className="field" inputMode="tel" placeholder="STD code and number" value={b.landline ?? ''} onChange={(x) => up({ landline: x.target.value.replace(/[^\d\s-]/g, '').slice(0, 14) })} />
+        <Row id="b-phone" title="Mobile number" error={e.phone ?? e.whatsapp}>
+          <span className={`flex overflow-hidden rounded-[10px] border focus-within:border-pine-700 ${phoneVerified ? 'border-line bg-[#eef0ee]' : e.phone ? 'border-alert bg-white' : 'border-line-strong bg-white'}`}>
+            <span className={`flex items-center px-3 text-sm font-bold ${phoneVerified ? 'text-ink-400' : 'bg-paper text-ink-700'}`}>+91</span>
+            <input
+              id="b-phone"
+              className="min-h-[46px] min-w-0 flex-1 bg-transparent px-3 text-[15px] outline-none disabled:text-ink-700"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="10-digit mobile number"
+              disabled={phoneVerified}
+              value={b.phone}
+              onChange={(x) => up({ phone: x.target.value.replace(/\D/g, '').slice(0, 10) })}
+            />
+            <span className="flex items-center pr-3">
+              {phoneVerified ? (
+                <VerifiedBadge />
+              ) : (
+                <button type="button" onClick={() => setTarget({ channel: 'phone', to: b.phone })} disabled={!phoneOk} className="rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
+                  Verify
+                </button>
+              )}
+            </span>
+          </span>
+          {phoneVerified && (
+            <button type="button" onClick={() => up({ phoneVerified: undefined })} className="self-end text-[14px] font-bold text-pine-800 hover:underline">
+              Change
+            </button>
+          )}
+          <label className="mt-1 flex cursor-pointer items-center gap-2.5 text-[14px] text-ink-900">
+            <input type="checkbox" checked={sameWa} onChange={(x) => up({ whatsappSame: x.target.checked })} className="h-4 w-4 accent-pine-800" />
+            Use the same mobile number for WhatsApp.
+          </label>
+          {!sameWa && (
+            <span className="flex overflow-hidden rounded-[10px] border border-line-strong bg-white focus-within:border-pine-700">
+              <span className="flex items-center bg-paper px-3 text-sm font-bold text-ink-700">+91</span>
+              <input aria-label="WhatsApp number" className="min-h-[46px] min-w-0 flex-1 px-3 text-[15px] outline-none" inputMode="numeric" placeholder="WhatsApp number" value={b.whatsapp ?? ''} onChange={(x) => up({ whatsapp: x.target.value.replace(/\D/g, '').slice(0, 10) })} />
+            </span>
+          )}
         </Row>
-
-        <div className="border-t border-line bg-[#f1f3f1] px-4 pt-6 pb-4 sm:px-5">
-          <h3 className="text-[20px] font-bold text-ink-900">About the property</h3>
-          <p className="text-[14px] text-ink-500">Shown on your {site.marketplace} page</p>
-        </div>
-        <Row id="b-desc" title="Description" help="The building, the rooms, what’s nearby and who it suits" error={e.description}>
-          <textarea id="b-desc" className="field min-h-[130px] leading-relaxed" value={b.description} onChange={(x) => up({ description: x.target.value })} maxLength={1500} aria-invalid={!!e.description} />
-          {!e.description && <span className={`text-[13px] ${len < 80 ? 'text-ink-500' : 'text-live'}`}>{len < 80 ? `${80 - len} more characters needed` : `${len} characters`}</span>}
+        <Row id="b-land" title="Landline number (Optional)" error={e.landline}>
+          <input id="b-land" className="field" inputMode="tel" placeholder="Eg: 0124 4637 3533" value={b.landline ?? ''} onChange={(x) => up({ landline: x.target.value.replace(/[^\d\s-]/g, '').slice(0, 14) })} />
         </Row>
       </Card>
 
-      <Popup open={verify === 'code'} onClose={() => setVerify('idle')} title="Verify email">
-        <form
-          onSubmit={(ev) => {
-            ev.preventDefault()
-            if (!/^\d{6}$/.test(code)) return
-            up({ emailVerified: b.email.trim().toLowerCase() })
-            setVerify('idle')
-          }}
-          className="flex flex-col gap-4"
-        >
-          <p className="text-[14.5px] text-ink-700">
-            Enter the 6-digit code sent to <strong className="text-ink-900">{b.email}</strong>
-          </p>
-          <CodeBoxes value={code} onChange={setCode} />
-          <span className="rounded-lg bg-pine-50 px-3 py-2 text-[13px] text-pine-900">Demo mode: any 6 digits work.</span>
-          <button type="submit" className="btn-brass min-h-12" disabled={!/^\d{6}$/.test(code)}>
-            Verify
-          </button>
-        </form>
-      </Popup>
+      <VerifyOtp
+        target={target}
+        onClose={() => setTarget(null)}
+        onVerified={() => {
+          if (target?.channel === 'email') up({ emailVerified: target.to })
+          if (target?.channel === 'phone') up({ phoneVerified: target.to })
+          setTarget(null)
+        }}
+      />
     </section>
   )
 }
@@ -236,7 +313,7 @@ function Location({ l, set }: { l: Listing; set: Set }) {
         <label className="label">
           City
           <select className="field" value={loc.city} onChange={(e) => up({ city: e.target.value, lat: undefined, lng: undefined })}>
-            <option value="">Choose a city</option>
+            <option value="" disabled hidden>Choose a city</option>
             {cities.map((c) => (
               <option key={c.name}>{c.name}</option>
             ))}
@@ -690,7 +767,6 @@ export default function Wizard() {
   const [result, setResult] = useState('')
   const [justPublished, setJustPublished] = useState<Listing | null>(null)
   const [showErrors, setShowErrors] = useState(false)
-  const [stepNote, setStepNote] = useState<string[]>([])
   const [changingType, setChangingType] = useState(false)
   const top = useRef<HTMLDivElement>(null)
   const step = (steps.some((s) => s.id === params.get('step')) ? params.get('step') : 'basics') as StepId
@@ -743,7 +819,6 @@ export default function Wizard() {
   const go = (s: StepId) => {
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
     setShowErrors(false)
-    setStepNote([])
     setParams({ step: s }, { replace: false })
     top.current?.scrollIntoView({ block: 'start' })
     window.scrollTo({ top: 0 })
@@ -753,7 +828,6 @@ export default function Wizard() {
     if (!l) return
     if (!isLive && !stepDone(l, step)) {
       setShowErrors(true)
-      setStepNote(blockers(l).filter((c) => c.step === step).map((c) => c.message))
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
@@ -849,13 +923,15 @@ export default function Wizard() {
 
       <div className="flex-1 px-3 py-8 sm:px-6">
         <div className="mx-auto flex max-w-[920px] flex-col gap-5">
-          {stepNote.length > 0 && (
+          {showErrors && !isLive && !stepDone(l, step) && (
             <Notice tone="error">
               <strong className="block">Complete this section to continue:</strong>
               <ul className="mt-1 list-disc pl-5">
-                {stepNote.map((m) => (
-                  <li key={m}>{m}</li>
-                ))}
+                {blockers(l)
+                  .filter((c) => c.step === step)
+                  .map((c) => (
+                    <li key={c.message}>{c.message}</li>
+                  ))}
               </ul>
             </Notice>
           )}

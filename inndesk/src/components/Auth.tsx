@@ -44,19 +44,19 @@ export function PasswordRules({ value }: { value: string }) {
 }
 
 /** Six separate digit boxes; paste fills them all. */
-export function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function CodeBoxes({ value, onChange, length = 6 }: { value: string; onChange: (v: string) => void; length?: number }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
   useEffect(() => {
     refs.current[0]?.focus()
   }, [])
   const set = (i: number, d: string) => {
-    const chars = value.padEnd(6, ' ').split('')
+    const chars = value.padEnd(length, ' ').split('')
     chars[i] = d || ' '
     onChange(chars.join('').replace(/\s+$/, ''))
   }
   return (
-    <div className="flex gap-2" role="group" aria-label="6-digit code">
-      {Array.from({ length: 6 }, (_, i) => (
+    <div className="flex gap-2" role="group" aria-label={`${length}-digit code`}>
+      {Array.from({ length }, (_, i) => (
         <input
           key={i}
           ref={(el) => {
@@ -78,11 +78,11 @@ export function CodeBoxes({ value, onChange }: { value: string; onChange: (v: st
             if (e.key === 'ArrowRight') refs.current[i + 1]?.focus()
           }}
           onPaste={(e) => {
-            const p = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+            const p = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, length)
             if (!p) return
             e.preventDefault()
             onChange(p)
-            refs.current[Math.min(p.length, 5)]?.focus()
+            refs.current[Math.min(p.length, length - 1)]?.focus()
           }}
           className="h-12 w-11 rounded-lg border border-line-strong bg-white text-center text-xl font-bold outline-none focus:border-pine-700 focus:shadow-[0_0_0_3px_var(--color-pine-100)] sm:w-12"
         />
@@ -91,7 +91,7 @@ export function CodeBoxes({ value, onChange }: { value: string; onChange: (v: st
   )
 }
 
-function useCountdown(start: number) {
+export function useCountdown(start: number) {
   const [left, setLeft] = useState(start)
   useEffect(() => {
     if (left <= 0) return
@@ -102,7 +102,7 @@ function useCountdown(start: number) {
 }
 
 /** White pop-up over a dimmed page, with the InnDesk mark in the corner. */
-export function Popup({ open, onClose, title, intro, children, label }: { open: boolean; onClose: () => void; title: string; intro?: ReactNode; children: ReactNode; label?: string }) {
+export function Popup({ open, onClose, title, intro, children, label, mark = true }: { open: boolean; onClose: () => void; title: string; intro?: ReactNode; children: ReactNode; label?: string; mark?: boolean }) {
   const close = useRef(onClose)
   close.current = onClose
   useEffect(() => {
@@ -135,7 +135,7 @@ export function Popup({ open, onClose, title, intro, children, label }: { open: 
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-3 pr-10">
-              <Mark size={30} />
+              {mark && <Mark size={30} />}
               <h2 className="text-[19px] font-bold text-ink-900">{title}</h2>
             </div>
             {intro && <div className="mt-1 text-[14px] text-ink-500">{intro}</div>}

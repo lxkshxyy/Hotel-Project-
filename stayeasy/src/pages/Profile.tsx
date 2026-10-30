@@ -263,7 +263,7 @@ export default function Profile() {
                   </Row>
                   <Row label="Gender">
                     <select className={field} value={draft.gender} onChange={(e) => set('gender', e.target.value)}>
-                      <option value="">Select</option>
+                      <option value="" disabled hidden>Select</option>
                       <option>Female</option>
                       <option>Male</option>
                       <option>Other</option>
@@ -281,7 +281,7 @@ export default function Profile() {
                   </Row>
                   <Row label="Marital status">
                     <select className={field} value={draft.marital} onChange={(e) => set('marital', e.target.value)}>
-                      <option value="">Select</option>
+                      <option value="" disabled hidden>Select</option>
                       <option>Single</option>
                       <option>Married</option>
                       <option>Prefer not to say</option>
@@ -298,7 +298,7 @@ export default function Profile() {
                   {isBusiness && (
                     <Row label="Booker type">
                       <select className={field} value={draft.bookerType} onChange={(e) => set('bookerType', e.target.value)}>
-                        <option value="">Select</option>
+                        <option value="" disabled hidden>Select</option>
                         <option>Self booker</option>
                         <option>Books for my team</option>
                         <option>Travel desk / assistant</option>
@@ -367,7 +367,7 @@ export default function Profile() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Row label="ID type">
                     <select className={field} value={draft.idType} onChange={(e) => set('idType', e.target.value)}>
-                      <option value="">Select</option>
+                      <option value="" disabled hidden>Select</option>
                       <option>Passport</option>
                       <option>Aadhaar</option>
                       <option>Driving licence</option>
@@ -495,7 +495,7 @@ export default function Profile() {
                   </Row>
                   <Row label="Relation">
                     <select className={field} value={co.relation} onChange={(e) => setCo({ ...co, relation: e.target.value })}>
-                      <option value="">Select</option>
+                      <option value="" disabled hidden>Select</option>
                       {(isBusiness ? ['Colleague', 'Client', 'Interviewee', 'Other'] : ['Spouse', 'Child', 'Parent', 'Sibling', 'Friend', 'Other']).map((r) => (
                         <option key={r}>{r}</option>
                       ))}

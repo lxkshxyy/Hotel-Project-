@@ -137,7 +137,7 @@ export interface Check {
 const thisYear = new Date().getFullYear()
 
 /** What's missing on the Basic Info tab, keyed by field so the form can show each message in place. */
-export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yearBuilt' | 'bookingSince' | 'channel' | 'channelName' | 'email' | 'phone' | 'landline' | 'description', string>> {
+export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yearBuilt' | 'bookingSince' | 'channel' | 'channelName' | 'email' | 'phone' | 'whatsapp' | 'landline', string>> {
   const b = l.basics
   const e: ReturnType<typeof basicsErrors> = {}
   if (b.name.trim().length < 3) e.name = 'Enter the property name as on your documents.'
@@ -149,9 +149,11 @@ export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yea
   if (b.channelManager == null) e.channel = 'Choose No or Yes.'
   else if (b.channelManager && !b.channelManagerName?.trim()) e.channelName = 'Choose your channel manager.'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())) e.email = 'Enter the email guests can write to.'
+  else if (b.emailVerified !== b.email.trim().toLowerCase()) e.email = 'Verify this email ID with the OTP.'
   if (!/^[6-9]\d{9}$/.test(b.phone)) e.phone = 'Enter a 10-digit mobile number.'
+  else if (b.phoneVerified !== b.phone) e.phone = 'Verify this mobile number with the OTP.'
+  if (b.whatsappSame === false && b.whatsapp && !/^[6-9]\d{9}$/.test(b.whatsapp)) e.whatsapp = 'Enter a 10-digit WhatsApp number.'
   if (b.landline && !/^0?\d{10,11}$/.test(b.landline.replace(/[\s-]/g, ''))) e.landline = 'Enter the landline with STD code, e.g. 011 2345 6789.'
-  if (b.description.trim().length < 80) e.description = `Write at least 80 characters (now ${b.description.trim().length}).`
   return e
 }
 export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).filter((m): m is string => !!m)

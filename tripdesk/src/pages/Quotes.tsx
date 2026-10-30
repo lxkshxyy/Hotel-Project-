@@ -136,7 +136,7 @@ export default function Quotes() {
                       if (c) setF({ ...f, name: c.name, phone: c.phone })
                     }}
                   >
-                    <option value="">Choose to fill in</option>
+                    <option value="" disabled hidden>Choose to fill in</option>
                     {customers.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}, {c.phone}
