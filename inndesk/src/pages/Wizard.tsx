@@ -13,7 +13,7 @@ import { useSession } from '../context/Session'
 import { amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { basicsErrors, blockers, locationErrors, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { basicsErrors, blockers, locationErrors, minAmenities, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
@@ -528,6 +528,41 @@ function useColumns() {
   return n
 }
 
+/** How many amenities the star rating asks for, with progress. Not-rated properties may skip. */
+function RatingRule({ l }: { l: Listing }) {
+  const need = minAmenities(l)
+  const have = l.amenities.length
+  if (!need)
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-pine-100 bg-pine-50 px-4 py-3 text-[14.5px] text-pine-900">
+        <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <span>
+          <strong>{l.basics.category === 'homestay' ? 'Homestays and villas' : 'Not star-rated properties'} can skip this step.</strong> Tick what you have if you like, or press <strong>Skip</strong> below.
+        </span>
+      </div>
+    )
+  const done = have >= need
+  return (
+    <div className={`flex flex-col gap-2 rounded-xl border px-4 py-3 ${done ? 'border-pine-100 bg-pine-50' : 'border-brass-200 bg-brass-50'}`}>
+      <span className="flex flex-wrap items-baseline justify-between gap-2 text-[14.5px] text-ink-900">
+        <span>
+          <strong>
+            {l.basics.stars}-star {l.basics.propertyType.toLowerCase()}:
+          </strong>{' '}
+          tick at least {need} amenities.
+        </span>
+        <strong className={done ? 'text-live' : 'text-brass-700'} role="status">
+          {Math.min(have, need)} of {need}
+          {done ? ' done' : ''}
+        </strong>
+      </span>
+      <span className="h-1.5 overflow-hidden rounded-full bg-white">
+        <span className={`block h-full rounded-full transition-all ${done ? 'bg-live' : 'bg-brass-500'}`} style={{ width: `${Math.min(100, (have / need) * 100)}%` }} />
+      </span>
+    </div>
+  )
+}
+
 function Amenities({ l, set }: { l: Listing; set: Set }) {
   const cols = useColumns()
   const [justTicked, setJustTicked] = useState('')
@@ -538,6 +573,7 @@ function Amenities({ l, set }: { l: Listing; set: Set }) {
   }
   return (
     <Section title="Amenities" intro={`Tick everything guests can use. Guests filter by these on ${site.marketplace}.`}>
+      <RatingRule l={l} />
       {amenityGroups.map((g) => {
         const ticked = g.items.filter((a) => l.amenities.includes(a.id)).length
         // Tiles stay in their rows; the details of ticked tiles open under the row they sit in.
@@ -1144,6 +1180,11 @@ export default function Wizard() {
             {isLive && (
               <button type="button" className="btn-primary sm:hidden" disabled={saveState !== 'dirty'} onClick={() => save(l)}>
                 Save
+              </button>
+            )}
+            {step === 'amenities' && !isLive && minAmenities(l) === 0 && (
+              <button type="button" className="btn-ghost min-h-11 px-5" onClick={() => go(steps[index + 1].id)} disabled={!stepDone(l, 'amenities')} title={stepDone(l, 'amenities') ? undefined : 'Finish or untick the amenities that need details first'}>
+                Skip
               </button>
             )}
             {index < steps.length - 1 && (

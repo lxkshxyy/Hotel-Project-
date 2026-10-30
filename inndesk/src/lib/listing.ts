@@ -159,6 +159,12 @@ export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yea
 }
 export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).filter((m): m is string => !!m)
 
+/**
+ * Fewest amenities a property must tick for its star rating: 2 per star (1★ 2, 2★ 4, 3★ 6, 4★ 8, 5★ 10).
+ * Not-rated hotels and homestays can skip the step.
+ */
+export const minAmenities = (l: Listing) => (l.basics.category === 'homestay' || !l.basics.stars ? 0 : l.basics.stars * 2)
+
 /** What's missing on the Location tab, keyed by field. */
 export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
   const loc = l.location
@@ -180,6 +186,8 @@ export function blockers(l: Listing): Check[] {
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
   if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. Ask the ${site.marketplace} team to add the city.` })
+  const need = minAmenities(l)
+  if (l.amenities.length < need) out.push({ step: 'amenities', message: `A ${l.basics.stars}-star property needs at least ${need} amenities ticked (${l.amenities.length} ticked so far).` })
   for (const id of l.amenities) if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) out.push({ step: 'amenities', message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
