@@ -7,7 +7,7 @@ import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
 import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
-import PhotoManager, { PhotoInstructions } from '../components/PhotoManager'
+import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
@@ -1140,16 +1140,7 @@ function Rooms({ l, set, roomId, openRoom }: { l: Listing; set: Set; roomId: str
 }
 
 function Photos({ l, set }: { l: Listing; set: Set }) {
-  const onChange = useCallback((photos: Listing['photos']) => set((x) => ({ ...x, photos, rooms: x.rooms.map((r) => (photos.some((p) => p.id === r.photoId) ? r : { ...r, photoId: undefined })) })), [set])
-  return (
-    <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="rounded-xl bg-white p-4 ring-1 ring-line sm:p-5">
-        <h2 className="mb-4 text-[26px] font-bold text-ink-900">Upload Photos &amp; Videos</h2>
-        <PhotoManager photos={l.photos} onChange={onChange} />
-      </div>
-      <PhotoInstructions />
-    </section>
-  )
+  return <PhotoManager l={l} set={set} />
 }
 
 function Policies({ l, set }: { l: Listing; set: Set }) {

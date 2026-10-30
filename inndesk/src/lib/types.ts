@@ -63,6 +63,8 @@ export interface ListingPhoto {
   tag: PhotoTag
   /** Wider than tall. Missing on photos added before this was recorded. */
   landscape?: boolean
+  /** What the photo shows: room:<roomId>, area:Bedroom, prop:Exterior, am:<amenityId>… */
+  labels?: string[]
 }
 
 export interface CalendarCell {
