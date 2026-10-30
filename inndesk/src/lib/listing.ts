@@ -1,6 +1,7 @@
 import { site } from '../config/site'
 import { amenityForms } from '../data/amenityDetails'
 import { allAmenities, bedCatalog, cancellationOptions, cities, SHARED_BATH } from '../data/options'
+import { houseRuleLines } from '../data/policyRules'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
 import type { BedLine, Listing, ListingRoom } from './types'
@@ -61,6 +62,7 @@ export function guestRules(l: Listing) {
     p.localIds ? 'Guests with local IDs are allowed.' : 'Guests with local IDs are not allowed.',
     p.pets ? 'Pets are allowed.' : 'Pets are not allowed.',
     p.smoking ? 'Smoking is allowed in designated areas.' : 'Smoking is not allowed anywhere on the property.',
+    ...houseRuleLines(p.house),
     `Children up to ${p.childrenFreeAge} years stay free using existing beds.`,
     ...(p.extraBed > 0 ? [`Extra bed: ₹${p.extraBed} per night.`] : ['Extra beds are not available.']),
     ...p.rules.filter(Boolean),
@@ -266,6 +268,42 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
 export const roomSectionDone = (r: ListingRoom, section: number) => !Object.keys(roomErrors(r, section)).length
 export const roomDone = (r: ListingRoom) => roomSections.every((s) => roomSectionDone(r, s.id))
 
+/** Finance & Legal is filled in three parts, one after another. */
+export const legalSections = [
+  { id: 1, title: 'Bank Account Information', intro: 'Please provide your bank details to receive payouts without delay' },
+  { id: 2, title: 'Tax, MSME and Registration Information', intro: 'These tax details will be used for invoicing and statutory compliance' },
+  { id: 3, title: 'Property Documents', intro: 'Provide necessary documents for verification and onboarding completion' },
+]
+export const udyamError = (v: string) => (/^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/.test(v.trim().toUpperCase()) ? '' : 'A Udyam number looks like UDYAM-DL-01-0001234.')
+
+/** What's missing in one part of Finance & Legal, keyed by field. */
+export function legalErrors(l: Listing, section: number): Record<string, string> {
+  const g = l.legal
+  const e: Record<string, string> = {}
+  if (section === 1) {
+    if (!g.accountLast4) e.acct = 'Enter your bank account number twice.'
+    if (!g.ifsc) e.ifsc = 'Enter the IFSC code.'
+    else if (ifscError(g.ifsc)) e.ifsc = ifscError(g.ifsc)
+    if (!g.bankName) e.bankName = 'Select your bank.'
+    if (!g.bankConsent) e.consent = 'Tick the consent for bank account verification.'
+  }
+  if (section === 2) {
+    if (!g.legalName.trim()) e.legalName = 'Enter the registered business or owner name.'
+    if (!g.pan) e.pan = 'Enter the PAN.'
+    else if (panError(g.pan)) e.pan = panError(g.pan)
+    const hasGstin = g.hasGstin ?? (g.gstin ? true : null)
+    if (hasGstin == null) e.hasGstin = 'Choose No or Yes.'
+    else if (hasGstin && gstinError(g.gstin)) e.gstin = gstinError(g.gstin)
+    if (g.msme == null) e.msme = 'Choose No or Yes.'
+    else if (g.msme && udyamError(g.udyam ?? '')) e.udyam = udyamError(g.udyam ?? '')
+  }
+  if (section === 3) {
+    if (!g.agreed) e.agreed = 'Confirm you own or are authorised to list this property, and accept the partner terms.'
+  }
+  return e
+}
+export const legalSectionDone = (l: Listing, section: number) => !Object.keys(legalErrors(l, section)).length
+
 /** What's missing on the Location tab, keyed by field. */
 export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
   const loc = l.location
@@ -300,11 +338,9 @@ export function blockers(l: Listing): Check[] {
   if (l.photos.length < site.minPhotos) out.push({ step: 'photos', message: `Upload at least ${site.minPhotos} photos (now ${l.photos.length}).` })
   if (l.photos.length && !l.photos.some((p) => p.tag === 'Room')) out.push({ step: 'photos', message: 'Add at least one photo of a room.' })
   if (l.photos.length && !l.photos.some((p) => p.landscape ?? true)) out.push({ step: 'photos', message: 'Add at least one photo in landscape mode (wider than it is tall).' })
-  if (!l.legal.legalName.trim()) out.push({ step: 'legal', message: 'Add the registered business or owner name.' })
-  if (l.legal.gstin && gstinError(l.legal.gstin)) out.push({ step: 'legal', message: `GSTIN: ${gstinError(l.legal.gstin)}` })
-  if (l.legal.pan && panError(l.legal.pan)) out.push({ step: 'legal', message: `PAN: ${panError(l.legal.pan)}` })
-  if (l.legal.ifsc && ifscError(l.legal.ifsc)) out.push({ step: 'legal', message: `IFSC: ${ifscError(l.legal.ifsc)}` })
-  if (!l.legal.agreed) out.push({ step: 'legal', message: 'Accept the partner terms.' })
+  legalSections.forEach((sec) => {
+    Object.values(legalErrors(l, sec.id)).forEach((message) => out.push({ step: 'legal', message: `${sec.title}: ${message}` }))
+  })
   return out
 }
 
@@ -314,7 +350,7 @@ export function tips(l: Listing): Check[] {
   if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
   if (l.rooms.some((r) => !r.photoId)) out.push({ step: 'rooms', message: 'Give each room type its own photo.' })
   if (!l.legal.gstin) out.push({ step: 'legal', message: 'Add your GSTIN so commission invoices carry it.' })
-  if (!l.legal.accountLast4 || !l.legal.ifsc) out.push({ step: 'legal', message: 'Add payout bank details before your first payout.' })
+  if (!l.legal.ownershipDoc) out.push({ step: 'legal', message: 'Upload proof of ownership or lease before your first payout.' })
   return out
 }
 

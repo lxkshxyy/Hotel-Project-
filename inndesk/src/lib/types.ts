@@ -142,6 +142,8 @@ export interface Listing {
     childrenFreeAge: number
     extraBed: number
     rules: string[]
+    /** Property Rules answers by rule id (see data/policyRules.ts). */
+    house?: Record<string, string | string[]>
   }
   legal: {
     legalName: string
@@ -152,6 +154,11 @@ export interface Listing {
     bankName: string
     ifsc: string
     accountLast4: string
+    /** Consent to the ₹1 bank account verification. */
+    bankConsent?: boolean
+    msme?: boolean | null
+    udyam?: string
+    hasGstin?: boolean | null
     agreed: boolean
   }
   /** Room type id → date (yyyy-mm-dd) → price / rooms open / closed. */

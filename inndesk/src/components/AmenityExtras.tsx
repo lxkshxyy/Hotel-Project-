@@ -10,7 +10,7 @@ type Set = (fn: (l: Listing) => Listing) => void
 
 /* ---------------- searchable multi-select ---------------- */
 
-export function MultiSelect({ label, options, value, onChange }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+export function MultiSelect({ label, options, value, onChange, selectAll = false }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; selectAll?: boolean }) {
   const [open, setOpen] = useState(false)
   const [up, setUp] = useState(false)
   const [q, setQ] = useState('')
@@ -49,6 +49,14 @@ export function MultiSelect({ label, options, value, onChange }: { label: string
               <span className="sr-only">Search</span>
               <input autoFocus className="min-h-10 min-w-0 flex-1 text-[14px] outline-none" placeholder="Search for <keyword>" value={q} onChange={(e) => setQ(e.target.value)} />
             </label>
+          )}
+          {selectAll && (
+            <button type="button" onClick={() => onChange(value.length === options.length ? [] : [...options])} className="flex w-full items-center gap-2.5 border-b border-line px-3 py-2.5 text-left text-[14.5px] text-ink-900 hover:bg-pine-50">
+              <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border ${value.length ? 'border-pine-800 bg-pine-800 text-white' : 'border-ink-400'}`} aria-hidden="true">
+                {value.length === options.length ? <Check className="h-3 w-3" strokeWidth={3} /> : value.length ? <Minus className="h-3 w-3" strokeWidth={3} /> : null}
+              </span>
+              {value.length === 0 ? 'Select All' : value.length === options.length ? 'All selected' : `${value.length} selected`}
+            </button>
           )}
           <ul role="listbox" aria-multiselectable="true" className="max-h-56 overflow-y-auto py-1">
             {shown.map((o) => {

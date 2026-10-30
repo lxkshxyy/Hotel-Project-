@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BedDouble, CalendarDays, Check, ChevronDown, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Star, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Baby, Ban, BedDouble, BedSingle, CalendarDays, Check, ChevronDown, CircleAlert, CircleCheck, Clock3, ExternalLink, IdCard, Info, Lightbulb, Lock, MapPin, PawPrint, Plus, Search, Star, Trash2, Upload, Users, UtensilsCrossed, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
-import { AmenityExtrasBox, hasExtras } from '../components/AmenityExtras'
+import { AmenityExtrasBox, hasExtras, MultiSelect } from '../components/AmenityExtras'
+import { answered, policyGroups, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
 import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
@@ -12,10 +13,10 @@ import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { attachOptions, autoOccupancy, basicsErrors, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { attachOptions, autoOccupancy, basicsErrors, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { BedLine, Listing, ListingRoom } from '../lib/types'
@@ -34,12 +35,6 @@ function Section({ title, intro, children }: { title: string; intro?: string; ch
   )
 }
 
-const err = (show: boolean, msg: string) =>
-  show ? (
-    <span role="alert" className="text-[13px] font-semibold text-alert">
-      {msg}
-    </span>
-  ) : null
 
 /* ---------------- steps ---------------- */
 
@@ -1159,6 +1154,20 @@ function PolicyCard({ title, optional, intro, children }: { title: string; optio
   )
 }
 
+/** Rounded radio "pills" (No / Yes / Subject to availability …). */
+function Pills({ name, value, options, onChange }: { name: string; value: string | undefined; options: [string, string][]; onChange: (v: string) => void }) {
+  return (
+    <span className="flex shrink-0 flex-wrap gap-2" role="radiogroup">
+      {options.map(([v, t]) => (
+        <label key={v} className={`flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-[14px] transition-colors ${value === v ? 'border-pine-700 bg-pine-50 font-medium text-pine-900' : 'border-line-strong bg-white text-ink-900 hover:border-pine-700/50'}`}>
+          <input type="radio" name={name} checked={value === v} onChange={() => onChange(v)} className="h-4 w-4 accent-pine-800" />
+          {t}
+        </label>
+      ))}
+    </span>
+  )
+}
+
 /** A question with No / Yes on the right. */
 function YesNo({ q, hint, value, onChange, name }: { q: string; hint?: string; value: boolean; onChange: (v: boolean) => void; name: string }) {
   return (
@@ -1167,14 +1176,117 @@ function YesNo({ q, hint, value, onChange, name }: { q: string; hint?: string; v
         <span className="block text-[15px] text-ink-900">{q}</span>
         {hint && <span className="block text-[13px] text-ink-500">{hint}</span>}
       </span>
-      <span className="flex shrink-0 gap-6">
-        {[false, true].map((v) => (
-          <label key={String(v)} className="flex cursor-pointer items-center gap-2 text-[15px] text-ink-900">
-            <input type="radio" name={name} checked={value === v} onChange={() => onChange(v)} className="h-[18px] w-[18px] accent-pine-800" />
-            {v ? 'Yes' : 'No'}
-          </label>
-        ))}
+      <Pills name={name} value={value ? 'yes' : 'no'} options={[['no', 'No'], ['yes', 'Yes']]} onChange={(v) => onChange(v === 'yes')} />
+    </div>
+  )
+}
+
+/** The refund timeline shown under the chosen cancellation policy. */
+function CancelTimeline({ id }: { id: string }) {
+  const hours = { freeCheckin: 0, free24: 24, free48: 48, free72: 72 }[id]
+  const refund = id === 'nonref' ? 0 : hours === 0 ? 100 : 68
+  return (
+    <div className="mt-1 mb-2 ml-7 max-w-[460px] rounded-md bg-paper px-3 pt-3 pb-2.5">
+      <div className="flex text-center text-[12.5px] text-ink-700">
+        {refund > 0 && <span style={{ width: `${refund}%` }}>100% Refund</span>}
+        {refund < 100 && <span className="flex-1">Non-refundable</span>}
+      </div>
+      <div className="relative mt-1 flex h-[6px]">
+        {refund > 0 && <span className="h-full rounded-l-sm bg-brass-500" style={{ width: `${refund}%` }} />}
+        {refund < 100 && <span className="h-full flex-1 rounded-r-sm bg-line-strong" />}
+        <span className="absolute -top-1 left-0 h-[14px] w-px bg-ink-500" />
+        {refund > 0 && refund < 100 && <span className="absolute -top-1 h-[14px] w-px bg-ink-500" style={{ left: `${refund}%` }} />}
+        <span className="absolute -top-1 right-0 h-[14px] w-px bg-ink-500" />
+      </div>
+      <div className="relative mt-1.5 flex justify-between text-[12.5px]">
+        <strong className="font-medium text-ink-900">Booking Date</strong>
+        {refund > 0 && refund < 100 && (
+          <span className="absolute w-28 -translate-x-1/2 text-center leading-tight text-ink-700" style={{ left: `${refund}%` }}>
+            {hours} hours before check-in
+          </span>
+        )}
+        <strong className="font-medium text-ink-900">Check-in</strong>
+      </div>
+      {refund > 0 && refund < 100 && <div className="h-4" />}
+    </div>
+  )
+}
+
+const groupIcon = { guest: Users, id: IdCard, restrict: Ban, pet: PawPrint, clock: Clock3, infant: Baby, bed: BedSingle, beds: BedDouble, meal: UtensilsCrossed }
+const ynOpts: [string, string][] = [
+  ['no', 'No'],
+  ['yes', 'Yes'],
+]
+const ynsOpts: [string, string][] = [...ynOpts, ['subject', 'Subject to availability']]
+
+/** One property rule: Yes/No pills, a multi-select, a choice or a price box, plus its follow-up. */
+function RuleRow({ rule, h, put, nested }: { rule: PolicyRule; h: HouseAnswers; put: (id: string, v: string | string[]) => void; nested?: boolean }) {
+  const v = h[rule.id]
+  const control =
+    rule.kind === 'multi' ? (
+      <div className="w-full max-w-[420px]">
+        <MultiSelect label={rule.q} options={rule.options ?? []} value={Array.isArray(v) ? v : []} onChange={(x) => put(rule.id, x)} selectAll />
+      </div>
+    ) : rule.kind === 'price' ? (
+      <span className="flex w-full max-w-[245px] items-stretch overflow-hidden rounded-[10px] border border-line-strong bg-white focus-within:border-pine-700">
+        <span className="flex items-center border-r border-line-strong px-3 text-ink-700" aria-hidden="true">
+          ₹
+        </span>
+        <input aria-label={`${rule.q} price per person`} className="min-h-11 w-full px-3 text-[15px] outline-none" inputMode="numeric" placeholder="Enter" value={typeof v === 'string' ? v : ''} onChange={(e) => put(rule.id, e.target.value.replace(/\D/g, '').slice(0, 5))} />
       </span>
+    ) : (
+      <Pills name={rule.id} value={typeof v === 'string' ? v : undefined} options={rule.kind === 'yns' ? ynsOpts : rule.kind === 'choice' ? (rule.options ?? []).map((o) => [o, o] as [string, string]) : ynOpts} onChange={(x) => put(rule.id, x)} />
+    )
+  const showFollow = rule.follow && typeof v === 'string' && rule.follow.when.includes(v)
+  return (
+    <div className={nested ? 'rounded-md bg-paper px-4 py-3' : 'py-3'}>
+      {rule.kind === 'multi' ? (
+        <label className="flex flex-col gap-1.5 text-[15px] text-ink-900">
+          {rule.q}
+          {control}
+        </label>
+      ) : (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <span className="text-[15px] text-ink-900">{rule.q}</span>
+          {control}
+        </div>
+      )}
+      {showFollow && (
+        <div className="mt-3">
+          <RuleRow rule={rule.follow!.rule} h={h} put={put} nested />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** A collapsible group of property rules with its "x/y RULES ADDED" badge. */
+function RuleGroup({ g, h, put, open, onToggle }: { g: PolicyGroup; h: HouseAnswers; put: (id: string, v: string | string[]) => void; open: boolean; onToggle: () => void }) {
+  const Icon = groupIcon[g.icon]
+  const done = g.rules.filter((r) => answered(h[r.id])).length
+  const all = done === g.rules.length
+  return (
+    <div className="border-t border-line first:border-t-0">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 py-4 text-left">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pine-50 text-pine-800">
+          <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+          <strong className="text-[16px] font-medium text-ink-900">{g.title}</strong>
+          <span className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium tracking-wide ${all ? 'bg-pine-50 text-live' : 'bg-alert-50 text-alert'}`}>
+            {done}/{g.rules.length} RULES ADDED
+          </span>
+        </span>
+        <ChevronDown className={`h-5 w-5 shrink-0 text-ink-900 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="pb-3">
+          {g.intro && <p className="mb-1 text-[14px] text-ink-700">{g.intro}</p>}
+          {g.rules.map((r) => (
+            <RuleRow key={r.id} rule={r} h={h} put={put} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1219,6 +1331,21 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
   const p = l.policies
   const up = (x: Partial<Listing['policies']>) => set((y) => ({ ...y, policies: { ...y.policies, ...x } }))
   const n = l.rooms.length
+  const h = p.house ?? {}
+  const [openGroups, setOpenGroups] = useState<string[]>([policyGroups[0].id])
+  /** Saves one rule answer, clears follow-ups that no longer apply, and keeps the older on/off fields in step. */
+  const put = (id: string, v: string | string[]) =>
+    set((y) => {
+      const house: HouseAnswers = { ...(y.policies.house ?? {}), [id]: v }
+      for (const g of policyGroups)
+        for (const r of g.rules) if (r.follow && !(typeof house[r.id] === 'string' && r.follow.when.includes(house[r.id] as string))) delete house[r.follow.rule.id]
+      const x: Partial<Listing['policies']> = { house }
+      if (house.couples) x.coupleFriendly = house.couples === 'yes' && house.coupleTag !== 'no'
+      if (house.localIds) x.localIds = house.localIds === 'yes'
+      if (house.petsAllowed) x.pets = house.petsAllowed === 'yes'
+      if (house.smoking) x.smoking = house.smoking === 'yes'
+      return { ...y, policies: { ...y.policies, ...x } }
+    })
   return (
     <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex flex-col gap-4">
@@ -1255,11 +1382,14 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
         <PolicyCard title="Cancellation Policy" intro="Offering a flexible cancellation policy helps travellers book in advance.">
           <div className="flex flex-col gap-1" role="radiogroup" aria-label="Cancellation policy">
             {cancellationOptions.map((c) => (
-              <label key={c.id} className="flex min-h-9 cursor-pointer items-center gap-3 text-[15px] text-ink-900">
-                <input type="radio" name="cancel" checked={p.cancellation === c.id} onChange={() => up({ cancellation: c.id })} className="h-[18px] w-[18px] accent-pine-800" />
-                {c.label}
-                {c.id === 'freeCheckin' && <span className="rounded bg-pine-50 px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-live">RECOMMENDED</span>}
-              </label>
+              <div key={c.id}>
+                <label className="flex min-h-9 cursor-pointer items-center gap-3 text-[15px] text-ink-900">
+                  <input type="radio" name="cancel" checked={p.cancellation === c.id} onChange={() => up({ cancellation: c.id })} className="h-[18px] w-[18px] accent-pine-800" />
+                  {c.label}
+                  {c.id === 'freeCheckin' && <span className="rounded bg-pine-50 px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-live">RECOMMENDED</span>}
+                </label>
+                {p.cancellation === c.id && <CancelTimeline id={c.id} />}
+              </div>
             ))}
           </div>
           <p className="mt-3 flex items-start gap-2 rounded-md border border-pine-100 bg-pine-50 px-3 py-2 text-[13px] text-ink-700">
@@ -1268,21 +1398,11 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
           </p>
         </PolicyCard>
 
-        <PolicyCard title="Property Rules" optional intro="Add the rules guests must follow at your property">
-          <h4 className="text-[14px] font-medium text-ink-500 uppercase">Guest profile</h4>
-          <div className="mt-2 mb-5">
-            <YesNo name="couples" q="Are unmarried couples allowed?" hint="Shows the “Couple friendly” tag on StayEasy." value={p.coupleFriendly} onChange={(v) => up({ coupleFriendly: v })} />
-          </div>
-          <h4 className="text-[14px] font-medium text-ink-500 uppercase">ID proof</h4>
-          <div className="mt-2 mb-5">
-            <YesNo name="localids" q="Are local IDs allowed?" hint="Guests whose ID has an address in the same city can stay." value={p.localIds} onChange={(v) => up({ localIds: v })} />
-          </div>
-          <h4 className="text-[14px] font-medium text-ink-500 uppercase">Pets, smoking</h4>
-          <div className="mt-2 mb-5">
-            <YesNo name="pets" q="Are pets allowed at the property?" value={p.pets} onChange={(v) => up({ pets: v })} />
-            <YesNo name="smoking" q="Is smoking allowed in designated areas?" value={p.smoking} onChange={(v) => up({ smoking: v })} />
-          </div>
-          <label className="label">
+        <PolicyCard title="Property Rules" optional intro="Add property rules based on the requirements of your property listing">
+          {policyGroups.map((g) => (
+            <RuleGroup key={g.id} g={g} h={h} put={put} open={openGroups.includes(g.id)} onToggle={() => setOpenGroups((o) => (o.includes(g.id) ? o.filter((x) => x !== g.id) : [...o, g.id]))} />
+          ))}
+          <label className="label mt-2 border-t border-line pt-4">
             Other rules (one per line)
             <textarea className="field min-h-[100px]" value={p.rules.join('\n')} onChange={(e) => up({ rules: e.target.value.split('\n').slice(0, 8) })} placeholder={'Visitors are not allowed in rooms after 10 PM.\nOutside food is allowed.'} />
           </label>
@@ -1335,87 +1455,205 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
   )
 }
 
-function Legal({ l, set }: { l: Listing; set: Set }) {
+function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: number; openSec: (n: number) => void; tried: boolean }) {
   const g = l.legal
   const up = (x: Partial<Listing['legal']>) => set((y) => ({ ...y, legal: { ...y.legal, ...x } }))
   const [acct, setAcct] = useState('')
-  const gErr = g.gstin ? gstinError(g.gstin) : ''
-  return (
-    <Section title="Business and payout" intro="Used on commission invoices and for payouts. Only the details below are kept.">
-      <label className="label">
-        Registered business or owner name
-        <input className="field" value={g.legalName} onChange={(e) => up({ legalName: e.target.value })} />
-      </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          GSTIN (optional)
-          <input className="field uppercase" maxLength={15} value={g.gstin} onChange={(e) => up({ gstin: e.target.value.toUpperCase() })} aria-invalid={!!gErr && g.gstin.length === 15} />
-          {g.gstin.length === 15 && (gErr ? err(true, gErr) : <span className="text-[13px] font-semibold text-live">Valid format, registered in {gstinState(g.gstin)}.</span>)}
-          {isDemoMode && !g.gstin && (
-            <span className="text-[13px] font-normal text-ink-500">
-              Demo test GSTIN:{' '}
-              <button type="button" className="font-bold text-pine-800 underline" onClick={() => up({ gstin: demoIds.gstin, pan: g.pan || demoIds.pan })}>
-                {demoIds.gstin}
-              </button>
-            </span>
-          )}
+  const [acct2, setAcct2] = useState('')
+  const e = tried ? legalErrors(l, sec) : {}
+  const unlocked = (n: number) => legalSections.slice(0, n - 1).every((s) => legalSectionDone(l, s.id))
+  const hasGstin = g.hasGstin ?? (g.gstin ? true : null)
+  const mismatch = acct2.length > 0 && acct !== acct2
+  const setAccount = (a: string, b: string) => {
+    setAcct(a)
+    setAcct2(b)
+    up({ accountLast4: a.length >= 9 && a === b ? a.slice(-4) : a || b ? '' : g.accountLast4 })
+  }
+  const setIfsc = (v: string) => {
+    const ifsc = v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
+    const bank = banks.find(([code]) => code === ifsc.slice(0, 4))?.[1]
+    up({ ifsc, ...(bank && !ifscError(ifsc) && !g.bankName ? { bankName: bank } : {}) })
+  }
+  const row = (title: string, help: string | undefined, error: string | undefined, child: ReactNode, id?: string) => (
+    <div className="grid gap-2 py-3 sm:grid-cols-[1fr_minmax(0,480px)] sm:gap-8">
+      <div>
+        <label htmlFor={id} className="block text-[15px] font-medium text-ink-900">
+          {title}
         </label>
-        <label className="label">
-          PAN (optional)
-          <input className="field uppercase" maxLength={10} value={g.pan} onChange={(e) => up({ pan: e.target.value.toUpperCase() })} />
-          {err(g.pan.length === 10 && !!panError(g.pan), panError(g.pan))}
-        </label>
+        {help && <p className="text-[13px] text-ink-500">{help}</p>}
       </div>
-      <label className="label">
-        Proof of ownership or lease (optional now, needed before first payout)
-        <input type="file" accept=".pdf,image/*" className="field py-2.5" onChange={(e) => up({ ownershipDoc: e.target.files?.[0]?.name })} />
-        {g.ownershipDoc && <span className="text-[13px] font-semibold text-live">Attached: {g.ownershipDoc}</span>}
-        <span className="text-[13px] font-normal text-ink-500">Electricity bill, property tax receipt or rent agreement.{isDemoMode ? ' In demo mode only the file name is kept.' : ''}</span>
-      </label>
-
-      <h3 className="mt-2 font-display text-lg font-bold">Payout bank account</h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          Account holder name
-          <input className="field" value={g.payoutName} onChange={(e) => up({ payoutName: e.target.value })} />
-        </label>
-        <label className="label">
-          Bank name
-          <input className="field" value={g.bankName} onChange={(e) => up({ bankName: e.target.value })} />
-        </label>
-        <label className="label">
-          IFSC
-          <input className="field uppercase" maxLength={11} value={g.ifsc} onChange={(e) => up({ ifsc: e.target.value.toUpperCase() })} />
-          {err(g.ifsc.length === 11 && !!ifscError(g.ifsc), ifscError(g.ifsc))}
-        </label>
-        <label className="label">
-          Account number
-          <input
-            className="field"
-            inputMode="numeric"
-            autoComplete="off"
-            value={acct}
-            placeholder={g.accountLast4 ? `Saved, ending ${g.accountLast4}` : ''}
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, '').slice(0, 18)
-              setAcct(v)
-              if (v.length >= 9) up({ accountLast4: v.slice(-4) })
-            }}
-          />
-          <span className="text-[13px] font-normal text-ink-500">Only the last 4 digits are stored here. The payments partner confirms the full number when payouts start.</span>
-        </label>
-      </div>
-
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line-strong bg-white p-4">
-        <input type="checkbox" checked={g.agreed} onChange={(e) => up({ agreed: e.target.checked })} className="mt-1 h-5 w-5 accent-pine-800" />
-        <span>
-          <span className="block font-semibold">I own this property or am authorised to list it, and I accept the partner terms.</span>
-          <span className="text-sm text-ink-500">
-            Commission {Math.round(site.commissionRate * 100)}% of the room amount on completed stays, plus GST. Payouts {site.payoutCycle}. [Partner terms document to be added by the client.]
+      <div className="flex flex-col gap-1">
+        {child}
+        {error && (
+          <span role="alert" className="text-[13px] font-medium text-alert">
+            {error}
           </span>
-        </span>
-      </label>
-    </Section>
+        )}
+      </div>
+    </div>
+  )
+  const body: Record<number, ReactNode> = {
+    1: (
+      <div className="px-4 pb-4 sm:px-5">
+        <div className="border-b border-line pb-2">
+          {row(
+            'Bank Account Number',
+            undefined,
+            e.acct && !acct ? e.acct : undefined,
+            <input id="b-acct" className="field" inputMode="numeric" autoComplete="off" placeholder={g.accountLast4 ? `Saved, ending ${g.accountLast4}` : '1234567890123456'} value={acct} onChange={(x) => setAccount(x.target.value.replace(/\D/g, '').slice(0, 18), acct2)} aria-invalid={!!e.acct && !acct} />,
+            'b-acct',
+          )}
+          {row(
+            'Re-Enter Bank Account Number',
+            undefined,
+            mismatch ? 'The account numbers don’t match.' : acct && acct.length < 9 ? 'An account number has 9 to 18 digits.' : undefined,
+            <input id="b-acct2" className="field" inputMode="numeric" autoComplete="off" placeholder={g.accountLast4 ? `Saved, ending ${g.accountLast4}` : '1234567890123456'} value={acct2} onPaste={(x) => x.preventDefault()} onChange={(x) => setAccount(acct, x.target.value.replace(/\D/g, '').slice(0, 18))} aria-invalid={mismatch} />,
+            'b-acct2',
+          )}
+          <p className="pb-1 text-[12.5px] text-ink-500">Only the last 4 digits are stored in InnDesk. The full number is checked by our payments partner when payouts start.</p>
+        </div>
+        <div className="border-b border-line">{row('Bank IFSC Code', 'You can find this on your cheque book or bank statement', e.ifsc ?? (g.ifsc.length === 11 && ifscError(g.ifsc) ? ifscError(g.ifsc) : undefined), <input id="b-ifsc" className="field uppercase" maxLength={11} placeholder="HDFC0001234" value={g.ifsc} onChange={(x) => setIfsc(x.target.value)} aria-invalid={!!e.ifsc} />, 'b-ifsc')}</div>
+        {row('Bank Name', undefined, e.bankName, <SearchSelect id="b-bank" value={g.bankName} options={banks.map(([, n]) => n)} onChange={(v) => up({ bankName: v })} placeholder="Select your bank from the list" searchPlaceholder="Search banks" invalid={!!e.bankName} />, 'b-bank')}
+        <label className="mt-1 flex cursor-pointer items-start gap-2.5 text-[14px] font-medium text-ink-900">
+          <input type="checkbox" checked={!!g.bankConsent} onChange={(x) => up({ bankConsent: x.target.checked })} className="mt-0.5 h-[18px] w-[18px] accent-pine-800" />I consent to third-party bank account verification, ₹1 will be deposited in given bank account.
+        </label>
+        {e.consent && (
+          <span role="alert" className="mt-1 block text-[13px] font-medium text-alert">
+            {e.consent}
+          </span>
+        )}
+      </div>
+    ),
+    2: (
+      <div className="px-4 pb-4 sm:px-5">
+        <div className="border-b border-line">{row('Registered business or owner name', 'As written on the PAN card', e.legalName, <input id="t-name" className="field" value={g.legalName} onChange={(x) => up({ legalName: x.target.value })} aria-invalid={!!e.legalName} />, 't-name')}</div>
+        <div className="border-b border-line">{row('PAN', 'Permanent Account Number of the business or owner', e.pan ?? (g.pan.length === 10 && panError(g.pan) ? panError(g.pan) : undefined), <input id="t-pan" className="field uppercase" maxLength={10} placeholder="ABCDE1234F" value={g.pan} onChange={(x) => up({ pan: x.target.value.toUpperCase() })} aria-invalid={!!e.pan} />, 't-pan')}</div>
+        <div className="border-b border-line">
+          {row('Do you have a GSTIN?', 'Used on the commission invoices we send you', e.hasGstin, <Pills name="hasgst" value={hasGstin == null ? undefined : hasGstin ? 'yes' : 'no'} options={ynOpts} onChange={(v) => up({ hasGstin: v === 'yes', ...(v === 'no' ? { gstin: '' } : {}) })} />)}
+          {hasGstin &&
+            row(
+              'GSTIN',
+              undefined,
+              e.gstin ?? (g.gstin.length === 15 && gstinError(g.gstin) ? gstinError(g.gstin) : undefined),
+              <>
+                <input id="t-gst" className="field uppercase" maxLength={15} placeholder="07ABCDE1234F1Z5" value={g.gstin} onChange={(x) => up({ gstin: x.target.value.toUpperCase() })} aria-invalid={!!e.gstin} />
+                {g.gstin.length === 15 && !gstinError(g.gstin) && <span className="text-[13px] font-medium text-live">Valid format, registered in {gstinState(g.gstin)}.</span>}
+                {isDemoMode && !g.gstin && (
+                  <span className="text-[13px] text-ink-500">
+                    Demo test GSTIN:{' '}
+                    <button type="button" className="font-medium text-pine-800 underline" onClick={() => up({ gstin: demoIds.gstin, pan: g.pan || demoIds.pan })}>
+                      {demoIds.gstin}
+                    </button>
+                  </span>
+                )}
+              </>,
+              't-gst',
+            )}
+        </div>
+        {row('Is your business registered as an MSME (Udyam)?', 'Micro, small and medium enterprises registered on the Udyam portal', e.msme, <Pills name="msme" value={g.msme == null ? undefined : g.msme ? 'yes' : 'no'} options={ynOpts} onChange={(v) => up({ msme: v === 'yes', ...(v === 'no' ? { udyam: '' } : {}) })} />)}
+        {g.msme && row('Udyam Registration Number', undefined, e.udyam, <input id="t-udyam" className="field uppercase" maxLength={19} placeholder="UDYAM-DL-01-0001234" value={g.udyam ?? ''} onChange={(x) => up({ udyam: x.target.value.toUpperCase() })} aria-invalid={!!e.udyam} />, 't-udyam')}
+      </div>
+    ),
+    3: (
+      <div className="px-4 pb-4 sm:px-5">
+        <div className="border-b border-line pb-3">
+          {row(
+            'Proof of ownership or lease',
+            'Electricity bill, property tax receipt, sale deed or rent agreement. Optional now, needed before your first payout.',
+            undefined,
+            <>
+              <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-dashed border-line-strong bg-paper px-3 text-[15px] font-medium text-pine-800 hover:border-pine-700">
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                {g.ownershipDoc ? 'Replace document' : 'Upload document'}
+                <input type="file" accept=".pdf,image/jpeg,image/png" className="sr-only" onChange={(x) => x.target.files?.[0] && up({ ownershipDoc: x.target.files[0].name })} />
+              </label>
+              {g.ownershipDoc && <span className="text-[13px] font-medium text-live">Attached: {g.ownershipDoc}</span>}
+              <span className="text-[12.5px] text-ink-500">PDF, JPG or PNG.{isDemoMode ? ' In demo mode only the file name is kept.' : ''}</span>
+            </>,
+          )}
+        </div>
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5">
+          <input type="checkbox" checked={g.agreed} onChange={(x) => up({ agreed: x.target.checked })} className="mt-0.5 h-[18px] w-[18px] accent-pine-800" />
+          <span>
+            <span className="block text-[14px] font-medium text-ink-900">I own this property or am authorised to list it, and I accept the partner terms.</span>
+            <span className="text-[13px] text-ink-500">
+              Commission {Math.round(site.commissionRate * 100)}% of the room amount on completed stays, plus GST. Payouts {site.payoutCycle}. [Partner terms document to be added by the client.]
+            </span>
+          </span>
+        </label>
+        {e.agreed && (
+          <span role="alert" className="mt-1 block text-[13px] font-medium text-alert">
+            {e.agreed}
+          </span>
+        )}
+      </div>
+    ),
+  }
+  const facts = (n: number): [string, string][] =>
+    n === 1
+      ? [
+          ['Bank account number', g.accountLast4 ? `•••• ${g.accountLast4}` : '-'],
+          ['Bank IFSC Code', g.ifsc || '-'],
+          ['Bank Name', g.bankName || '-'],
+        ]
+      : n === 2
+        ? [
+            ['Registered name', g.legalName || '-'],
+            ['PAN', g.pan || '-'],
+            ['GSTIN', hasGstin ? g.gstin : 'No GSTIN'],
+            ['MSME (Udyam)', g.msme ? (g.udyam ?? '-') : 'Not registered'],
+          ]
+        : [
+            ['Proof of ownership or lease', g.ownershipDoc || 'Not uploaded yet'],
+            ['Partner terms', g.agreed ? 'Accepted' : '-'],
+          ]
+  return (
+    <section className="flex flex-col gap-5">
+      <h2 className="text-[30px] font-medium text-ink-900">Finance &amp; Legal</h2>
+      <ol className="relative flex flex-col gap-4">
+        {legalSections.map((s, i) => {
+          const open = s.id === sec
+          const can = unlocked(s.id)
+          const done = can && legalSectionDone(l, s.id) && !open
+          const state = open ? 'active' : done ? 'done' : 'locked'
+          const nextOpen = i < legalSections.length - 1 && unlocked(s.id + 1)
+          return (
+            <li key={s.id} className="relative flex gap-3 sm:gap-5">
+              {i < legalSections.length - 1 && <span aria-hidden="true" className={`absolute top-8 bottom-[-48px] left-4 w-[3px] -translate-x-1/2 ${done && nextOpen ? 'bg-pine-800' : open ? 'bg-brass-500' : 'bg-line-strong'}`} />}
+              <div className="pt-4">
+                <StepDot n={s.id} state={state} />
+              </div>
+              <div className={`min-w-0 flex-1 rounded-xl bg-white ring-1 ring-line ${open ? 'shadow-panel' : ''} ${!can ? 'opacity-70' : ''}`}>
+                <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
+                  <span className="min-w-0">
+                    <strong className="block text-[22px] leading-tight font-medium text-ink-900">{s.title}</strong>
+                    {!done && <span className="block text-[14px] text-ink-700">{s.intro}</span>}
+                  </span>
+                  {!can ? (
+                    <Lock className="h-4 w-4 shrink-0 text-ink-400" aria-label="Locked" />
+                  ) : done ? (
+                    <button type="button" onClick={() => openSec(s.id)} className="shrink-0 rounded-md px-2 py-1 text-[14px] font-medium text-pine-800 hover:bg-pine-50">
+                      Edit
+                    </button>
+                  ) : null}
+                </div>
+                {done && (
+                  <dl className="grid gap-x-6 gap-y-4 border-t border-line px-4 py-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
+                    {facts(s.id).map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="text-[13px] text-ink-500">{k}</dt>
+                        <dd className="text-[15px] font-medium break-words text-ink-900">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {open && <div className="border-t border-line pt-2">{body[s.id]}</div>}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
   )
 }
 
@@ -1548,6 +1786,8 @@ export default function Wizard() {
   const roomId = step === 'rooms' ? params.get('room') : null
   const sec = Math.min(5, Math.max(1, Number(params.get('sec')) || 1))
   const [roomTried, setRoomTried] = useState(false)
+  // Finance & Legal: which of its three parts is open.
+  const [legalTried, setLegalTried] = useState(false)
   const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
   useEffect(() => {
     if (!toast) return
@@ -1594,6 +1834,13 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [l, saveState, save])
 
+  // Opening Finance & Legal pins the part to show (the first unfinished one), so it doesn't jump while typing.
+  const legalPinned = !!params.get('lsec')
+  useEffect(() => {
+    if (step !== 'legal' || legalPinned || !l) return
+    setParams({ step: 'legal', lsec: String(legalSections.find((x) => !legalSectionDone(l, x.id))?.id ?? 1) }, { replace: true })
+  }, [step, legalPinned, l, setParams])
+
   if (id === 'new') return <Navigate to="/app/properties?new=1" replace />
 
   const isLive = !!l && l.status !== 'draft'
@@ -1636,6 +1883,26 @@ export default function Wizard() {
     setToast({ text: `${title.charAt(0)}${title.slice(1).toLowerCase()} ${sec === 5 ? '— room saved' : 'have been saved'}`, n: 3 })
     if (sec < 5) openRoom(r.id, sec + 1)
     else closeRoom()
+  }
+
+  const lsec = l ? Math.min(3, Math.max(1, Number(params.get('lsec')) || (legalSections.find((x) => !legalSectionDone(l, x.id))?.id ?? 1))) : 1
+  const openLegal = (n: number) => {
+    setLegalTried(false)
+    setShowErrors(false)
+    setParams({ step: 'legal', lsec: String(n) })
+    window.scrollTo({ top: 0 })
+  }
+  const legalNext = () => {
+    if (!l) return
+    if (!legalSectionDone(l, lsec)) {
+      setLegalTried(true)
+      return
+    }
+    if (saveState === 'dirty' && l.status === 'draft') save(l)
+    const title = legalSections[lsec - 1].title
+    setToast({ text: `${title} has been saved`, n: 3 })
+    if (lsec < 3) openLegal(lsec + 1)
+    else next()
   }
 
   const next = () => {
@@ -1687,7 +1954,7 @@ export default function Wizard() {
     ),
     photos: <Photos l={l} set={set} />,
     policies: <Policies l={l} set={set} />,
-    legal: <Legal l={l} set={set} />,
+    legal: <Legal l={l} set={set} sec={lsec} openSec={openLegal} tried={legalTried} />,
     review: <Review l={l} go={go} onPublish={publish} busy={publishing} result={result} onRetry={async () => setL(await retrySync(l))} />,
   }[step]
 
@@ -1789,8 +2056,8 @@ export default function Wizard() {
               </button>
             ) : (
               index < steps.length - 1 && (
-                <button type="button" className="btn-brass min-h-11 px-6" onClick={next}>
-                  {step === 'basics' ? 'Continue' : 'Save And Continue'}
+                <button type="button" className="btn-brass min-h-11 px-6" onClick={step === 'legal' && !isLive ? legalNext : next}>
+                  {step === 'basics' ? 'Continue' : step === 'legal' ? 'Save & Continue' : 'Save And Continue'}
                 </button>
               )
             )}
