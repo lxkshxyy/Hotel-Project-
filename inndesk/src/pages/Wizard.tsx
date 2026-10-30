@@ -16,7 +16,7 @@ import { useSession } from '../context/Session'
 import { amenityGroups, banks, cities, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { attachOptions, autoOccupancy, basicsErrors, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { attachOptions, autoOccupancy, basicsErrors, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { BedLine, Listing, ListingRoom } from '../lib/types'
@@ -487,14 +487,26 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
               </div>
               {text('l-state', 'State', 'state', 'Please add details', { autoComplete: 'address-level1' })}
               {text('l-city', 'City', 'city', 'Please add details', { autoComplete: 'address-level2' })}
-              {loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase()) && (
-                <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
-                  <span>
-                    {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It currently covers {cities.map((c) => c.name).join(', ')}. If your property is in one of these cities, correct the city. Otherwise you can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
-                  </span>
-                </p>
-              )}
+              {loc.city.trim() &&
+                (() => {
+                  const served = servedCity(loc)
+                  if (cityByName(loc.city)) return null
+                  return served ? (
+                    <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-pine-100 bg-pine-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+                      <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-live" aria-hidden="true" />
+                      <span>
+                        Guests will find this property under <strong>{served}</strong> on {site.marketplace}, with {loc.city.trim()} shown in the address.
+                      </span>
+                    </p>
+                  ) : (
+                    <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
+                      <span>
+                        {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It covers {cities.map((c) => c.name).join(', ')} and places within {60} km of them. You can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
+                      </span>
+                    </p>
+                  )
+                })()}
               {e.pin && (
                 <span role="alert" className="text-[13px] font-semibold text-alert">
                   {e.pin}

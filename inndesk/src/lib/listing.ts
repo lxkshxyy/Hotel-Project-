@@ -84,12 +84,13 @@ export function toHotel(l: Listing) {
     slug,
     name: l.basics.name.trim(),
     brand: 'Partner' as const,
-    city: cities.find((c) => c.name.toLowerCase() === l.location.city.trim().toLowerCase())?.name ?? l.location.city.trim(),
-    area: l.location.area.trim(),
+    city: servedCity(l.location) ?? l.location.city.trim(),
+    // When a nearby town is sold under a covered city (Greater Noida → New Delhi), keep the town in the area.
+    area: [l.location.area.trim(), servedCity(l.location) && !cityByName(l.location.city) ? l.location.city.trim() : ''].filter(Boolean).join(', '),
     address: [l.location.address.trim(), l.location.area.trim(), `${l.location.city} ${l.location.pincode}`.trim(), l.location.state?.trim()].filter(Boolean).join(', '),
     distance: lm[0] ? `${lm[0].distance} from ${lm[0].name}` : l.location.area,
-    lat: l.location.lat ?? cities.find((c) => c.name === l.location.city)?.lat ?? 0,
-    lng: l.location.lng ?? cities.find((c) => c.name === l.location.city)?.lng ?? 0,
+    lat: l.location.lat ?? cities.find((c) => c.name === servedCity(l.location))?.lat ?? 0,
+    lng: l.location.lng ?? cities.find((c) => c.name === servedCity(l.location))?.lng ?? 0,
     rating: 0,
     reviews: 0,
     tags: [l.basics.stars ? `${l.basics.stars}-star ${l.basics.propertyType.toLowerCase()}` : l.basics.propertyType, l.policies.coupleFriendly ? 'Couple friendly' : '', cancel.id === 'nonref' ? '' : cancel.short]
@@ -270,6 +271,42 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
 export const roomSectionDone = (r: ListingRoom, section: number) => !Object.keys(roomErrors(r, section)).length
 export const roomDone = (r: ListingRoom) => roomSections.every((s) => roomSectionDone(r, s.id))
 
+/** Other names people type for the cities StayEasy covers. */
+const cityAliases: Record<string, string> = {
+  delhi: 'New Delhi', newdelhi: 'New Delhi', ncr: 'New Delhi', delhincr: 'New Delhi',
+  bangalore: 'Bengaluru', bengaluru: 'Bengaluru', bombay: 'Mumbai', calcutta: 'Kolkata',
+  panaji: 'Goa', panjim: 'Goa', northgoa: 'Goa', southgoa: 'Goa', margao: 'Goa',
+  secunderabad: 'Hyderabad', poona: 'Pune',
+}
+const SERVED_RADIUS_KM = 60
+const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const r = Math.PI / 180
+  const x = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lng - a.lng) * r) / 2) ** 2
+  return 12742 * Math.asin(Math.sqrt(x))
+}
+
+/**
+ * The StayEasy city a listing is sold under, or null when StayEasy doesn't cover it yet.
+ * Matches the typed city (any spelling or old name, e.g. "delhi", "Calcutta", "Kolkata District"),
+ * or else the map pin: anything within 60 km of a covered city is listed under that city
+ * (so Dadri, Greater Noida, Noida and Gurugram come under New Delhi).
+ */
+/** A covered city from its name or another spelling ("delhi", "Calcutta", "Kolkata District"). */
+export function cityByName(name: string): string | null {
+  const key = name.toLowerCase().replace(/district|city|municipal corporation/g, '').replace(/[^a-z]/g, '')
+  return cities.find((c) => c.name.toLowerCase().replace(/[^a-z]/g, '') === key)?.name ?? cityAliases[key] ?? null
+}
+
+export function servedCity(loc: Listing['location']): string | null {
+  const byName = cityByName(loc.city)
+  if (byName) return byName
+  if (loc.lat != null && loc.lng != null) {
+    const near = cities.map((c) => ({ c, d: km(c, { lat: loc.lat!, lng: loc.lng! }) })).sort((a, b) => a.d - b.d)[0]
+    if (near && near.d <= SERVED_RADIUS_KM) return near.c.name
+  }
+  return null
+}
+
 /** Finance & Legal is filled in three parts, one after another. */
 export const legalSections = [
   { id: 1, title: 'Bank Account Information', intro: 'Please provide your bank details to receive payouts without delay' },
@@ -326,7 +363,7 @@ export function blockers(l: Listing): Check[] {
   const loc = l.location
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
-  if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', fix: { step: 'location', field: 'l-city' }, message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. If your property is in a city ${site.marketplace} covers, correct the city; otherwise ask the ${site.marketplace} team to add ${loc.city.trim()}.` })
+  if (loc.city.trim() && !servedCity(loc)) out.push({ step: 'review', fix: { step: 'location', field: 'l-city' }, message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. If your property is in a city ${site.marketplace} covers, correct the city; otherwise ask the ${site.marketplace} team to add ${loc.city.trim()}.` })
   const need = minAmenities(l)
   if (l.amenities.length < need) out.push({ step: 'amenities', message: `A ${l.basics.stars}-star property needs at least ${need} amenities ticked (${l.amenities.length} ticked so far).` })
   for (const id of l.amenities) if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) out.push({ step: 'amenities', message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` })
