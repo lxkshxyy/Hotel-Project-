@@ -80,10 +80,8 @@ export interface Listing {
     lng?: number
     landmarks: { name: string; distance: string }[]
   }
-  /** Amenity ids answered Yes. */
+  /** Ids of the amenities the owner ticked. */
   amenities: string[]
-  /** Every amenity the owner answered: id → Yes (true) / No (false). */
-  amenityAnswers?: Record<string, boolean>
   rooms: ListingRoom[]
   photos: ListingPhoto[]
   policies: {

@@ -12,19 +12,17 @@ export const cities = [
 
 
 /**
- * Property amenities, grouped as on the big Indian travel extranets. Owners answer No or Yes for each.
- * Every item in the Mandatory group must be answered before the Amenities step is complete.
+ * Property amenities, grouped as on the big Indian travel extranets. Owners tick what the property has.
  * `key` matches StayEasy's own amenity list, so those show with icons and work as search filters
  * on StayEasy; the rest are listed on the hotel page as text.
  */
-export const amenityGroups: { group: string; mandatory?: boolean; items: { id: string; label: string; key?: string }[] }[] = [
+export const amenityGroups: { group: string; items: { id: string; label: string; key?: string }[] }[] = [
   {
-    group: "Mandatory",
-    mandatory: true,
+    group: "Most popular",
     items: [
       {
         id: "ac",
-        label: "Air Conditioning",
+        label: "Air conditioning",
         key: "ac"
       },
       {
@@ -39,17 +37,17 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "pool",
-        label: "Swimming Pool",
+        label: "Swimming pool",
         key: "pool"
       },
       {
         id: "wifi",
-        label: "Wi-Fi",
+        label: "Free Wi-Fi",
         key: "wifi"
       },
       {
         id: "frontDesk",
-        label: "Reception"
+        label: "24-hour front desk"
       },
       {
         id: "bar",
@@ -66,7 +64,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "wheelchair",
-        label: "Wheelchair"
+        label: "Wheelchair accessible"
       },
       {
         id: "gym",
@@ -75,15 +73,15 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "cctv",
-        label: "CCTV"
+        label: "CCTV in common areas"
       },
       {
         id: "shuttle",
-        label: "Airport Transfers"
+        label: "Airport pickup / drop"
       },
       {
         id: "lift",
-        label: "Elevator / Lift",
+        label: "Lift / Elevator",
         key: "lift"
       },
       {
@@ -92,7 +90,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "kitchen",
-        label: "Kitchen / Kitchenette"
+        label: "Kitchen / Guest kitchen"
       },
       {
         id: "powerBackup",
@@ -183,7 +181,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "security",
-        label: "Security Guard",
+        label: "24-hour security",
         key: "security"
       },
       {
@@ -203,6 +201,11 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
   {
     group: "Basic Facilities",
     items: [
+      {
+        id: "hotWater",
+        label: "24-hour hot water",
+        key: "hotWater"
+      },
       {
         id: "lan",
         label: "LAN"
@@ -408,7 +411,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
       },
       {
         id: "breakfast",
-        label: "Breakfast",
+        label: "Breakfast available",
         key: "breakfast"
       },
       {
@@ -430,7 +433,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
     items: [
       {
         id: "banquet",
-        label: "Banquet"
+        label: "Banquet hall"
       },
       {
         id: "businessCenter",
@@ -526,7 +529,7 @@ export const amenityGroups: { group: string; mandatory?: boolean; items: { id: s
     items: [
       {
         id: "tv",
-        label: "TV",
+        label: "TV in rooms",
         key: "tv"
       }
     ]

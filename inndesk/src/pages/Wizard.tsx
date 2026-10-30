@@ -12,7 +12,7 @@ import { useSession } from '../context/Session'
 import { amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { basicsErrors, blockers, locationErrors, mandatoryLeft, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { basicsErrors, blockers, locationErrors, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
@@ -515,105 +515,29 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
   )
 }
 
-function Amenities({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
-  const [active, setActive] = useState(0)
-  const [q, setQ] = useState('')
-  const answers = l.amenityAnswers ?? {}
-  const answerOf = (id: string): boolean | undefined => answers[id] ?? (l.amenities.includes(id) ? true : undefined)
-  const answer = (id: string, yes: boolean) =>
-    set((x) => ({
-      ...x,
-      amenityAnswers: { ...(x.amenityAnswers ?? {}), [id]: yes },
-      amenities: yes ? [...new Set([...x.amenities, id])] : x.amenities.filter((a) => a !== id),
-    }))
-  const count = (g: (typeof amenityGroups)[number]) => g.items.filter((i) => answerOf(i.id) !== undefined).length
-  const needle = q.trim().toLowerCase()
-  const rows = needle ? amenityGroups.flatMap((g) => g.items.filter((i) => i.label.toLowerCase().includes(needle)).map((i) => ({ ...i, group: g.group }))) : amenityGroups[active].items.map((i) => ({ ...i, group: '' }))
-  const missing = show ? mandatoryLeft(l) : 0
-  const list = useRef<HTMLDivElement>(null)
-
+function Amenities({ l, set }: { l: Listing; set: Set }) {
+  const toggle = (id: string) => set((x) => ({ ...x, amenities: x.amenities.includes(id) ? x.amenities.filter((a) => a !== id) : [...x.amenities, id] }))
   return (
-    <section className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-[30px] font-black text-ink-900 sm:text-[32px]">Property Amenities</h2>
-        <p className="text-[14px] text-ink-500">Answering the amenities available at your property can significantly influence guests to book. Please answer all the Mandatory amenities below.</p>
-      </div>
-      <div className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-line">
-        <div className="border-b border-line p-3">
-          <label className="flex items-center gap-2 rounded-lg border border-line-strong px-3 focus-within:border-pine-700">
-            <Search className="h-4 w-4 text-ink-500" aria-hidden="true" />
-            <span className="sr-only">Search amenities</span>
-            <input className="min-h-[42px] min-w-0 flex-1 text-[15px] outline-none" placeholder="Search amenities, e.g. pool, parking" value={q} onChange={(x) => setQ(x.target.value)} />
-            {q && (
-              <button type="button" aria-label="Clear search" onClick={() => setQ('')} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </label>
-        </div>
-        <div className="md:grid md:grid-cols-[280px_1fr]">
-          <nav aria-label="Amenity groups" className={`no-scrollbar flex gap-2 overflow-x-auto border-b border-line p-3 md:block md:max-h-[640px] md:overflow-y-auto md:border-r md:border-b-0 md:p-0 ${needle ? 'opacity-50' : ''}`}>
-            {amenityGroups.map((g, i) => {
-              const on = !needle && i === active
-              const done = count(g)
-              const warn = g.mandatory && missing > 0
-              return (
-                <button
-                  key={g.group}
-                  type="button"
-                  aria-current={on ? 'true' : undefined}
-                  onClick={() => {
-                    setQ('')
-                    setActive(i)
-                    list.current?.scrollTo({ top: 0 })
-                  }}
-                  className={`shrink-0 rounded-full border px-3 py-2 text-left text-[14px] whitespace-nowrap transition-colors md:block md:w-full md:rounded-none md:border-0 md:border-l-[3px] md:px-4 md:py-2.5 md:whitespace-normal ${on ? 'border-pine-800 bg-pine-50 font-bold text-pine-900' : 'border-line-strong text-ink-900 hover:bg-paper md:border-transparent'}`}
-                >
-                  {g.group}
-                  {g.mandatory && <span className="text-alert"> *</span>}{' '}
-                  <span className={warn ? 'font-bold text-alert' : done === g.items.length ? 'text-live' : 'text-ink-500'}>
-                    ({done} of {g.items.length})
-                  </span>
-                </button>
-              )
-            })}
-          </nav>
-          <div ref={list} className="md:max-h-[640px] md:overflow-y-auto">
-            {!needle && amenityGroups[active].mandatory && <p className={`border-b border-line px-4 py-2.5 text-[13px] ${missing ? 'bg-alert-50 font-semibold text-alert' : 'bg-pine-50 text-pine-900'}`}>{missing ? `Answer the ${missing} remaining mandatory amenities to continue.` : 'Answer No or Yes for each one. All of these are required.'}</p>}
-            {rows.length === 0 ? (
-              <p className="p-6 text-ink-500">No amenity matches “{q}”.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {rows.map((r) => {
-                  const v = answerOf(r.id)
-                  const unanswered = show && amenityGroups.some((g) => g.mandatory && g.items.some((i) => i.id === r.id)) && v === undefined
-                  return (
-                    <li key={r.id} className={`flex items-center justify-between gap-4 px-4 py-3.5 ${unanswered ? 'bg-alert-50/60' : ''}`}>
-                      <span className="min-w-0 text-[15px] text-ink-900">
-                        {r.label}
-                        {r.group && <span className="block text-[12px] text-ink-500">{r.group}</span>}
-                      </span>
-                      <span role="radiogroup" aria-label={r.label} className="flex shrink-0 gap-5">
-                        {[
-                          [false, 'No'],
-                          [true, 'Yes'],
-                        ].map(([val, t]) => (
-                          <label key={t as string} className="flex cursor-pointer items-center gap-2 text-[14px] text-ink-900">
-                            <input type="radio" name={`am-${r.id}`} checked={v === val} onChange={() => answer(r.id, val as boolean)} className="h-[18px] w-[18px] accent-pine-800" />
-                            {t as string}
-                          </label>
-                        ))}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-      </div>
-      <p className="text-[13px] text-ink-500">Room features like TV, AC in rooms, kettle and geyser are added for each room type in the next step.</p>
-    </section>
+    <Section title="Amenities" intro={`Tick everything guests can use. Guests filter by these on ${site.marketplace}.`}>
+      {amenityGroups.map((g) => {
+        const ticked = g.items.filter((a) => l.amenities.includes(a.id)).length
+        return (
+          <fieldset key={g.group} className="flex flex-col gap-2.5">
+            <legend className="mb-2.5 flex items-baseline gap-2 text-[20px] font-bold text-ink-900">
+              {g.group}
+              {ticked > 0 && <span className="text-[13px] font-semibold text-live">{ticked} selected</span>}
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {g.items.map((a) => (
+                <Chip key={a.id} on={l.amenities.includes(a.id)} onClick={() => toggle(a.id)}>
+                  {a.label}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+        )
+      })}
+    </Section>
   )
 }
 
@@ -1101,7 +1025,7 @@ export default function Wizard() {
   const stepBody = {
     basics: <Basics l={l} set={set} show={showErrors} onChangeType={() => setChangingType(true)} />,
     location: <Location l={l} set={set} show={showErrors} />,
-    amenities: <Amenities l={l} set={set} show={showErrors} />,
+    amenities: <Amenities l={l} set={set} />,
     rooms: <Rooms l={l} set={set} goPhotos={() => go('photos')} />,
     photos: <Photos l={l} set={set} />,
     policies: <Policies l={l} set={set} />,
