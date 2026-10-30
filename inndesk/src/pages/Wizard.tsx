@@ -614,7 +614,7 @@ const SQFT_PER_SQM = 10.7639
 /** The numbered line on the left of Create Room. */
 function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' }) {
   return (
-    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-pine-800 text-white ring-4 ring-pine-100' : state === 'done' ? 'bg-brass-500 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
+    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-brass-500 text-white ring-4 ring-brass-100' : state === 'done' ? 'bg-pine-800 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
       {state === 'done' ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Done" /> : n}
     </span>
   )
