@@ -3,7 +3,7 @@ import { BedDouble, Briefcase, ClipboardList, Home, Luggage, Menu, Search, Shiel
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { features, isPublicDemo } from '../config/launch'
-import WelcomeLogin, { openLogin } from './WelcomeLogin'
+import WelcomeLogin from './WelcomeLogin'
 import { site } from '../config/site'
 import { useAccount } from '../context/AccountContext'
 import { useAuth } from '../context/AuthContext'
@@ -206,10 +206,6 @@ function Header() {
             <Link
               to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
               className="btn-navy"
-              onClick={(e) => {
-                e.preventDefault()
-                openLogin()
-              }}
             >
               Sign in
             </Link>
@@ -248,11 +244,6 @@ function Header() {
                 <Link
                   to="/login"
                   className="rounded-lg px-2 py-3 font-semibold text-ink-900 no-underline"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setOpen(false)
-                    openLogin()
-                  }}
                 >
                   Sign in
                 </Link>

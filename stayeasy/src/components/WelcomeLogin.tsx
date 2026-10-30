@@ -10,15 +10,15 @@ import { isDemoMode } from '../lib/supabase'
 
 /*
  * Sign-in pop-up with a photo panel, like the big travel sites.
- * It opens by itself once for a new visitor (not signed in, never closed it before), and from any
- * "Sign in" button through openLogin(). The photo follows the Personal / Business choice.
+ * It opens by itself only for NEW visitors: not signed in, and nobody has ever signed in on this
+ * browser. It shows once per visit; after a first sign-in it never opens by itself again.
+ * The "Sign in" buttons keep going to the normal /login page.
+ * (A website can't know who someone is before they sign in, so a returning customer on a new
+ * phone or browser sees it once, and simply signs in.)
  */
 
-const SEEN = 'stayeasy.welcome.seen'
-const EVT = 'stayeasy-open-login'
-
-/** Opens the sign-in pop-up from anywhere (header buttons, checkout…). */
-export const openLogin = (tab: 'personal' | 'business' = 'personal') => window.dispatchEvent(new CustomEvent(EVT, { detail: tab }))
+const SEEN = 'stayeasy.welcome.seen' // sessionStorage: closed during this visit
+const KNOWN = 'stayeasy.signed-in-before' // localStorage: someone has signed in on this browser
 
 const panels = {
   personal: {
@@ -55,30 +55,29 @@ export default function WelcomeLogin() {
   const emailRef = useRef<HTMLInputElement>(null)
   const quiet = pathname.startsWith('/login') || pathname.startsWith('/checkout') || pathname.startsWith('/biz') || pathname.startsWith('/bookings/')
 
-  // First visit: open once, a moment after the page has loaded.
+  // Remember that this browser has a signed-in customer, so the pop-up never opens for them again.
+  useEffect(() => {
+    if (!user) return
+    try {
+      localStorage.setItem(KNOWN, '1')
+    } catch {
+      /* ignore */
+    }
+  }, [user])
+
+  // New visitor: open a moment after the page has loaded.
   useEffect(() => {
     if (loading || user || quiet) return
-    let seen = false
+    let skip = false
     try {
-      seen = !!localStorage.getItem(SEEN)
+      skip = !!localStorage.getItem(KNOWN) || !!sessionStorage.getItem(SEEN)
     } catch {
-      seen = true
+      skip = true
     }
-    if (seen) return
+    if (skip) return
     const t = setTimeout(() => setOpen(true), 2500)
     return () => clearTimeout(t)
   }, [loading, user, quiet])
-
-  // Opened by a Sign in button.
-  useEffect(() => {
-    const on = (e: Event) => {
-      const t = (e as CustomEvent<'personal' | 'business'>).detail
-      setTab(t === 'business' && features.business ? 'business' : 'personal')
-      setOpen(true)
-    }
-    window.addEventListener(EVT, on)
-    return () => window.removeEventListener(EVT, on)
-  }, [])
 
   useEffect(() => {
     if (open) setTimeout(() => emailRef.current?.focus(), 80)
@@ -94,7 +93,7 @@ export default function WelcomeLogin() {
     setOpen(false)
     setError('')
     try {
-      localStorage.setItem(SEEN, new Date().toISOString())
+      sessionStorage.setItem(SEEN, '1')
     } catch {
       /* ignore */
     }
