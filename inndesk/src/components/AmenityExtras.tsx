@@ -12,8 +12,16 @@ type Set = (fn: (l: Listing) => Listing) => void
 
 export function MultiSelect({ label, options, value, onChange }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void }) {
   const [open, setOpen] = useState(false)
+  const [up, setUp] = useState(false)
   const [q, setQ] = useState('')
   const box = useRef<HTMLDivElement>(null)
+  const openList = () => {
+    const r = box.current?.getBoundingClientRect()
+    // Leaves room for the sticky Back / Continue bar at the bottom of the screen.
+    if (r) setUp(window.innerHeight - r.bottom < 330 && r.top > 330)
+    setQ('')
+    setOpen((x) => !x)
+  }
   useEffect(() => {
     if (!open) return
     const out = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
@@ -29,12 +37,12 @@ export function MultiSelect({ label, options, value, onChange }: { label: string
   const toggle = (o: string) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o])
   return (
     <div ref={box} className="relative">
-      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={() => setOpen((x) => !x)} className={`field flex items-center justify-between gap-2 text-left ${open ? 'border-pine-700 shadow-[0_0_0_3px_var(--color-pine-100)]' : ''}`}>
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={openList} className={`field flex items-center justify-between gap-2 text-left ${open ? 'border-pine-700 shadow-[0_0_0_3px_var(--color-pine-100)]' : ''}`}>
         <span className={`truncate ${value.length ? 'text-ink-900' : 'text-ink-400'}`}>{value.length ? value.join(', ') : 'Select'}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-ink-700 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-lg bg-white shadow-lift ring-1 ring-line">
+        <div className={`absolute inset-x-0 z-50 overflow-hidden rounded-lg bg-white shadow-lift ring-1 ring-line ${up ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           {options.length > 3 && (
             <label className="m-2 flex items-center gap-2 rounded-md border border-line-strong px-2.5 focus-within:border-pine-700">
               <Search className="h-4 w-4 text-ink-400" aria-hidden="true" />
@@ -74,12 +82,21 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
   const fields = amenityDetails[id]
   const form = amenityForms[id]
   const entries = l.amenityEntries?.[id] ?? []
+  const [settled, setSettled] = useState(false)
   // Ticking an amenity with its own form opens the form straight away (like answering Yes).
   const [editing, setEditing] = useState<AmenityEntry | 'new' | null>(() => (autoOpen && form && !entries.length ? 'new' : null))
   const setDetail = (f: DetailField, v: string | string[]) => set((x) => ({ ...x, amenityDetails: { ...x.amenityDetails, [id]: { ...x.amenityDetails?.[id], [f.id]: v } } }))
 
   return (
-    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="col-span-full overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      onAnimationStart={() => setSettled(false)}
+      onAnimationComplete={() => setSettled(true)}
+      // Clip only while opening/closing, so dropdown lists can hang over the tiles below.
+      className={`col-span-full ${settled ? 'overflow-visible' : 'overflow-hidden'}`}
+    >
       <div className="flex flex-col gap-3 rounded-xl bg-[#eef0ee] p-3 sm:p-4">
         <span className="text-[13px] font-semibold text-ink-700">{label} details</span>
         {fields && (
