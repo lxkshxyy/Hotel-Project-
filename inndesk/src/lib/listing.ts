@@ -81,9 +81,9 @@ export function toHotel(l: Listing) {
     slug,
     name: l.basics.name.trim(),
     brand: 'Partner' as const,
-    city: l.location.city,
+    city: cities.find((c) => c.name.toLowerCase() === l.location.city.trim().toLowerCase())?.name ?? l.location.city.trim(),
     area: l.location.area.trim(),
-    address: [l.location.address.trim(), l.location.area.trim(), `${l.location.city} ${l.location.pincode}`.trim()].filter(Boolean).join(', '),
+    address: [l.location.address.trim(), l.location.area.trim(), `${l.location.city} ${l.location.pincode}`.trim(), l.location.state?.trim()].filter(Boolean).join(', '),
     distance: lm[0] ? `${lm[0].distance} from ${lm[0].name}` : l.location.area,
     lat: l.location.lat ?? cities.find((c) => c.name === l.location.city)?.lat ?? 0,
     lng: l.location.lng ?? cities.find((c) => c.name === l.location.city)?.lng ?? 0,
@@ -158,16 +158,27 @@ export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yea
 }
 export const basicsProblems = (l: Listing) => Object.values(basicsErrors(l)).filter((m): m is string => !!m)
 
+/** What's missing on the Location tab, keyed by field. */
+export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
+  const loc = l.location
+  const e: ReturnType<typeof locationErrors> = {}
+  if (loc.address.trim().length < 2) e.address = 'Enter the house, building or apartment number.'
+  if (loc.area.trim().length < 2) e.area = 'Enter the locality, area, street or sector.'
+  if (!/^[1-9]\d{5}$/.test(loc.pincode)) e.pincode = 'Enter the 6-digit pincode.'
+  if (!loc.state?.trim()) e.state = 'Enter the state.'
+  if (!loc.city.trim()) e.city = 'Enter the city.'
+  if (loc.lat == null || loc.lng == null) e.pin = 'Place the pin on your entrance on the map.'
+  if (!loc.addressConfirmed) e.confirm = 'Confirm the address matches your registration or lease document.'
+  return e
+}
+
 /** Things that must be fixed before the listing can go live. */
 export function blockers(l: Listing): Check[] {
   const out: Check[] = []
   const loc = l.location
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
-  if (!cities.some((c) => c.name === loc.city)) out.push({ step: 'location', message: 'Choose the city.' })
-  if (loc.area.trim().length < 2) out.push({ step: 'location', message: 'Add the area or locality.' })
-  if (loc.address.trim().length < 8) out.push({ step: 'location', message: 'Add the street address.' })
-  if (!/^\d{6}$/.test(loc.pincode)) out.push({ step: 'location', message: 'Add the 6-digit PIN code.' })
-  if (loc.lat == null || loc.lng == null) out.push({ step: 'location', message: 'Drop the pin on your entrance so guests can find you.' })
+  out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
+  if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. Ask the ${site.marketplace} team to add the city.` })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`
@@ -189,7 +200,6 @@ export function blockers(l: Listing): Check[] {
 /** Optional improvements that help a listing sell. */
 export function tips(l: Listing): Check[] {
   const out: Check[] = []
-  if (l.location.landmarks.filter((x) => x.name).length < 2) out.push({ step: 'location', message: 'Add two nearby landmarks with distances.' })
   if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
   if (l.photos.length < 10) out.push({ step: 'photos', message: 'Hotels with 10 or more photos get more bookings.' })
   if (l.rooms.some((r) => !r.photoId)) out.push({ step: 'rooms', message: 'Give each room type its own photo.' })

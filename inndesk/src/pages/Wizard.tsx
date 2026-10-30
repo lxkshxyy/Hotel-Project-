@@ -1,18 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Lightbulb, Lock, MapPin, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, CircleAlert, CircleCheck, ExternalLink, Info, Lightbulb, Lock, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
-import MapPicker from '../components/MapPicker'
+import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
 import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner, Toggle } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, bedTypes, cancellationOptions, checkTimes, cities, roomAmenities } from '../data/options'
+import { amenityGroups, bedTypes, cancellationOptions, checkTimes, roomAmenities } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { basicsErrors, blockers, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { basicsErrors, blockers, locationErrors, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import type { Listing, ListingRoom } from '../lib/types'
@@ -302,62 +302,216 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
   )
 }
 
-function Location({ l, set }: { l: Listing; set: Set }) {
+function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
   const loc = l.location
   const up = (p: Partial<Listing['location']>) => set((x) => ({ ...x, location: { ...x.location, ...p } }))
-  const city = cities.find((c) => c.name === loc.city) ?? cities[0]
+  const e = show ? locationErrors(l) : {}
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<Place[]>([])
+  const [open, setOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [note, setNote] = useState('')
+  const [manual, setManual] = useState(false)
+  // The text put in the box after picking a place; it shouldn't trigger a new search.
+  const picked = useRef('')
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const out = (ev: MouseEvent) => !box.current?.contains(ev.target as Node) && setOpen(false)
+    document.addEventListener('mousedown', out)
+    return () => document.removeEventListener('mousedown', out)
+  }, [])
+  const showFields = manual || !!(loc.address || loc.area || loc.pincode || loc.city)
+
+  // Suggestions a moment after the owner stops typing.
+  useEffect(() => {
+    const text = q.trim()
+    if (text.length < 3 || q === picked.current) {
+      setResults([])
+      return
+    }
+    const ctl = new AbortController()
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const near = loc.lat != null && loc.lng != null ? { lat: loc.lat, lng: loc.lng } : undefined
+        setResults(await searchPlaces(text, near, ctl.signal))
+        setOpen(true)
+        setNote('')
+      } catch {
+        if (!ctl.signal.aborted) setNote('Address search isn’t reachable right now. Enter the address below and tap your entrance on the map.')
+      } finally {
+        if (!ctl.signal.aborted) setSearching(false)
+      }
+    }, 350)
+    return () => {
+      clearTimeout(t)
+      ctl.abort()
+    }
+  }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fill = (p: Place) =>
+    up({ address: p.house || loc.address, area: p.locality, pincode: p.pincode, city: p.city, state: p.state, country: p.country || 'India', lat: p.lat, lng: p.lng })
+
+  const pick = (p: Place) => {
+    picked.current = p.label
+    setResults([])
+    setQ(p.label)
+    setOpen(false)
+    fill(p)
+    setNote('Check the details below and drag the pin onto your entrance if needed.')
+  }
+
+  const current = () => {
+    if (!('geolocation' in navigator)) return setNote('This browser can’t share your location. Search your address instead.')
+    setLocating(true)
+    setNote('')
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        up({ lat, lng })
+        try {
+          const p = await placeAt(lat, lng)
+          if (p) {
+            picked.current = p.label
+            setOpen(false)
+            setQ(p.label)
+            fill(p)
+          } else setManual(true)
+          setNote('Pin placed at your current location. Check the address below.')
+        } catch {
+          setManual(true)
+          setNote('Pin placed at your current location. Enter the address below.')
+        } finally {
+          setLocating(false)
+        }
+      },
+      (err) => {
+        setLocating(false)
+        setNote(err.code === err.PERMISSION_DENIED ? 'Location permission was blocked. Allow it in the browser, or search your address.' : 'Couldn’t get your location. Search your address instead.')
+      },
+      { enableHighAccuracy: true, timeout: 12000 },
+    )
+  }
+
   const onPin = useCallback((lat: number, lng: number) => set((x) => ({ ...x, location: { ...x.location, lat, lng } })), [set])
-  return (
-    <Section title="Location" intro="Guests search by city and area. The pin decides where you appear on the map.">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="label">
-          City
-          <select className="field" value={loc.city} onChange={(e) => up({ city: e.target.value, lat: undefined, lng: undefined })}>
-            <option value="" disabled hidden>Choose a city</option>
-            {cities.map((c) => (
-              <option key={c.name}>{c.name}</option>
-            ))}
-          </select>
-          <span className="text-[13px] font-normal text-ink-500">{site.marketplace} is open in these cities for now.</span>
-        </label>
-        <label className="label">
-          Area or locality
-          <input className="field" value={loc.area} onChange={(e) => up({ area: e.target.value })} placeholder="e.g. Paharganj" />
-        </label>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
-        <label className="label">
-          Street address
-          <input className="field" value={loc.address} onChange={(e) => up({ address: e.target.value })} placeholder="Building number, street" autoComplete="street-address" />
-        </label>
-        <label className="label">
-          PIN code
-          <input className="field" inputMode="numeric" value={loc.pincode} onChange={(e) => up({ pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })} autoComplete="postal-code" />
-        </label>
-      </div>
-      {loc.city ? (
-        <MapPicker lat={loc.lat} lng={loc.lng} fallback={city} query={[loc.address, loc.area, loc.city, loc.pincode].filter(Boolean).join(', ')} onChange={onPin} />
-      ) : (
-        <Notice>Choose the city to place your pin on the map.</Notice>
+  const text = (id: string, label: string, key: 'address' | 'area' | 'pincode' | 'state' | 'city', placeholder = 'Please add details', extra?: object) => (
+    <label className="flex flex-col gap-1.5 text-[15px] text-ink-900">
+      {label}
+      <input id={id} className="field" value={(loc[key] as string | undefined) ?? ''} placeholder={placeholder} onChange={(x) => up({ [key]: key === 'pincode' ? x.target.value.replace(/\D/g, '').slice(0, 6) : x.target.value })} aria-invalid={!!e[key]} {...extra} />
+      {e[key] && (
+        <span role="alert" className="text-[13px] font-semibold text-alert">
+          {e[key]}
+        </span>
       )}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1.5 text-sm font-semibold text-ink-700">Nearby landmarks (the first one shows on your card)</legend>
-        {loc.landmarks.map((m, i) => (
-          <div key={i} className="grid grid-cols-[1fr_120px_44px] gap-2">
-            <input className="field" aria-label={`Landmark ${i + 1}`} value={m.name} placeholder="New Delhi Railway Station" onChange={(e) => up({ landmarks: loc.landmarks.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
-            <input className="field" aria-label={`Distance to landmark ${i + 1}`} value={m.distance} placeholder="600 m" onChange={(e) => up({ landmarks: loc.landmarks.map((x, j) => (j === i ? { ...x, distance: e.target.value } : x)) })} />
-            <button type="button" aria-label={`Remove landmark ${i + 1}`} onClick={() => up({ landmarks: loc.landmarks.filter((_, j) => j !== i) })} className="flex h-[46px] items-center justify-center rounded-[10px] text-ink-500 hover:bg-alert-50 hover:text-alert">
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </button>
+    </label>
+  )
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-[30px] font-black text-ink-900 sm:text-[32px]">Property Location Details</h2>
+        <p className="text-[14px] text-ink-500">Please fill in the location details of your property.</p>
+      </div>
+      <div className="grid items-start gap-6 rounded-xl bg-white p-4 shadow-panel ring-1 ring-line sm:p-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <p className="flex gap-2 rounded-md border border-pine-100 bg-pine-50 px-3 py-2 text-[13px] text-ink-700">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />
+            Please enter the same address as on your address proof document (to be uploaded in a later step), to avoid rejections due to mismatch.
+          </p>
+          <div ref={box} className="relative">
+            <span className={`flex items-center gap-2 rounded-lg border bg-white px-3 focus-within:border-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none' : ''} border-line-strong`}>
+              <Search className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
+              <input
+                role="combobox"
+                aria-expanded={open && results.length > 0}
+                aria-controls="place-list"
+                aria-label="Search your property address"
+                className="min-h-[46px] min-w-0 flex-1 text-[15px] outline-none"
+                placeholder="Search here"
+                value={q}
+                onChange={(x) => setQ(x.target.value)}
+                onFocus={() => results.length && setOpen(true)}
+                onKeyDown={(x) => {
+                  if (x.key === 'Enter' && results[0]) {
+                    x.preventDefault()
+                    pick(results[0])
+                  }
+                  if (x.key === 'Escape') setOpen(false)
+                }}
+              />
+              {searching && <span className="text-[12px] text-ink-400">Searching…</span>}
+              {q && (
+                <button type="button" aria-label="Clear search" onClick={() => (setQ(''), setResults([]))} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+            </span>
+            {open && results.length > 0 && (
+              <ul id="place-list" role="listbox" className="absolute inset-x-0 top-full z-[600] max-h-72 overflow-y-auto rounded-b-lg border border-t-0 border-line-strong bg-white shadow-lift">
+                {results.map((r) => (
+                  <li key={`${r.lat},${r.lng},${r.label}`} role="option" aria-selected="false">
+                    <button type="button" onClick={() => pick(r)} className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-[14px] hover:bg-pine-50">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pine-700" aria-hidden="true" />
+                      <span>{r.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        ))}
-        {loc.landmarks.length < 5 && (
-          <button type="button" className="btn-ghost self-start" onClick={() => up({ landmarks: [...loc.landmarks, { name: '', distance: '' }] })}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add landmark
-          </button>
-        )}
-      </fieldset>
-    </Section>
+          <div className="-mt-1 flex flex-wrap items-center justify-between gap-2">
+            <button type="button" onClick={current} disabled={locating} className="text-[15px] font-bold text-pine-800 hover:underline disabled:opacity-60">
+              {locating ? 'Finding your location…' : 'Or Use My Current Location'}
+            </button>
+            {!showFields && (
+              <button type="button" onClick={() => setManual(true)} className="text-[13px] font-semibold text-ink-500 hover:text-ink-900 hover:underline">
+                Can’t find it? Enter manually
+              </button>
+            )}
+          </div>
+          {note && (
+            <p role="status" className="text-[13px] text-ink-700">
+              {note}
+            </p>
+          )}
+
+          {showFields && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
+              {text('l-house', 'House/Building/Apartment No.', 'address', 'Please add details', { autoComplete: 'address-line1' })}
+              {text('l-area', 'Locality/Area/Street/Sector', 'area', 'Please add details', { autoComplete: 'address-line2' })}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {text('l-pin', 'Pincode', 'pincode', '6-digit pincode', { inputMode: 'numeric', autoComplete: 'postal-code' })}
+                <label className="flex flex-col gap-1.5 text-[15px] text-ink-900">
+                  Country
+                  <input className="field bg-paper text-ink-700" value="India" readOnly />
+                </label>
+              </div>
+              {text('l-state', 'State', 'state', 'Please add details', { autoComplete: 'address-level1' })}
+              {text('l-city', 'City', 'city', 'Please add details', { autoComplete: 'address-level2' })}
+              {e.pin && (
+                <span role="alert" className="text-[13px] font-semibold text-alert">
+                  {e.pin}
+                </span>
+              )}
+              <label className="flex cursor-pointer items-start gap-3 text-[14px] text-ink-900">
+                <input type="checkbox" checked={!!loc.addressConfirmed} onChange={(x) => up({ addressConfirmed: x.target.checked })} className="mt-0.5 h-4 w-4 shrink-0 accent-pine-800" aria-invalid={!!e.confirm} />
+                <span>I agree to the {site.marketplace} partner terms and confirm the address provided here is as per the registration or lease document.</span>
+              </label>
+              {e.confirm && (
+                <span role="alert" className="-mt-2 text-[13px] font-semibold text-alert">
+                  {e.confirm}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </div>
+        <div className="lg:sticky lg:top-[200px]">
+          <MapPicker lat={loc.lat} lng={loc.lng} onPin={onPin} onLocate={current} locating={locating} />
+          <span className="mt-2 block text-[13px] text-ink-500">{loc.lat != null ? 'Drag the pin onto your entrance, or tap the map to move it.' : 'Tap the map to place your pin.'}</span>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -864,7 +1018,7 @@ export default function Wizard() {
 
   const stepBody = {
     basics: <Basics l={l} set={set} show={showErrors} onChangeType={() => setChangingType(true)} />,
-    location: <Location l={l} set={set} />,
+    location: <Location l={l} set={set} show={showErrors} />,
     amenities: <Amenities l={l} set={set} />,
     rooms: <Rooms l={l} set={set} goPhotos={() => go('photos')} />,
     photos: <Photos l={l} set={set} />,
@@ -958,7 +1112,7 @@ export default function Wizard() {
             )}
             {index < steps.length - 1 && (
               <button type="button" className="btn-brass min-h-11 px-6" onClick={next}>
-                Continue
+                {step === 'basics' ? 'Continue' : 'Save And Continue'}
               </button>
             )}
           </div>

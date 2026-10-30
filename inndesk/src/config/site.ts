@@ -17,5 +17,16 @@ export const site = {
   /** [CONFIRM] Payout cycle shown to owners. */
   payoutCycle: 'every Tuesday, for stays that checked out the week before',
   minPhotos: 5,
+  /**
+   * Live map and address search on the Location step. Free OpenStreetMap-based services, fine
+   * for testing and light use; for heavy traffic switch to a paid provider (Google Maps, Ola Maps).
+   */
+  map: {
+    tiles: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    geocoder: 'https://photon.komoot.io',
+    /** Where the map starts before a pin is placed (centre of India). */
+    start: { lat: 22.5, lng: 79 },
+  },
   minPrice: 300,
 }

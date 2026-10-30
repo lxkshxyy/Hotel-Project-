@@ -72,6 +72,10 @@ export interface Listing {
     area: string
     address: string
     pincode: string
+    state?: string
+    country?: string
+    /** Owner confirmed the address matches the registration or lease document. */
+    addressConfirmed?: boolean
     lat?: number
     lng?: number
     landmarks: { name: string; distance: string }[]
