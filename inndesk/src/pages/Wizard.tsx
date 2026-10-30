@@ -13,7 +13,7 @@ import { PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, banks, cities, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { attachOptions, autoOccupancy, basicsErrors, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
@@ -487,6 +487,14 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
               </div>
               {text('l-state', 'State', 'state', 'Please add details', { autoComplete: 'address-level1' })}
               {text('l-city', 'City', 'city', 'Please add details', { autoComplete: 'address-level2' })}
+              {loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase()) && (
+                <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
+                  <span>
+                    {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It currently covers {cities.map((c) => c.name).join(', ')}. If your property is in one of these cities, correct the city. Otherwise you can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
+                  </span>
+                </p>
+              )}
               {e.pin && (
                 <span role="alert" className="text-[13px] font-semibold text-alert">
                   {e.pin}
@@ -1685,7 +1693,7 @@ function ListingPreview({ l }: { l: Listing }) {
   )
 }
 
-function Review({ l, go, onPublish, busy, result, onRetry }: { l: Listing; go: (s: StepId) => void; onPublish: () => void; busy: boolean; result: string; onRetry: () => void }) {
+function Review({ l, go, onPublish, busy, result, onRetry }: { l: Listing; go: (s: StepId, field?: string) => void; onPublish: () => void; busy: boolean; result: string; onRetry: () => void }) {
   const b = blockers(l)
   const t = tips(l)
   const live = l.status !== 'draft'
@@ -1722,7 +1730,7 @@ function Review({ l, go, onPublish, busy, result, onRetry }: { l: Listing; go: (
                 {b.map((c, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-[15px]">
                     <span>{c.message}</span>
-                    <button type="button" onClick={() => go(c.step)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-pine-800 hover:bg-pine-50">
+                    <button type="button" onClick={() => go(c.fix?.step ?? c.step, c.fix?.field)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-pine-800 hover:bg-pine-50">
                       Fix
                     </button>
                   </li>
@@ -1834,6 +1842,25 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [l, saveState, save])
 
+  // A Fix button can point at one field: scroll to it, focus it, then drop the hint from the address.
+  const focusField = params.get('focus')
+  useEffect(() => {
+    if (!focusField || !l) return
+    const t = setTimeout(() => {
+      const el = document.getElementById(focusField)
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        el.focus({ preventScroll: true })
+      }
+      setParams((p) => {
+        const n = new URLSearchParams(p)
+        n.delete('focus')
+        return n
+      }, { replace: true })
+    }, 350)
+    return () => clearTimeout(t)
+  }, [focusField, l, setParams])
+
   // Opening Finance & Legal pins the part to show (the first unfinished one), so it doesn't jump while typing.
   const legalPinned = !!params.get('lsec')
   useEffect(() => {
@@ -1847,10 +1874,10 @@ export default function Wizard() {
   // A tab opens once every tab before it is complete. Live listings can jump anywhere.
   const unlocked = (i: number) => isLive || (!!l && steps.slice(0, i).every((s) => stepDone(l, s.id)))
 
-  const go = (s: StepId) => {
+  const go = (s: StepId, field?: string) => {
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
     setShowErrors(false)
-    setParams({ step: s }, { replace: false })
+    setParams({ step: s, ...(field ? { focus: field } : {}) }, { replace: false })
     top.current?.scrollIntoView({ block: 'start' })
     window.scrollTo({ top: 0 })
   }

@@ -135,6 +135,8 @@ export function toHotel(l: Listing) {
 export interface Check {
   step: StepId
   message: string
+  /** Where the Fix button should take the owner, when it isn't the step itself. */
+  fix?: { step: StepId; field?: string }
 }
 
 const thisYear = new Date().getFullYear()
@@ -324,7 +326,7 @@ export function blockers(l: Listing): Check[] {
   const loc = l.location
   out.push(...basicsProblems(l).map((message) => ({ step: 'basics' as const, message })))
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
-  if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. Ask the ${site.marketplace} team to add the city.` })
+  if (loc.city.trim() && !cities.some((c) => c.name.toLowerCase() === loc.city.trim().toLowerCase())) out.push({ step: 'review', fix: { step: 'location', field: 'l-city' }, message: `${site.marketplace} isn’t open in ${loc.city.trim()} yet, so the listing can’t go live there. If your property is in a city ${site.marketplace} covers, correct the city; otherwise ask the ${site.marketplace} team to add ${loc.city.trim()}.` })
   const need = minAmenities(l)
   if (l.amenities.length < need) out.push({ step: 'amenities', message: `A ${l.basics.stars}-star property needs at least ${need} amenities ticked (${l.amenities.length} ticked so far).` })
   for (const id of l.amenities) if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) out.push({ step: 'amenities', message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` })
