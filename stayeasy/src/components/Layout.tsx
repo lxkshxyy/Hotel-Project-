@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { BedDouble, Briefcase, ClipboardList, Home, Luggage, Menu, Search, ShieldCheck, Ticket, User, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { features, isPublicDemo } from '../config/launch'
+import { features } from '../config/launch'
 import WelcomeLogin, { openLogin } from './WelcomeLogin'
 import { site } from '../config/site'
 import { useAccount } from '../context/AccountContext'
@@ -397,11 +397,6 @@ export default function Layout() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">
         Skip to content
       </a>
-      {isPublicDemo && (
-        <div role="note" className="bg-[#FFF4D6] px-4 py-2 text-center text-[13px] font-semibold text-[#6B4A00] print:hidden">
-          Preview site with sample hotels. Bookings made here are not real and no hotel is notified.
-        </div>
-      )}
       {!checkout && (isBusiness ? <BizHeader /> : <Header />)}
       <main
         id="main"
