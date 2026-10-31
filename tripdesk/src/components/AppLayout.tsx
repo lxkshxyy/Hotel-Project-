@@ -148,7 +148,7 @@ function Shell({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void
 
       <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-white/95 pt-2 backdrop-blur lg:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
         {nav.slice(0, 4).map(({ to, label, Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[11px] font-bold no-underline ${isActive ? 'text-ink-900' : 'text-faint'}`}>
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[11px] font-bold no-underline ${isActive ? 'text-ink-900' : 'text-muted'}`}>
             <Icon className="h-6 w-6" aria-hidden="true" />
             {label}
           </NavLink>

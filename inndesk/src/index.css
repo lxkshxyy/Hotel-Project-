@@ -118,6 +118,11 @@
   background: white;
   padding: 10px 12px;
   font-size: 15px;
+  /* Always dark text on the white box, even inside dark cards (sign-in on the photo). */
+  color: var(--color-ink-900);
+  &::placeholder {
+    color: var(--color-ink-400);
+  }
   outline: none;
   &:focus {
     border-color: var(--color-pine-700);
