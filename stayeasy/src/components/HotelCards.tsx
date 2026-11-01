@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Check, Heart, MapPin } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { cheapestRoom } from '../data/hotels'
+import { brandShort, cheapestRoom } from '../data/hotels'
 import type { Hotel } from '../data/types'
 import { gstRate } from '../config/site'
 import { inr, ratingsText } from '../lib/format'
@@ -63,7 +63,7 @@ export function HotelTile({ hotel, query = '' }: { hotel: Hotel; query?: string 
         <div className="relative aspect-[4/3]">
           <HotelArt hue={hotel.hue} photo={hotel.photos?.[0]} label={`${hotel.name} exterior`} />
           <span className="absolute top-3 left-3">
-            <BrandPill tone="white">{hotel.brand}</BrandPill>
+            <BrandPill tone="white">{brandShort(hotel.brand)}</BrandPill>
           </span>
           <span className="absolute top-2 right-2">
             <WishButton slug={hotel.slug} name={hotel.name} />
@@ -110,7 +110,7 @@ export function HotelRow({ hotel, query, nights }: { hotel: Hotel; query: string
       <Link to={`/hotel/${hotel.slug}?${query}`} className="relative block aspect-[16/10] sm:aspect-auto sm:w-[280px] sm:shrink-0" tabIndex={-1} aria-hidden="true">
         <HotelArt hue={hotel.hue} photo={hotel.photos?.[0]} />
         <span className="absolute top-3 left-3">
-          <BrandPill tone="white">{hotel.brand}</BrandPill>
+          <BrandPill tone="white">{brandShort(hotel.brand)}</BrandPill>
         </span>
       </Link>
       <div className="relative flex flex-1 flex-col gap-2 p-4 sm:p-5">

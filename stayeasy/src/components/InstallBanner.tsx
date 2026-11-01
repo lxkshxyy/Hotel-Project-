@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { site } from '../config/site'
 import { Download, Share, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -60,7 +61,7 @@ export default function InstallBanner() {
     <AnimatePresence>
       {show && (
         <motion.aside
-          aria-label="Install the StayEasy app"
+          aria-label={`Install the ${site.name} app`}
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
@@ -68,9 +69,9 @@ export default function InstallBanner() {
           style={{ bottom: 'calc(84px + env(safe-area-inset-bottom))' }}
         >
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-lg font-extrabold text-navy-800">S</span>
+            <img src="/brand/emblem.webp" alt="" width={44} height={44} className="h-11 w-11 shrink-0" />
             <div className="flex-1">
-              <strong className="block">Get the StayEasy app</strong>
+              <strong className="block">Get the {site.name} app</strong>
               {ios ? (
                 <span className="text-sm text-[#D3DCEE]">
                   Tap <Share className="inline h-4 w-4 align-[-2px]" aria-label="Share" /> then “Add to Home Screen”.

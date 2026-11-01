@@ -22,7 +22,7 @@ const offers: { tab: Exclude<Tab, 'All Offers'>; title: string; text: string; im
   { tab: 'Hotels', title: 'For your first getaway:', text: `Use code FIRSTSTAY for flat ${inr(site.firstStayDiscount)} off your first booking.`, img: '/destinations/goa.webp', to: q({}, 'Goa') },
   { tab: 'Long Stays', title: 'Staying 5 nights or more?', text: 'Use code LONGSTAY for 10% off long stays in every city.', img: '/hotels/csfc/room-4.webp', to: q() },
   { tab: 'Members', title: 'Members save more:', text: 'Sign in for an extra 5% off every booking and earn Club points.', img: '/hotels/orange-oasis/room-1.webp', to: '/club' },
-  { tab: 'Hotels', title: 'StayEasy Prime stays:', text: `Pools, breakfast and bigger rooms from ${from((h) => h.brand === 'Prime')} a night.`, img: '/hotels/prime-oasis-blue/exterior-1.webp', to: q({ brand: 'Prime' }) },
+  { tab: 'Hotels', title: 'TRPotels Prime stays:', text: `Pools, breakfast and bigger rooms from ${from((h) => h.brand === 'Prime')} a night.`, img: '/hotels/prime-oasis-blue/exterior-1.webp', to: q({ brand: 'Prime' }) },
   { tab: 'Business', title: 'Travelling for work?', text: 'Corporate rates 12% below public prices, GST invoices and team booking.', img: '/hotels/red-vibe/banquet-1.webp', to: '/business' },
   { tab: 'Hotels', title: 'Heritage Jaipur:', text: `Stays near Hawa Mahal and the Old City from ${from((h) => h.city === 'Jaipur')} a night.`, img: '/destinations/jaipur.webp', to: q({}, 'Jaipur') },
   { tab: 'Hotels', title: 'Pay at hotel:', text: 'Reserve now with no prepayment on most stays. Pay by cash, card or UPI.', img: '/hotels/red-vibe/lobby-1.webp', to: q() },
@@ -95,10 +95,10 @@ export function OffersPanel() {
 }
 
 const stores = [
-  { name: 'StayEasy Prime', mark: 'P', to: q({ brand: 'Prime' }), img: '/hotels/prime-oasis-blue/exterior-2.webp', ring: 'bg-navy-800 text-white' },
-  { name: 'StayEasy', mark: 'S', to: q({ brand: 'StayEasy' }), img: '/hotels/orange-oasis/exterior-1.webp', ring: 'bg-ember-600 text-white' },
-  { name: 'StayEasy Lite', mark: 'L', to: q({ brand: 'Lite' }), img: '/hotels/csfc/exterior-1.webp', ring: 'bg-leaf-700 text-white' },
-  { name: 'StayEasy for Business', mark: 'B', to: '/business', img: '/hotels/red-vibe/exterior-1.webp', ring: 'bg-ink-900 text-white' },
+  { name: 'TRPotels Prime', mark: 'P', to: q({ brand: 'Prime' }), img: '/hotels/prime-oasis-blue/exterior-2.webp', ring: 'bg-navy-800 text-white' },
+  { name: 'TRPotels', mark: 'T', to: q({ brand: 'StayEasy' }), img: '/hotels/orange-oasis/exterior-1.webp', ring: 'bg-ember-600 text-white' },
+  { name: 'TRPotels Lite', mark: 'L', to: q({ brand: 'Lite' }), img: '/hotels/csfc/exterior-1.webp', ring: 'bg-leaf-700 text-white' },
+  { name: 'TRPotels for Business', mark: 'B', to: '/business', img: '/hotels/red-vibe/exterior-1.webp', ring: 'bg-ink-900 text-white' },
 ]
 
 export function FlagshipStores() {

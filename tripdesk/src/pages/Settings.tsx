@@ -214,7 +214,7 @@ export default function Settings() {
 
 export function Help() {
   const topics = [
-    ['Why can’t I book yet?', 'New agencies are checked by the StayEasy team first. You can search and send quotes meanwhile. Approval usually takes one working day.'],
+    ['Why can’t I book yet?', 'New agencies are checked by the TRPotels team first. You can search and send quotes meanwhile. Approval usually takes one working day.'],
     ['How is the net rate worked out?', `It is the public room price less ${Math.round(AGENT_DISCOUNT * 100)}%, plus GST at the hotel’s rate. Your markup is added on top.`],
     ['Can I change the price for one customer?', 'Yes. Change the markup on the booking page; it affects only that booking.'],
     ['My customer wants to cancel.', 'Open the booking and press Cancel booking. Inside the free-cancellation window, the net amount goes back to your wallet at once.'],

@@ -13,10 +13,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'favicon.svg', 'apple-touch-icon.png', 'brand/*'],
       manifest: {
-        name: 'StayEasy – Hotel Booking',
-        short_name: 'StayEasy',
+        name: 'TRPotels – Hotel Booking',
+        short_name: 'TRPotels',
         description: 'Clean, comfortable rooms. Same standard in every city.',
         theme_color: '#14306B',
         background_color: '#F5F7FB',
@@ -39,7 +39,7 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/__partner\//],
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2}', 'brand/*', '*.png'],
         // Big parts only some guests need (voucher PDF, maps) are cached when first used,
         // not downloaded by every new visitor.
         globIgnores: ['**/voucherPdf-*.js', '**/html2canvas-*.js', '**/index.es-*.js', '**/purify.es-*.js', '**/HotelMap-*.js', '**/Biz*.js', '**/biz*.js'],

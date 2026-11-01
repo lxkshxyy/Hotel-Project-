@@ -31,7 +31,7 @@ export const policyGroups: PolicyGroup[] = [
     title: 'Guest Profile',
     icon: 'guest',
     rules: [
-      { id: 'couples', q: 'Do you allow unmarried couples?', kind: 'yn', follow: { when: ['yes'], rule: { id: 'coupleTag', q: 'Do you want to show couple friendly tag on StayEasy?', kind: 'yn' } } },
+      { id: 'couples', q: 'Do you allow unmarried couples?', kind: 'yn', follow: { when: ['yes'], rule: { id: 'coupleTag', q: 'Do you want to show couple friendly tag on TRPotels?', kind: 'yn' } } },
       { id: 'under18', q: 'Do you allow guests below 18 years of age at your property?', kind: 'yn' },
       { id: 'maleGroups', q: 'Groups with only male guests are allowed at your property?', kind: 'yn' },
     ],

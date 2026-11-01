@@ -76,7 +76,7 @@ export default function HotelMap({ hotel, landmarks, nearbyHotels, focus, intera
       <ZoomControl position="bottomright" />
       <Interaction on={interactive} />
       <Fit hotel={hotel} points={[...landmarks, ...nearbyHotels]} focus={focus} />
-      <Marker position={[hotel.lat, hotel.lng]} icon={pin('#C2410C', 38, 'S')} zIndexOffset={1000}>
+      <Marker position={[hotel.lat, hotel.lng]} icon={pin('#C2410C', 38, 'T')} zIndexOffset={1000}>
         <Popup>
           <strong>{hotel.name}</strong>
           <br />

@@ -3,7 +3,7 @@ import { PageHead } from '../components/ui'
 import { site } from '../config/site'
 
 const topics = [
-  { q: 'Why isn’t my property on StayEasy?', a: 'Open the property and check the key tag. Drafts and paused listings are hidden from guests. If the tag says Live but a warning shows, the last change didn’t reach StayEasy: press Retry.' },
+  { q: 'Why isn’t my property on TRPotels?', a: 'Open the property and check the key tag. Drafts and paused listings are hidden from guests. If the tag says Live but a warning shows, the last change didn’t reach TRPotels: press Retry.' },
   { q: 'How do I change the price for a festival or weekend?', a: 'Go to Rates and availability, tap the date (or press Change a date range), pick the days of the week and set the price.' },
   { q: 'A guest didn’t arrive. What do I do?', a: 'Open the reservation and press Mark no-show. Charges follow the cancellation policy shown on the booking.' },
   { q: 'Can I list more than one property?', a: 'Yes. Each property is a separate listing with its own rooms, photos, prices and payouts.' },

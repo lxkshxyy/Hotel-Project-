@@ -40,6 +40,22 @@ const photoLabel = (url: string) => {
 }
 
 /** Loads an image (any format the browser can show, incl. WebP) and crops it to fill a box, as JPEG. */
+/** A logo file as a PNG data URL, keeping transparency (for the voucher header). */
+async function pngData(url: string): Promise<{ data: string; ratio: number } | null> {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const bmp = await createImageBitmap(await res.blob())
+    const canvas = document.createElement('canvas')
+    canvas.width = bmp.width
+    canvas.height = bmp.height
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0)
+    return { data: canvas.toDataURL('image/png'), ratio: bmp.width / bmp.height }
+  } catch {
+    return null
+  }
+}
+
 async function coverJpeg(url: string, aspect: number, pxW = 900): Promise<string | null> {
   try {
     const res = await fetch(url)
@@ -70,7 +86,9 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
   // Images in parallel
   const gallery = [room?.photo, ...(hotel?.photos ?? []).slice(1)].filter((x): x is string => !!x)
   const uniqueGallery = [...new Set(gallery)].slice(0, 4)
-  const [cover, qr, ...thumbs] = await Promise.all([
+  const [emblem, wordmark, cover, qr, ...thumbs] = await Promise.all([
+    pngData('/brand/emblem.png'),
+    pngData('/brand/wordmark-gold.png'),
     hotel?.photos?.[0] ? coverJpeg(hotel.photos[0], 72 / 50) : Promise.resolve(null),
     QRCode.toDataURL(`${site.name} booking ${b.id}\n${link}`, { margin: 1, width: 360, color: { dark: C.navy, light: '#FFFFFF' } }),
     ...uniqueGallery.map((u) => coverJpeg(u, 43 / 25, 520)),
@@ -109,11 +127,16 @@ export async function buildVoucher(b: Booking, hotel: Hotel | null) {
     const h = small ? 16 : 34
     doc.setFillColor(C.navy)
     doc.rect(0, 0, W, h, 'F')
-    doc.setFillColor('#FFFFFF')
-    doc.roundedRect(M, small ? 4 : 9, small ? 8 : 11, small ? 8 : 11, 2, 2, 'F')
-    text('S', M + (small ? 4 : 5.5), small ? 9.6 : 16.6, { size: small ? 11 : 15, bold: true, color: C.navy, align: 'center' })
-    text(site.name, M + (small ? 11 : 14), small ? 9.8 : 17, { size: small ? 13 : 19, bold: true, color: '#FFFFFF' })
-    if (!small) text(site.tagline, M + 14, 23.5, { size: 8.5, color: '#C9D2E3' })
+    // Client logo: round emblem + gold TRPOTELS lettering (falls back to text if the files can't load).
+    const e = small ? 9 : 13
+    const ey = small ? 3.5 : 7.5
+    if (emblem) doc.addImage(emblem.data, 'PNG', M, ey, e, e)
+    const wx = M + e + 3
+    if (wordmark) {
+      const wh = small ? 4 : 5.5
+      doc.addImage(wordmark.data, 'PNG', wx, ey + (e - wh) / 2, wh * wordmark.ratio, wh)
+    } else text(site.name, wx, small ? 9.8 : 17, { size: small ? 13 : 19, bold: true, color: '#FFFFFF' })
+    if (!small) text(site.tagline, wx, ey + e + 4.5, { size: 8.5, color: '#C9D2E3' })
     text(small ? `Booking ${b.id}` : 'HOTEL BOOKING VOUCHER', W - M, small ? 9.8 : 13, { size: small ? 9 : 8, bold: true, color: '#F6B98A', align: 'right' })
     if (!small) {
       text(b.id, W - M, 21.5, { size: 17, bold: true, color: '#FFFFFF', align: 'right' })

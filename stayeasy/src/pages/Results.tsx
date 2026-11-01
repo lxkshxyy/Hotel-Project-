@@ -6,7 +6,8 @@ import { HotelRow } from '../components/HotelCards'
 import SearchForm from '../components/SearchForm'
 import { Spinner } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
-import { minPrice } from '../data/hotels'
+import { site } from '../config/site'
+import { brandLabel, minPrice } from '../data/hotels'
 import type { AmenityKey, Brand, Hotel } from '../data/types'
 import { getHotels } from '../lib/api'
 import { bookableForStay } from '../lib/quote'
@@ -152,7 +153,7 @@ export default function Results() {
     ...(f.airport ? [{ label: 'Near airport', clear: () => setF({ ...f, airport: false }) }] : []),
     ...(f.railway ? [{ label: 'Near railway station', clear: () => setF({ ...f, railway: false }) }] : []),
     ...(f.rating ? [{ label: `Rating ${f.rating}+`, clear: () => setF({ ...f, rating: 0 }) }] : []),
-    ...f.brands.map((b) => ({ label: b === 'StayEasy' ? 'StayEasy' : `StayEasy ${b}`, clear: () => toggle('brands', b) })),
+    ...f.brands.map((b) => ({ label: brandLabel(b), clear: () => toggle('brands', b) })),
     ...f.areas.map((a) => ({ label: a, clear: () => toggle('areas', a) })),
     ...f.amenities.map((a) => ({ label: amenityFilters.find((x) => x.k === a)?.l ?? a, clear: () => toggle('amenities', a) })),
     ...(f.max < priceCap || f.min > 0
@@ -160,7 +161,7 @@ export default function Results() {
       : []),
   ]
 
-  const title = search.city ? `Hotels in ${search.city}` : 'All StayEasy hotels'
+  const title = search.city ? `Hotels in ${search.city}` : `All ${site.name} hotels`
 
   const filterPanel = (
     <div className="flex flex-col gap-6">
@@ -232,7 +233,7 @@ export default function Results() {
         {(['Lite', 'StayEasy', 'Prime'] as Brand[]).map((b) => (
           <Check
             key={b}
-            label={b === 'StayEasy' ? 'StayEasy' : `StayEasy ${b}`}
+            label={brandLabel(b)}
             checked={f.brands.includes(b)}
             onChange={() => toggle('brands', b)}
             count={count((h) => h.brand === b)}
@@ -373,7 +374,7 @@ export default function Results() {
           ) : results.length === 0 ? (
             inPlace.length === 0 ? (
               <div className="card flex flex-col items-center gap-3 p-10 text-center">
-                <strong className="text-lg">{search.city ? `No StayEasy stays in ${search.city} for these dates` : 'No stays available for these dates'}</strong>
+                <strong className="text-lg">{search.city ? `No ${site.name} stays in ${search.city} for these dates` : 'No stays available for these dates'}</strong>
                 <p className="text-ink-500">Try other dates, or one of the cities we serve.</p>
                 <Link to="/hotels" className="btn-navy no-underline">
                   See all hotels

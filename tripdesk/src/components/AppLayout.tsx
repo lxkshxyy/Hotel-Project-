@@ -122,7 +122,7 @@ function Shell({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void
         </header>
         {agency?.status === 'pending' && (
           <div className="border-b border-gold-100 bg-gold-50 px-4 py-2.5 text-[14px] text-[#6b4700] sm:px-7">
-            <strong>Your agency is being checked.</strong> You can search hotels and send quotes now; bookings open once the StayEasy team approves your documents (usually within one working day).
+            <strong>Your agency is being checked.</strong> You can search hotels and send quotes now; bookings open once the TRPotels team approves your documents (usually within one working day).
           </div>
         )}
         {agency?.status === 'rejected' && (

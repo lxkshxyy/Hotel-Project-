@@ -79,7 +79,7 @@ export default function Settings() {
         <span>
           Publishes to <strong>{site.mainSiteUrl}</strong>
         </span>
-        <span className="text-ink-500">{isDemoMode ? 'Local demo mode: your properties and photos are stored in this browser and sent to StayEasy on this computer.' : 'Live mode: data is stored in the shared StayEasy database.'}</span>
+        <span className="text-ink-500">{isDemoMode ? 'Local demo mode: your properties and photos are stored in this browser and sent to TRPotels on this computer.' : 'Live mode: data is stored in the shared TRPotels database.'}</span>
       </section>
     </div>
   )

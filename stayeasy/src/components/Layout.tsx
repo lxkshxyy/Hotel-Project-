@@ -15,15 +15,15 @@ import InstallBanner from './InstallBanner'
 export function Logo({ light = false, business = false }: { light?: boolean; business?: boolean }) {
   return (
     <Link to={business ? '/biz' : '/'} className="flex items-center gap-2.5 no-underline" aria-label={`${site.name} home`}>
-      <span
-        className={`flex h-9 w-9 items-center justify-center rounded-[10px] text-lg font-extrabold ${
-          light ? 'bg-white text-navy-800' : business ? 'bg-ember-600 text-white' : 'bg-navy-800 text-white'
-        }`}
-      >
-        S
-      </span>
+      <img src="/brand/emblem.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" decoding="async" />
       {/* On phones the business header also carries the Personal | Business switch, so keep the logo compact there. */}
-      <span className={`text-[22px] font-extrabold tracking-tight ${light ? 'text-white' : 'text-navy-800'} ${business && !light ? 'hidden min-[420px]:inline' : ''}`}>{site.name}</span>
+      <img
+        src={light ? '/brand/wordmark-gold.png' : '/brand/wordmark-navy.png'}
+        alt={site.name}
+        height={20}
+        className={`h-[18px] w-auto sm:h-5 ${business && !light ? 'hidden min-[420px]:inline' : ''}`}
+        decoding="async"
+      />
       {business && (
         <span className={`hidden rounded-md px-2 py-[3px] text-[11px] font-extrabold tracking-[0.06em] sm:inline ${light ? 'bg-white/15 text-white' : 'bg-navy-800 text-white'}`}>BUSINESS</span>
       )}
@@ -34,7 +34,7 @@ export function Logo({ light = false, business = false }: { light?: boolean; bus
 const navLinks = [
   { to: '/hotels', label: 'Hotels' },
   { to: '/offers', label: 'Offers' },
-  { to: '/club', label: 'StayEasy Club' },
+  { to: '/club', label: `${site.name} Club` },
   { to: '/business', label: 'For Business' },
 ]
 

@@ -43,7 +43,7 @@ export default function Earnings() {
       <section className="card grid gap-6 p-6 sm:grid-cols-4">
         <Stat label="Confirmed bookings" value={ok.length} />
         <Stat label="Customers paid you" value={inr(sum('selling_amount'))} />
-        <Stat label="You paid StayEasy" value={inr(sum('net_amount'))} />
+        <Stat label="You paid TRPotels" value={inr(sum('net_amount'))} />
         <Stat label="Your earnings" value={inr(sum('markup_amount'))} tone="earn" />
       </section>
       <div className="card overflow-x-auto">

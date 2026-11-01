@@ -1467,8 +1467,8 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
       <StepDetail
         text="Add details on check-in/check-out timings, cancellation policies, rules & restrictions applicable to your property. It will set the right expectations for the guests looking forward to booking your property."
         faqs={[
-          ['Apart from the policies mentioned, can I add a customised policy for my property?', 'Yes. Write it under Other rules in Property Rules, one rule per line. Guests see it on your hotel page and in their booking confirmation. For anything else, contact the StayEasy partner team.'],
-          ['What should I do if I face any dispute, or if a guest violates my property rules?', 'Note the booking ID and contact the StayEasy partner team. Clear property rules help, because guests see them before they book and in their confirmation.'],
+          ['Apart from the policies mentioned, can I add a customised policy for my property?', 'Yes. Write it under Other rules in Property Rules, one rule per line. Guests see it on your hotel page and in their booking confirmation. For anything else, contact the TRPotels partner team.'],
+          ['What should I do if I face any dispute, or if a guest violates my property rules?', 'Note the booking ID and contact the TRPotels partner team. Clear property rules help, because guests see them before they book and in their confirmation.'],
         ]}
       />
     </section>
@@ -2139,7 +2139,7 @@ export default function Wizard() {
                 </span>
               </motion.div>
               <h2 id="pub-h" className="mt-5 text-2xl font-bold text-pine-950">
-                {justPublished.sync?.ok ? `${justPublished.basics.name} is live on ${site.marketplace}` : 'Published, waiting to reach StayEasy'}
+                {justPublished.sync?.ok ? `${justPublished.basics.name} is live on ${site.marketplace}` : 'Published, waiting to reach TRPotels'}
               </h2>
               <p className="mt-2 text-ink-700">
                 {justPublished.sync?.ok ? 'Guests can find and book it now. Set your prices for busy dates next.' : justPublished.sync?.message}

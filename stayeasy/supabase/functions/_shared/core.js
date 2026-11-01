@@ -6,8 +6,19 @@
 * Replace the bracketed values with the client's real details before launch.
 */
 const env = (k) => (import.meta.env?.[k] ?? "").trim();
+/**
+* On a real domain, the panels default to subdomains of this site when their addresses aren't set:
+* yourdomain.com -> partner.yourdomain.com (InnDesk) and agent.yourdomain.com (TripDesk).
+* On this computer they stay empty unless set in .env.local.
+*/
+const panel = (sub) => {
+	if (typeof window === "undefined") return "";
+	const h = window.location.hostname;
+	if (/^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h)) return "";
+	return `${window.location.protocol}//${sub}.${h.replace(/^www\./, "")}`;
+};
 const site = {
-	name: "StayEasy",
+	name: "TRPotels",
 	tagline: "India's branded budget stays",
 	/** Set VITE_SUPPORT_PHONE / VITE_SUPPORT_EMAIL / VITE_WHATSAPP on the live site. Empty = hidden. */
 	supportPhone: env("VITE_SUPPORT_PHONE"),
@@ -18,8 +29,8 @@ const site = {
 	legalAddress: env("VITE_LEGAL_ADDRESS") || "[Registered office address]",
 	gstin: env("VITE_COMPANY_GSTIN"),
 	/** The hotel-owner panel (InnDesk) and travel-agent panel (TripDesk) addresses. */
-	partnerPanelUrl: env("VITE_PARTNER_PANEL_URL"),
-	agentPanelUrl: env("VITE_AGENT_PANEL_URL"),
+	partnerPanelUrl: env("VITE_PARTNER_PANEL_URL") || panel("partner"),
+	agentPanelUrl: env("VITE_AGENT_PANEL_URL") || panel("agent"),
 	/** Flat discount for FIRSTSTAY, in rupees. */
 	firstStayDiscount: 200,
 	/** Extra discount for members, as a fraction. */
@@ -289,7 +300,7 @@ function cancelTerms(b, hotel, now = Date.now()) {
 		hours,
 		paidOnline,
 		refund: paidOnline && free ? b.amount : 0,
-		reason: b.status !== "confirmed" ? "This booking is already cancelled." : hours === null ? "This rate is non-refundable." : free ? "" : `Free cancellation ended ${hours} hours before check-in.`
+		reason: b.status !== "confirmed" ? "This booking is already cancelled." : hours === null ? "This rate is non-refundable." : free ? "" : hours === 0 ? "Free cancellation ended at check-in." : `Free cancellation ended ${hours} hours before check-in.`
 	};
 }
 // src/lib/booked.ts

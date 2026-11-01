@@ -17,7 +17,7 @@ const panel = (sub: string) => {
 }
 
 export const site = {
-  name: 'StayEasy',
+  name: 'TRPotels',
   tagline: "India's branded budget stays",
   /** Set VITE_SUPPORT_PHONE / VITE_SUPPORT_EMAIL / VITE_WHATSAPP on the live site. Empty = hidden. */
   supportPhone: env('VITE_SUPPORT_PHONE'),

@@ -22,7 +22,7 @@ const faqs = [
   ['What happens if I cancel?', 'A cancelled booking no longer counts towards your level, and any points it earned are taken back. Points you spent on it are returned.'],
   ['Does the Club discount work with coupons?', 'Yes. The Club discount comes off the room price first, then coupon codes like FIRSTSTAY or LONGSTAY, then any points you use.'],
   ['Do add-ons earn points?', 'Yes. Points are worked out on the full amount you pay, including taxes, meals, early check-in and Stay Protect.'],
-  ['Can I use the Club for business trips?', 'Club discounts are for personal bookings. Company trips booked through StayEasy for Business get corporate rates instead.'],
+  ['Can I use the Club for business trips?', 'Club discounts are for personal bookings. Company trips booked through TRPotels for Business get corporate rates instead.'],
 ]
 
 export default function Club() {

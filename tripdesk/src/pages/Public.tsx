@@ -36,7 +36,7 @@ const pct = Math.round(AGENT_DISCOUNT * 100)
 
 const faqs = [
   ['Who can join?', 'Registered travel agencies and individual travel agents in India. You need a PAN, and a GSTIN if your agency is GST-registered.'],
-  ['How do I get paid?', 'You set a markup on top of the net rate. You collect the full selling price from your customer; StayEasy takes only the net rate from your wallet. The difference is yours.'],
+  ['How do I get paid?', 'You set a markup on top of the net rate. You collect the full selling price from your customer; TRPotels takes only the net rate from your wallet. The difference is yours.'],
   ['Can my customer see my net rate?', 'No. Quotes and vouchers show only the price you set. You can also hide the price on vouchers completely.'],
   ['What if my customer cancels?', 'Cancel from Bookings within the hotel’s free-cancellation window and the full net amount goes back to your wallet straight away.'],
   ['Can my staff use the same account?', 'Yes. Add team members by email in Settings. Each person signs in with their own email; bookings show who made them.'],
@@ -701,7 +701,7 @@ export function Landing() {
           <ol className="grid gap-8 sm:grid-cols-3">
             {[
               ['Register', 'Agency name, contact, PAN and GSTIN, and one ID or registration document.'],
-              ['Get approved', 'The StayEasy team checks your documents, usually within one working day. You can send quotes meanwhile.'],
+              ['Get approved', 'The TRPotels team checks your documents, usually within one working day. You can send quotes meanwhile.'],
               ['Add money and book', 'Top up your wallet, search, book for your customer and share the voucher.'],
             ].map(([t, d], i) => (
               <li key={t} className="flex flex-col gap-2">
@@ -860,7 +860,7 @@ export function Register() {
     }
   }
   return (
-    <Shell title="Register your agency" intro={`Signed in as ${user?.email ?? ''}. The StayEasy team checks these details before your first booking.`}>
+    <Shell title="Register your agency" intro={`Signed in as ${user?.email ?? ''}. The TRPotels team checks these details before your first booking.`}>
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
         <label className="label">
           Agency name

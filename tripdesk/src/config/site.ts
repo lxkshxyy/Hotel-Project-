@@ -14,8 +14,8 @@ function guessMainSite() {
 
 export const site = {
   name: 'TripDesk',
-  tagline: 'The StayEasy portal for travel agents',
-  marketplace: 'StayEasy',
+  tagline: 'The TRPotels portal for travel agents',
+  marketplace: 'TRPotels',
   /** Where hotel photos and (on your computer) partner hotels come from. */
   mainSiteUrl: (env('VITE_MAIN_SITE_URL') || guessMainSite()).replace(/\/$/, ''),
   supportPhone: env('VITE_SUPPORT_PHONE'),

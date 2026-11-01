@@ -128,7 +128,7 @@ async function pushToStayEasy(l: Listing): Promise<Listing['sync']> {
       })
       if (!r.ok) {
         const msg = ((await r.json().catch(() => ({}))) as { error?: string }).error
-        return { ok: false, at, message: msg || `StayEasy answered ${r.status}.` }
+        return { ok: false, at, message: msg || `TRPotels answered ${r.status}.` }
       }
       return { ok: true, at }
     }
