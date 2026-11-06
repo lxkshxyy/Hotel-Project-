@@ -15,8 +15,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'favicon.svg', 'apple-touch-icon.png', 'brand/*'],
       manifest: {
-        name: 'TRPotels – Hotel Booking',
-        short_name: 'TRPotels',
+        name: 'TRPOTELS – Hotel Booking',
+        short_name: 'TRPOTELS',
         description: 'Clean, comfortable rooms. Same standard in every city.',
         theme_color: '#14306B',
         background_color: '#F5F7FB',

@@ -367,13 +367,10 @@ export default function HotelDetail() {
             </div>
           </section>
 
-          <LocationSection hotel={hotel} />
-          <PropertyRules hotel={hotel} />
-          <ReviewsSection hotel={hotel} />
         </div>
 
         {/* Booking box */}
-        <aside aria-label="Your booking" className="card hidden flex-col gap-4 p-5 shadow-card md:flex lg:sticky lg:top-24 lg:w-[360px] lg:shrink-0">
+        <aside aria-label="Your booking" className="card hidden flex-col gap-4 p-5 shadow-card md:flex lg:sticky lg:top-[172px] lg:w-[360px] lg:shrink-0">
           <div>
             <div className="flex items-baseline gap-2">
               <strong className="text-[28px]">{inr(room.price)}</strong>
@@ -430,6 +427,13 @@ export default function HotelDetail() {
             {cancelHrs === null ? 'Non-refundable rate' : !freeNow ? 'Non-refundable for these dates: free cancellation has closed' : `Free cancellation till ${shortDate(cancelHrs === 0 ? search.checkIn : addDays(search.checkIn, -Math.max(1, Math.ceil(cancelHrs / 24))))}, ${site.checkInTime}`}
           </span>
         </aside>
+      </div>
+
+      {/* Location, rules and reviews use the full page width; the booking panel stops above them. */}
+      <div className="container-page mt-5 flex flex-col gap-5">
+        <LocationSection hotel={hotel} />
+        <PropertyRules hotel={hotel} />
+        <ReviewsSection hotel={hotel} />
       </div>
 
       {similar.length > 0 && (
