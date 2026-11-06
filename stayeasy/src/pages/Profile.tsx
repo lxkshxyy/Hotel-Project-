@@ -4,7 +4,8 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { useAccount } from '../context/AccountContext'
 import { useAuth } from '../context/AuthContext'
 import { cities } from '../data/hotels'
-import { getPoints } from '../lib/api'
+import { getPoints, listBookings } from '../lib/api'
+import { expiryDate, nextPointsExpiry } from '../lib/club'
 import { initials } from '../lib/names'
 import { validateOrgId } from '../lib/orgVerify'
 import { useProfile, type CoTraveller, type Profile as P } from '../lib/profile'
@@ -84,8 +85,14 @@ export default function Profile() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [points, setPoints] = useState<number | null>(null)
+  const [expiry, setExpiry] = useState<ReturnType<typeof nextPointsExpiry>>(null)
   useEffect(() => {
-    if (user && !isBusiness) getPoints(user.id).then(setPoints)
+    if (user && !isBusiness) {
+      getPoints(user.id).then(setPoints)
+      listBookings(user.id)
+        .then((l) => setExpiry(nextPointsExpiry(l)))
+        .catch(() => setExpiry(null))
+    }
   }, [user, isBusiness])
 
   // Phone verification (demo code until SMS is connected)
@@ -245,6 +252,11 @@ export default function Profile() {
                   <span>
                     <strong className="block">{points ?? '…'} Club points</strong>
                     <span className="text-xs text-[#D3DCEE]">Worth ₹{points ?? '…'} on your next stay</span>
+                    {!!points && expiry && (
+                      <span className="block text-[11px] text-[#B9C5DD]">
+                        {Math.min(points, expiry.points)} expire on {expiryDate(expiry.date)}
+                      </span>
+                    )}
                   </span>
                 </Link>
               )}

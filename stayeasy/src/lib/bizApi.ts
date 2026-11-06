@@ -28,6 +28,7 @@ function writeAll(list: BizBooking[]) {
 
 /** Sample trips for the demo company only (upcoming, past and cancelled), so every tab has something to show. */
 function sampleTrips(c: Company): BizBooking[] {
+  if (!hotels.length) return [] // no sample hotels on the site any more
   const make = (id: string, slug: string, inDays: number, nights: number, qty: Record<number, number>, travellers: string[], purpose: string, cc: string, status: 'confirmed' | 'cancelled' = 'confirmed'): BizBooking => {
     const h = hotels.find((x) => x.slug === slug)!
     const q: Record<string, number> = {}

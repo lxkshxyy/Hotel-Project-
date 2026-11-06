@@ -9,11 +9,12 @@ import { RatingBadge, Reveal } from '../../components/ui'
 import { site } from '../../config/site'
 import { useAccount } from '../../context/AccountContext'
 import { bizCategories, bizCheapest, bizRules, categoryHotels, cityLimit, hotelRoomsFree, metroCities, walletMilestones } from '../../data/business'
-import { cities, hotels } from '../../data/hotels'
+import { cities } from '../../data/hotels'
 import { bookingsLeftUnverified, getLastSearch, listBizBookings, walletStatement } from '../../lib/bizApi'
 import { addDays, dayMonth, inr, plural, shortDate, todayISO } from '../../lib/format'
 import { useProfile } from '../../lib/profile'
 import { bizQuery, LimitChip, Pill, type BizSearch } from './shared'
+import { useHotels } from '../../lib/useHotels'
 
 const products = [
   { id: '', label: 'Hotels', Icon: Hotel },
@@ -23,6 +24,7 @@ const products = [
 ]
 
 export default function BizHome() {
+  const hotels = useHotels() ?? []
   const { company, isAdmin } = useAccount()
   const { name } = useProfile()
   const c = company!

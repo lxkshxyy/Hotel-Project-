@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { Hourglass, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { HotelRow } from '../components/HotelCards'
@@ -8,6 +8,8 @@ import { Spinner } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { site } from '../config/site'
 import { brandLabel, minPrice } from '../data/hotels'
+import { hotelInPlace, stateNamed } from '../data/places'
+import { hotelStars } from '../lib/useHotels'
 import type { AmenityKey, Brand, Hotel } from '../data/types'
 import { getHotels } from '../lib/api'
 import { bookableForStay } from '../lib/quote'
@@ -23,6 +25,7 @@ interface Filters {
   airport: boolean
   railway: boolean
   brands: Brand[]
+  stars: number[]
   areas: string[]
   rating: number
   amenities: AmenityKey[]
@@ -37,6 +40,7 @@ const emptyFilters = (max: number): Filters => ({
   airport: false,
   railway: false,
   brands: [],
+  stars: [],
   areas: [],
   rating: 0,
   amenities: [],
@@ -57,11 +61,7 @@ const amenityFilters: { k: AmenityKey; l: string }[] = [
   { k: 'gym', l: 'Gym' },
 ]
 
-function matchesPlace(h: Hotel, q: string) {
-  if (!q) return true
-  const s = q.toLowerCase()
-  return [h.city, h.area, h.name].some((v) => v.toLowerCase().includes(s)) || (s === 'delhi' && h.city === 'New Delhi')
-}
+const matchesPlace = hotelInPlace
 
 const hasTag = (h: Hotel, word: string) =>
   h.tags.some((t) => t.toLowerCase().includes(word)) || h.nearby.some((n) => n.name.toLowerCase().includes(word) && parseFloat(n.distance) <= 5)
@@ -73,6 +73,28 @@ function Check({ checked, onChange, label, count }: { checked: boolean; onChange
       <span className="flex-1">{label}</span>
       {count !== undefined && <span className="text-[13px] text-ink-400">{count}</span>}
     </label>
+  )
+}
+
+function ComingSoon({ place }: { place: string }) {
+  const st = stateNamed(place)
+  return (
+    <div className="card relative flex flex-col items-center gap-3 overflow-hidden p-10 text-center">
+      <span className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-navy-800 via-ember-600 to-[#C89B3C]" />
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF3D6] text-[#8A5A00]">
+        <Hourglass className="h-7 w-7" aria-hidden="true" />
+      </span>
+      <span className="rounded-full bg-[#FFF3D6] px-3 py-1 text-xs font-black tracking-wider text-[#8A5A00] uppercase">Coming soon</span>
+      <strong className="text-xl text-navy-800">{place ? `${site.name} stays in ${place} are coming soon` : `${site.name} stays are coming soon`}</strong>
+      <p className="max-w-md text-ink-500">
+        {place
+          ? `We're signing up hotels ${st ? `across ${st.name}` : `in ${place}`} right now. Check back soon, or try another city.`
+          : "We're signing up our first hotels right now. Check back soon."}
+      </p>
+      <Link to="/" className="btn-navy no-underline">
+        Back to home
+      </Link>
+    </div>
   )
 }
 
@@ -94,7 +116,8 @@ export default function Results() {
       .catch(() => setAll([]))
   }, [])
 
-  const inPlace = useMemo(() => bookableForStay((all ?? []).filter((h) => matchesPlace(h, search.city)), search.checkIn, search.checkOut), [all, search.city, search.checkIn, search.checkOut])
+  const listedHere = useMemo(() => (all ?? []).filter((h) => matchesPlace(h, search.city)), [all, search.city])
+  const inPlace = useMemo(() => bookableForStay(listedHere, search.checkIn, search.checkOut), [listedHere, search.checkIn, search.checkOut])
   const priceCap = useMemo(() => Math.max(1000, ...inPlace.map(minPrice)), [inPlace])
 
   const [f, setF] = useState<Filters>(() => emptyFilters(100000))
@@ -124,6 +147,7 @@ export default function Results() {
       if (f.couple && !h.coupleFriendly) return false
       if (f.airport && !hasTag(h, 'airport')) return false
       if (f.railway && !(hasTag(h, 'railway') || hasTag(h, 'station'))) return false
+      if (f.stars.length && !f.stars.includes(hotelStars(h))) return false
       if (f.brands.length && !f.brands.includes(h.brand)) return false
       if (f.areas.length && !f.areas.includes(h.area)) return false
       if (f.rating && h.rating < f.rating) return false
@@ -139,11 +163,13 @@ export default function Results() {
   }, [inPlace, f, sort])
 
   const areas = useMemo(() => Array.from(new Set(inPlace.map((h) => h.area))).sort(), [inPlace])
+  // "Popular": the two most-reviewed hotels in this list (only when they actually have reviews).
+  const popular = useMemo(() => new Set([...results].filter((h) => h.reviews > 0).sort((a, b) => b.reviews - a.reviews).slice(0, 2).map((h) => h.slug)), [results])
   const count = (pred: (h: Hotel) => boolean) => inPlace.filter(pred).length
-  const toggle = <K extends 'brands' | 'areas' | 'amenities'>(key: K, v: Filters[K][number]) =>
+  const toggle = <K extends 'brands' | 'areas' | 'amenities' | 'stars'>(key: K, v: Filters[K][number]) =>
     setF((cur) => {
-      const arr = cur[key] as string[]
-      return { ...cur, [key]: arr.includes(v as string) ? arr.filter((x) => x !== v) : [...arr, v] }
+      const arr = cur[key] as (string | number)[]
+      return { ...cur, [key]: arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v] }
     })
 
   const chips: { label: string; clear: () => void }[] = [
@@ -153,6 +179,7 @@ export default function Results() {
     ...(f.airport ? [{ label: 'Near airport', clear: () => setF({ ...f, airport: false }) }] : []),
     ...(f.railway ? [{ label: 'Near railway station', clear: () => setF({ ...f, railway: false }) }] : []),
     ...(f.rating ? [{ label: `Rating ${f.rating}+`, clear: () => setF({ ...f, rating: 0 }) }] : []),
+    ...f.stars.map((n) => ({ label: `${n}-Star`, clear: () => toggle('stars', n) })),
     ...f.brands.map((b) => ({ label: brandLabel(b), clear: () => toggle('brands', b) })),
     ...f.areas.map((a) => ({ label: a, clear: () => toggle('areas', a) })),
     ...f.amenities.map((a) => ({ label: amenityFilters.find((x) => x.k === a)?.l ?? a, clear: () => toggle('amenities', a) })),
@@ -226,6 +253,22 @@ export default function Results() {
           onChange={() => setF({ ...f, railway: !f.railway })}
           count={count((h) => hasTag(h, 'railway') || hasTag(h, 'station'))}
         />
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-1 border-t border-line pt-5">
+        <legend className="float-left mb-2 font-bold">Star rating</legend>
+        {[5, 4, 3, 2, 1].map((n) => (
+          <label key={n} className="flex min-h-9 cursor-pointer items-center gap-3 text-sm">
+            <input type="checkbox" checked={f.stars.includes(n)} onChange={() => toggle('stars', n)} className="h-[18px] w-[18px] accent-navy-800" />
+            <span className="flex flex-1 items-center gap-2">
+              <span className="text-[#E0A526]" aria-hidden="true">
+                {'★'.repeat(n)}
+              </span>
+              {n}-Star
+            </span>
+            <span className="text-[13px] text-ink-400">{count((h) => hotelStars(h) === n)}</span>
+          </label>
+        ))}
       </fieldset>
 
       <fieldset className="flex flex-col gap-1 border-t border-line pt-5">
@@ -358,7 +401,7 @@ export default function Results() {
               ))}
             </div>
           )}
-          {!user && (
+          {!user && listedHere.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#BFE3C9] bg-leaf-50 px-4 py-3 text-sm">
               <span>
                 <strong className="text-leaf-700">Members save an extra 5%</strong> on every hotel below — sign in to unlock member prices.
@@ -372,7 +415,9 @@ export default function Results() {
           {!all ? (
             <Spinner label="Finding stays" />
           ) : results.length === 0 ? (
-            inPlace.length === 0 ? (
+            listedHere.length === 0 ? (
+              <ComingSoon place={search.city} />
+            ) : inPlace.length === 0 ? (
               <div className="card flex flex-col items-center gap-3 p-10 text-center">
                 <strong className="text-lg">{search.city ? `No ${site.name} stays in ${search.city} for these dates` : 'No stays available for these dates'}</strong>
                 <p className="text-ink-500">Try other dates, or one of the cities we serve.</p>
@@ -390,11 +435,13 @@ export default function Results() {
               </div>
             )
           ) : (
-            <AnimatePresence mode="popLayout">
-              {results.map((h) => (
-                <HotelRow key={h.slug} hotel={h} query={query} nights={nights} />
-              ))}
-            </AnimatePresence>
+            <div className="card divide-y divide-line overflow-hidden">
+              <AnimatePresence mode="popLayout">
+                {results.map((h) => (
+                  <HotelRow key={h.slug} hotel={h} query={query} nights={nights} search={search} popular={popular.has(h.slug)} />
+                ))}
+              </AnimatePresence>
+            </div>
           )}
         </section>
       </div>

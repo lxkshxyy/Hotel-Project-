@@ -9,11 +9,12 @@ import { VerifyOrgModal } from '../../components/biz/VerifyOrg'
 import { useAccount } from '../../context/AccountContext'
 import { useAuth } from '../../context/AuthContext'
 import { bizCheapest, tripPurposes, type TravelRequest } from '../../data/business'
-import { cities, hotels } from '../../data/hotels'
+import { cities } from '../../data/hotels'
 import { getShortlist, listRequests, requestId, saveRequest, toggleShortlist } from '../../lib/bizApi'
 import { addDays, inr, nightsBetween, plural, shortDate, todayISO } from '../../lib/format'
 import { useProfile } from '../../lib/profile'
 import { bizQuery } from './shared'
+import { useHotels } from '../../lib/useHotels'
 
 type Tab = 'shortlist' | 'raised' | 'approve'
 type StatusFilter = 'all' | TravelRequest['status']
@@ -125,6 +126,7 @@ function RequestCard({ r, children }: { r: TravelRequest; children?: ReactNode }
 }
 
 export default function BizRequests() {
+  const hotels = useHotels() ?? []
   const { company, isAdmin, me } = useAccount()
   const { user } = useAuth()
   const { name } = useProfile()

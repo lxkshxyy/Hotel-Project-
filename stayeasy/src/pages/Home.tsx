@@ -123,8 +123,10 @@ export default function Home() {
             transition={{ delay: 0.12, duration: 0.5 }}
             className="mt-4 max-w-xl text-lg text-[#D3DCEE]"
           >
-            Hotels from {lowest ? inr(lowest) : '…'} a night across {countByCity.size || 8} cities. Free cancellation, pay at hotel,
-            and a 30-minute service promise.
+            {lowest
+              ? `Hotels from ${inr(lowest)} a night across ${countByCity.size} ${countByCity.size === 1 ? 'city' : 'cities'}. `
+              : 'New hotels opening across India soon. '}
+            Free cancellation, pay at hotel, and a 30-minute service promise.
           </motion.p>
         </div>
       </section>
@@ -243,7 +245,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Top rated */}
+      {/* Top rated (only once hotels are listed) */}
+      {topRated.length > 0 && (
       <section className="mt-14">
         <div className="container-page flex items-end justify-between gap-4">
           <Reveal>
@@ -261,6 +264,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Prime selections */}
       <div className="container-page mt-14">
@@ -301,9 +305,13 @@ export default function Home() {
                       ))}
                     </ul>
                     <div className="mt-auto flex items-center justify-between pt-4">
-                      <span className="text-sm text-ink-500">
-                        From <strong className="text-lg text-ink-900">{from.length ? inr(Math.min(...from)) : '—'}</strong>/night
-                      </span>
+                      {from.length ? (
+                        <span className="text-sm text-ink-500">
+                          From <strong className="text-lg text-ink-900">{inr(Math.min(...from))}</strong>/night
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-[#FFF3D6] px-2.5 py-1 text-xs font-bold text-[#8A5A00]">Coming soon</span>
+                      )}
                       <Link to={`/hotels?${searchToQuery(base, { brand: b.brand })}`} className="font-bold no-underline hover:underline">
                         Explore →
                       </Link>

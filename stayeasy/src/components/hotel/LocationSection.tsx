@@ -1,6 +1,6 @@
 import { ChevronDown, Landmark as LandmarkIcon, MapPin, Navigation, Search, TrainFront, Utensils, Camera } from 'lucide-react'
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { hotels } from '../../data/hotels'
+import { useHotels } from '../../lib/useHotels'
 import { distanceKm, kmLabel, landmarkKinds, landmarksNear, type LandmarkKind } from '../../data/landmarks'
 import type { Hotel } from '../../data/types'
 
@@ -22,6 +22,7 @@ export default function LocationSection({ hotel }: { hotel: Hotel }) {
   const [focus, setFocus] = useState<{ lat: number; lng: number; name: string; km: number } | null>(null)
   const [msg, setMsg] = useState('')
 
+  const hotels = useHotels() ?? []
   const shown = near.filter((l) => checked.includes(l.name))
   const others = showHotels ? hotels.filter((h) => h.city === hotel.city && h.slug !== hotel.slug) : []
   const toggle = (name: string) => setChecked((c) => (c.includes(name) ? c.filter((x) => x !== name) : [...c, name]))

@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext'
 import { brandLabel } from '../data/hotels'
 import type { Hotel } from '../data/types'
 import { BookingError, confirmPayment, createBooking, getHotel, getPoints, listBookings } from '../lib/api'
-import { clubStatus, clubTiers, isAtLeast, type ClubTier } from '../lib/club'
+import { clubStatus, clubTiers, expiryDate, isAtLeast, nextPointsExpiry, pointsExpireOn, pointsFor, type ClubTier } from '../lib/club'
 import { addDays, inr, nightsBetween, parseISODate, plural, shortDate } from '../lib/format'
 import { onlinePayments, openRazorpay } from '../lib/payments'
 import { cancelTerms, checkCoupon, freeCancelHours, quote } from '../lib/quote'
@@ -120,6 +120,7 @@ export default function Checkout() {
   const [couponMsg, setCouponMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [points, setPoints] = useState(0)
   const [tier, setTier] = useState<ClubTier>(clubTiers[0])
+  const [expiry, setExpiry] = useState<ReturnType<typeof nextPointsExpiry>>(null)
   const [usePoints, setUsePoints] = useState(false)
   const [early, setEarly] = useState('')
   const [late, setLate] = useState('')
@@ -127,6 +128,7 @@ export default function Checkout() {
   const [protect, setProtect] = useState<'' | 'yes' | 'no'>('')
   const [showRequests, setShowRequests] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [showBreakup, setShowBreakup] = useState(false)
   const [agree, setAgree] = useState(true)
   const [payMode, setPayMode] = useState<'hotel' | 'now'>('hotel')
@@ -141,7 +143,10 @@ export default function Checkout() {
     if (user) {
       getPoints(user.id).then(setPoints)
       listBookings(user.id)
-        .then((list) => setTier(clubStatus(list).tier))
+        .then((list) => {
+          setTier(clubStatus(list).tier)
+          setExpiry(nextPointsExpiry(list))
+        })
         .catch(() => {})
       setForm((f) => ({ ...f, email: f.email || user.email }))
     }
@@ -317,7 +322,21 @@ export default function Checkout() {
   const capLabel = 'flex flex-col gap-1.5 text-xs font-bold tracking-wide text-ink-700 uppercase'
 
   return (
-    <div className="pb-28 lg:pb-12">
+    <div className="relative isolate pb-28 lg:pb-12">
+      {/* Deep navy band with soft colour glows and a light grain, behind the glass panels. */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-16 -z-10 h-[420px] overflow-hidden bg-navy-900">
+        <div className="absolute -top-24 -left-20 h-80 w-80 rounded-full bg-[#3B6BFF]/35 blur-3xl" />
+        <div className="absolute top-10 right-[8%] h-72 w-72 rounded-full bg-ember-600/30 blur-3xl" />
+        <div className="absolute -bottom-24 left-[40%] h-72 w-[28rem] rounded-full bg-[#C89B3C]/25 blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.18] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-canvas" />
+      </div>
       <header className="border-b border-line bg-white">
         <div className="container-page flex h-16 items-center justify-between gap-4">
           <Logo />
@@ -329,10 +348,10 @@ export default function Checkout() {
       </header>
 
       <form onSubmit={submit} noValidate className="container-page pt-6">
-        <Link to={`/hotel/${hotel.slug}?${searchToQuery(search, { room: room.id })}`} className="inline-flex items-center gap-1 text-sm font-bold no-underline">
+        <Link to={`/hotel/${hotel.slug}?${searchToQuery(search, { room: room.id })}`} className="inline-flex items-center gap-1 text-sm font-bold text-[#C9D6F2] no-underline hover:text-white">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to hotel
         </Link>
-        <h1 className="mt-2 mb-5 text-[28px] font-black tracking-tight text-ink-900 sm:text-[30px]">Review your Booking</h1>
+        <h1 className="mt-2 mb-5 text-[28px] font-black tracking-tight text-white sm:text-[30px]">Review your Booking</h1>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-5">
@@ -361,7 +380,7 @@ export default function Checkout() {
             )}
 
             {/* Hotel + stay */}
-            <section className="card overflow-hidden">
+            <section className="glass overflow-hidden">
               <div className="flex gap-4 p-5 sm:p-6">
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <h2 className="text-[24px] leading-tight font-black">{hotel.name}</h2>
@@ -495,71 +514,8 @@ export default function Checkout() {
               </div>
             </section>
 
-            {/* Add-ons */}
-            <section className="card p-5 sm:p-6">
-              <h2 className="text-xl font-black">Addons</h2>
-              <p className="text-sm text-ink-500">Get additional benefits by paying a little extra</p>
-              <div className="mt-4 flex flex-col gap-3" role="radiogroup" aria-label="Meal add-on">
-                {breakfastIncluded && (
-                  <p className="rounded-xl bg-leaf-50 px-4 py-3 text-sm font-semibold text-leaf-800">Breakfast is already included with this room.</p>
-                )}
-                {(['breakfast', 'allMeals'] as const)
-                  .filter((k) => !(breakfastIncluded && k === 'breakfast'))
-                  .map((k) => {
-                    const amount = site.addons[k] * guests * nights
-                    const on = meal === k
-                    return (
-                      <label key={k} className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 pt-6 ${on ? 'border-navy-800 bg-[#F6F8FD]' : 'border-line-strong'}`}>
-                        {features.sampleReviews && hotel.rating > 0 && (
-                          <span className="absolute -top-px left-3 rounded-b-md bg-leaf-50 px-2 py-0.5 text-[11px] font-bold text-leaf-800">
-                            Guests rate the food {Math.min(4.8, hotel.rating + 0.1).toFixed(1)}/5
-                          </span>
-                        )}
-                        <input
-                          type="radio"
-                          name="meal"
-                          checked={on}
-                          onClick={() => on && setMeal('')}
-                          onChange={() => setMeal(k)}
-                          className="mt-1 h-5 w-5 accent-navy-800"
-                        />
-                        <span className="flex-1">
-                          <strong className="block">{k === 'breakfast' ? 'Breakfast' : 'Breakfast + Lunch/Dinner'}</strong>
-                          <span className="text-sm text-ink-500">(Price at hotel is {inr(Math.round(amount * site.addons.atHotelMarkup))} for all guests)</span>
-                        </span>
-                        <span className="text-right">
-                          <strong className="block">{inr(amount)}</strong>
-                          <span className="text-xs text-ink-500">all guests</span>
-                        </span>
-                      </label>
-                    )
-                  })}
-              </div>
-            </section>
-
-            {/* Important information */}
-            <section className="card p-5 sm:p-6">
-              <h2 className="text-xl font-black">Important information</h2>
-              <div className="mt-4 rounded-xl border border-line p-4">
-                <div className="relative rounded-xl border border-line px-3 pt-4 pb-2.5">
-                  <span className="absolute -top-2.5 left-3 flex items-center gap-1 rounded-full bg-leaf-50 px-2 py-0.5 text-xs font-bold">
-                    <Heart className="h-3 w-3 fill-ember-600 text-ember-600" aria-hidden="true" /> Couple/Bachelor Rules
-                  </span>
-                  <span className="text-sm text-ink-700">{rules.couple}</span>
-                </div>
-                <ul className="mt-3 flex list-disc flex-col gap-1.5 pl-5 text-sm text-ink-700">
-                  {(showInfo ? [...rules.must, ...rules.fees] : rules.must.slice(0, 4)).map((x) => (
-                    <li key={x}>{x}</li>
-                  ))}
-                </ul>
-                <button type="button" onClick={() => setShowInfo((v) => !v)} className="mt-2 text-sm font-black text-navy-800">
-                  {showInfo ? 'View less' : 'View More'}
-                </button>
-              </div>
-            </section>
-
             {/* Guest details */}
-            <section className="card p-5 sm:p-6">
+            <section className="glass p-5 sm:p-6">
               <h2 className="mb-4 text-xl font-black">Guest Details</h2>
               <div className="grid gap-4 sm:grid-cols-[90px_1fr_1fr]">
                 <label className={capLabel}>
@@ -656,8 +612,83 @@ export default function Checkout() {
               </AnimatePresence>
             </section>
 
+            {/* Add-ons */}
+            <section className="glass p-5 sm:p-6">
+              <h2 className="text-xl font-black">Make your stay better</h2>
+              <p className="text-sm text-ink-500">Get additional benefits by paying a little extra</p>
+              <div className="mt-4 flex flex-col gap-3" role="radiogroup" aria-label="Meal add-on">
+                {breakfastIncluded && (
+                  <p className="rounded-xl bg-leaf-50 px-4 py-3 text-sm font-semibold text-leaf-800">Breakfast is already included with this room.</p>
+                )}
+                {(['breakfast', 'allMeals'] as const)
+                  .filter((k) => !(breakfastIncluded && k === 'breakfast'))
+                  .map((k) => {
+                    const amount = site.addons[k] * guests * nights
+                    const on = meal === k
+                    return (
+                      <label key={k} className={`relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 pt-6 ${on ? 'border-navy-800 bg-[#F6F8FD]' : 'border-line-strong'}`}>
+                        {features.sampleReviews && hotel.rating > 0 && (
+                          <span className="absolute -top-px left-3 rounded-b-md bg-leaf-50 px-2 py-0.5 text-[11px] font-bold text-leaf-800">
+                            Guests rate the food {Math.min(4.8, hotel.rating + 0.1).toFixed(1)}/5
+                          </span>
+                        )}
+                        <input
+                          type="radio"
+                          name="meal"
+                          checked={on}
+                          onClick={() => on && setMeal('')}
+                          onChange={() => setMeal(k)}
+                          className="mt-1 h-5 w-5 accent-navy-800"
+                        />
+                        <span className="flex-1">
+                          <strong className="block">{k === 'breakfast' ? 'Breakfast' : 'Breakfast + Lunch/Dinner'}</strong>
+                          <span className="text-sm text-ink-500">(Price at hotel is {inr(Math.round(amount * site.addons.atHotelMarkup))} for all guests)</span>
+                        </span>
+                        <span className="text-right">
+                          <strong className="block">{inr(amount)}</strong>
+                          <span className="text-xs text-ink-500">all guests</span>
+                        </span>
+                      </label>
+                    )
+                  })}
+              </div>
+            </section>
+
+            {/* Property rules (folded) */}
+            <section className="glass p-5 sm:p-6">
+              <button type="button" onClick={() => setShowRules((v) => !v)} aria-expanded={showRules} className="flex w-full items-center justify-between gap-3 text-left">
+                <span>
+                  <h2 className="text-xl font-black">Property rules</h2>
+                  <span className="text-sm text-ink-500">Check-in rules, IDs and fees at this hotel</span>
+                </span>
+                <ChevronDown className={`h-5 w-5 shrink-0 text-navy-800 transition-transform ${showRules ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
+              <AnimatePresence initial={false}>
+                {showRules && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="mt-4 rounded-xl border border-line p-4">
+                <div className="relative rounded-xl border border-line px-3 pt-4 pb-2.5">
+                  <span className="absolute -top-2.5 left-3 flex items-center gap-1 rounded-full bg-leaf-50 px-2 py-0.5 text-xs font-bold">
+                    <Heart className="h-3 w-3 fill-ember-600 text-ember-600" aria-hidden="true" /> Couple/Bachelor Rules
+                  </span>
+                  <span className="text-sm text-ink-700">{rules.couple}</span>
+                </div>
+                <ul className="mt-3 flex list-disc flex-col gap-1.5 pl-5 text-sm text-ink-700">
+                  {(showInfo ? [...rules.must, ...rules.fees] : rules.must.slice(0, 4)).map((x) => (
+                    <li key={x}>{x}</li>
+                  ))}
+                </ul>
+                <button type="button" onClick={() => setShowInfo((v) => !v)} className="mt-2 text-sm font-black text-navy-800">
+                  {showInfo ? 'View less' : 'View More'}
+                </button>
+              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+
             {/* Special requests */}
-            <section className="card p-5 sm:p-6">
+            <section className="glass p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-black">
@@ -700,7 +731,7 @@ export default function Checkout() {
 
             {/* Stay protect: only offered once the client has an insurance partner (VITE_STAY_PROTECT=on). */}
             {features.stayProtect && (
-            <section className="card p-5 sm:p-6">
+            <section className="glass p-5 sm:p-6">
               <div className="flex items-center gap-3 rounded-xl bg-[#E9FBF4] px-4 py-3 text-sm text-ink-700">
                 <ShieldCheck className="h-6 w-6 shrink-0 text-leaf-700" aria-hidden="true" /> Travel worry-free! Protect your stay against sudden changes.
               </div>
@@ -739,82 +770,11 @@ export default function Checkout() {
             </section>
             )}
 
-            {/* Payment */}
-            <section className="card p-5 sm:p-6">
-              <h2 className="mb-4 text-xl font-black">How would you like to pay?</h2>
-              <div role="radiogroup" aria-label="Payment option" className="flex flex-col gap-3">
-                {(
-                  [
-                    {
-                      id: 'hotel' as const,
-                      title: 'Pay at hotel',
-                      badge: 'No prepayment',
-                      text: 'Reserve with no payment now. Pay by cash, card or UPI at check-in.',
-                      disabled: !canPayAtHotel,
-                      note: canPayAtHotel ? '' : 'This hotel needs payment online.',
-                    },
-                    {
-                      id: 'now' as const,
-                      title: 'Pay now',
-                      badge: onlinePayments ? `Extra ${Math.round(site.payNowDiscount * 100)}% off` : 'Coming soon',
-                      text: 'UPI, cards, net banking or wallets, secured by Razorpay.',
-                      disabled: !onlinePayments,
-                      note: '',
-                    },
-                  ]
-                ).map((o) => {
-                  const on = mode === o.id && !o.disabled
-                  return (
-                    <label key={o.id} className={`flex items-start gap-3.5 rounded-2xl border-2 p-4 ${on ? 'border-navy-800 bg-[#F6F8FD]' : 'border-line'} ${o.disabled ? 'opacity-70' : 'cursor-pointer'}`}>
-                      <input type="radio" name="paymode" className="sr-only" checked={on} disabled={o.disabled} onChange={() => setPayMode(o.id)} />
-                      <span aria-hidden="true" className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-navy-800' : 'border-line-strong'}`}>
-                        {on && <span className="h-2.5 w-2.5 rounded-full bg-navy-800" />}
-                      </span>
-                      <span className="flex flex-col gap-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <strong>{o.title}</strong>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${o.disabled ? 'bg-mist text-ink-500' : 'bg-navy-100 text-navy-800'}`}>{o.badge}</span>
-                        </span>
-                        <span className="text-sm text-ink-700">{o.note || o.text}</span>
-                      </span>
-                    </label>
-                  )
-                })}
-                {cantBook && <p className="rounded-lg bg-ember-50 px-3 py-2 text-sm font-semibold text-ember-700">This hotel only takes online payment, which isn’t available yet. Please choose another hotel or call us.</p>}
-              </div>
-            </section>
-
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] accent-navy-800" />
-              <span>
-                By proceeding, I agree to {site.name}’s{' '}
-                <Link to="/terms" target="_blank">
-                  User Agreement
-                </Link>
-                ,{' '}
-                <Link to="/privacy" target="_blank">
-                  Privacy Policy
-                </Link>{' '}
-                and{' '}
-                <Link to="/cancellation-policy" target="_blank">
-                  Cancellation &amp; Property Booking Policies
-                </Link>
-                .
-              </span>
-            </label>
-            {error && (
-              <p role="alert" className="rounded-lg bg-ember-50 px-3 py-2 text-sm font-semibold text-ember-700">
-                {error}
-              </p>
-            )}
-            <button type="submit" className="btn-primary hidden min-h-[56px] max-w-[340px] text-lg font-black tracking-wide uppercase lg:inline-flex" disabled={submitting || cantBook}>
-              {submitting ? (mode === 'now' ? 'Opening payment…' : 'Booking…') : user ? (mode === 'now' ? `Pay ${inr(grand)} & book` : 'Book now · Pay at hotel') : 'Sign in & book'}
-            </button>
           </div>
 
           {/* Right column */}
           <aside aria-label="Booking summary" className="flex flex-col gap-4 lg:sticky lg:top-6 lg:w-[340px] lg:shrink-0">
-            <div className="card flex flex-col gap-3 p-5 shadow-card">
+            <div className="glass flex flex-col gap-3 p-5 shadow-card">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-lg font-black">Price Summary</h2>
                 <button type="button" aria-expanded={showBreakup} onClick={() => setShowBreakup((v) => !v)} className="flex items-center gap-1 text-sm font-bold text-navy-800">
@@ -886,9 +846,86 @@ export default function Checkout() {
                 <span>{inr(grand)}</span>
               </div>
               <p className="text-[13px] font-bold text-leaf-700">You save {inr(price.saved)} on this booking</p>
+              {user && pointsFor(grand) > 0 && (
+                <p className="text-[13px] text-ink-700">
+                  Earn <strong className="text-[#8A5A00]">{pointsFor(grand)} Club points</strong>
+                  <span className="block text-[11px] text-ink-500">Valid till {expiryDate(pointsExpireOn(grand))}</span>
+                </p>
+              )}
             </div>
 
-            <div className="card flex flex-col gap-3 p-5">
+            {/* Payment */}
+            <section className="glass p-5">
+              <h2 className="mb-3 text-lg font-black">How would you like to pay?</h2>
+              <div role="radiogroup" aria-label="Payment option" className="flex flex-col gap-3">
+                {(
+                  [
+                    {
+                      id: 'hotel' as const,
+                      title: 'Pay at hotel',
+                      badge: 'No prepayment',
+                      text: 'Reserve with no payment now. Pay by cash, card or UPI at check-in.',
+                      disabled: !canPayAtHotel,
+                      note: canPayAtHotel ? '' : 'This hotel needs payment online.',
+                    },
+                    {
+                      id: 'now' as const,
+                      title: 'Pay now',
+                      badge: onlinePayments ? `Extra ${Math.round(site.payNowDiscount * 100)}% off` : 'Coming soon',
+                      text: 'UPI, cards, net banking or wallets, secured by Razorpay.',
+                      disabled: !onlinePayments,
+                      note: '',
+                    },
+                  ]
+                ).map((o) => {
+                  const on = mode === o.id && !o.disabled
+                  return (
+                    <label key={o.id} className={`flex items-start gap-3.5 rounded-2xl border-2 p-4 ${on ? 'border-navy-800 bg-[#F6F8FD]' : 'border-line'} ${o.disabled ? 'opacity-70' : 'cursor-pointer'}`}>
+                      <input type="radio" name="paymode" className="sr-only" checked={on} disabled={o.disabled} onChange={() => setPayMode(o.id)} />
+                      <span aria-hidden="true" className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-navy-800' : 'border-line-strong'}`}>
+                        {on && <span className="h-2.5 w-2.5 rounded-full bg-navy-800" />}
+                      </span>
+                      <span className="flex flex-col gap-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <strong>{o.title}</strong>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${o.disabled ? 'bg-mist text-ink-500' : 'bg-navy-100 text-navy-800'}`}>{o.badge}</span>
+                        </span>
+                        <span className="text-sm text-ink-700">{o.note || o.text}</span>
+                      </span>
+                    </label>
+                  )
+                })}
+                {cantBook && <p className="rounded-lg bg-ember-50 px-3 py-2 text-sm font-semibold text-ember-700">This hotel only takes online payment, which isn’t available yet. Please choose another hotel or call us.</p>}
+              </div>
+            </section>
+
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] accent-navy-800" />
+              <span>
+                By proceeding, I agree to {site.name}’s{' '}
+                <Link to="/terms" target="_blank">
+                  User Agreement
+                </Link>
+                ,{' '}
+                <Link to="/privacy" target="_blank">
+                  Privacy Policy
+                </Link>{' '}
+                and{' '}
+                <Link to="/cancellation-policy" target="_blank">
+                  Cancellation &amp; Property Booking Policies
+                </Link>
+                .
+              </span>
+            </label>
+            {error && (
+              <p role="alert" className="rounded-lg bg-ember-50 px-3 py-2 text-sm font-semibold text-ember-700">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="btn-primary hidden min-h-[56px] w-full text-lg font-black tracking-wide uppercase shadow-[0_12px_28px_-10px_rgba(194,65,12,0.6)] lg:inline-flex" disabled={submitting || cantBook}>
+              {submitting ? (mode === 'now' ? 'Opening payment…' : 'Booking…') : user ? (mode === 'now' ? `Pay ${inr(grand)} & book` : 'Book now · Pay at hotel') : 'Sign in & book'}
+            </button>
+            <div className="glass flex flex-col gap-3 p-5">
               <h2 className="text-lg font-black">Coupon Codes</h2>
               <div className="flex overflow-hidden rounded-lg border border-line-strong bg-mist">
                 <input
@@ -950,6 +987,11 @@ export default function Checkout() {
                     <strong className="text-leaf-800">Use {points} Club points</strong>
                     <br />
                     <span className="text-ink-700">1 point = ₹1</span>
+                    {points > 0 && expiry && (
+                      <span className="block text-[11px] text-ink-500">
+                        {Math.min(points, expiry.points)} {Math.min(points, expiry.points) === 1 ? 'point expires' : 'points expire'} on {expiryDate(expiry.date)}
+                      </span>
+                    )}
                   </span>
                   <input type="checkbox" disabled={points <= 0} checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="h-[22px] w-[22px] accent-leaf-700" />
                 </label>
@@ -957,7 +999,7 @@ export default function Checkout() {
             </div>
 
             {!user && (
-              <div className="card flex flex-col gap-2 p-5 text-sm">
+              <div className="glass flex flex-col gap-2 p-5 text-sm">
                 <h2 className="text-lg font-black">
                   Why <Link to={loginLink}>Sign up</Link> or <Link to={loginLink}>Login</Link>
                 </h2>

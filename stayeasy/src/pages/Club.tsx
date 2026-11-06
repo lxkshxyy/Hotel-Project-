@@ -6,7 +6,7 @@ import { Reveal } from '../components/ui'
 import { gstRate, site } from '../config/site'
 import { useAuth } from '../context/AuthContext'
 import { getPoints, listBookings } from '../lib/api'
-import { CLUB_FEE, clubStatus, clubTiers, pointsFor } from '../lib/club'
+import { CLUB_FEE, POINTS_EXPIRY, clubStatus, clubTiers, expiryDate, nextPointsExpiry, pointsFor } from '../lib/club'
 import { inr, plural } from '../lib/format'
 
 const steps = [
@@ -28,6 +28,7 @@ const faqs = [
 export default function Club() {
   const { user } = useAuth()
   const [points, setPoints] = useState<number | null>(null)
+  const [expiry, setExpiry] = useState<ReturnType<typeof nextPointsExpiry>>(null)
   const [status, setStatus] = useState<ReturnType<typeof clubStatus> | null>(null)
   const [price, setPrice] = useState(2499)
   const [nights, setNights] = useState(2)
@@ -37,7 +38,10 @@ export default function Club() {
     if (!user) return
     getPoints(user.id).then(setPoints)
     listBookings(user.id)
-      .then((l) => setStatus(clubStatus(l)))
+      .then((l) => {
+        setStatus(clubStatus(l))
+        setExpiry(nextPointsExpiry(l))
+      })
       .catch(() => setStatus(clubStatus([])))
   }, [user])
 
@@ -108,6 +112,11 @@ export default function Club() {
                     </div>
                   ))}
                 </div>
+                {!!points && expiry && (
+                  <p className="mt-2 text-center text-[11px] text-ink-500">
+                    {Math.min(points, expiry.points)} {Math.min(points, expiry.points) === 1 ? 'point expires' : 'points expire'} on {expiryDate(expiry.date)}
+                  </p>
+                )}
                 {status.next ? (
                   <div className="mt-4">
                     <div className="flex justify-between text-sm">
@@ -303,6 +312,7 @@ export default function Club() {
             <ul className="mt-4 flex flex-col gap-3 text-sm text-ink-700">
               {[
                 ['Earn', 'Points are added when your booking is confirmed: 1 point for every full ₹100 of the amount you pay.'],
+                ['Expiry', `Points from a booking under ₹2,000 last ${POINTS_EXPIRY[0].months} month, ₹2,000–₹5,000 last ${POINTS_EXPIRY[1].months} months, and over ₹5,000 last ${POINTS_EXPIRY[2].months} months. The date shows under your points.`],
                 ['Bonus', 'Reaching Silver, Gold and Platinum adds 150, 300 and 500 bonus points once each.'],
                 ['Spend', '1 point = ₹1 off your next booking. Use as many as you like, up to the full booking amount.'],
                 ['Cancel', 'If you cancel, points you spent come back and points you earned on that booking are taken back.'],

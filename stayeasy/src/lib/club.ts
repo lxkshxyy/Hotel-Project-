@@ -94,3 +94,35 @@ export function bonusBetween(before: ClubTier, after: ClubTier) {
 export const pointsFor = (amount: number) => Math.floor(amount / 100) * POINTS_PER_100
 
 export const isAtLeast = (t: ClubTier, name: ClubTier['name']) => clubTiers.indexOf(t) >= clubTiers.findIndex((x) => x.name === name)
+
+/*
+ * Points expiry, by the amount of the booking that earned them (client's rule, 2 Nov 2026):
+ * under ₹2,000 → 1 month, ₹2,000–₹5,000 → 3 months, over ₹5,000 → 6 months.
+ * Change the numbers here only.
+ */
+export const POINTS_EXPIRY: { below: number; months: number }[] = [
+  { below: 2000, months: 1 },
+  { below: 5001, months: 3 },
+  { below: Infinity, months: 6 },
+]
+
+export const pointsLifeMonths = (amount: number) => POINTS_EXPIRY.find((r) => amount < r.below)!.months
+
+/** When points earned on a booking of this amount (made on `from`) expire. */
+export function pointsExpireOn(amount: number, from: Date = new Date()) {
+  const d = new Date(from)
+  d.setMonth(d.getMonth() + pointsLifeMonths(amount))
+  return d
+}
+
+/** The next batch of points to expire, from the guest's confirmed bookings. */
+export function nextPointsExpiry(list: Pick<Booking, 'status' | 'amount' | 'created_at'>[], now = Date.now()): { points: number; date: Date } | null {
+  const batches = list
+    .filter((b) => b.status === 'confirmed' && pointsFor(b.amount) > 0)
+    .map((b) => ({ points: pointsFor(b.amount), date: pointsExpireOn(b.amount, new Date(b.created_at)) }))
+    .filter((x) => x.date.getTime() > now)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+  return batches[0] ?? null
+}
+
+export const expiryDate = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })

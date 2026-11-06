@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext'
 import { hotels as bundledHotels } from '../data/hotels'
 import type { Booking, Hotel } from '../data/types'
 import { cancelBooking, cancelTerms, getBooking, getHotel, listBookings, updateGuestDetails } from '../lib/api'
-import { pointsFor } from '../lib/club'
+import { expiryDate, pointsExpireOn, pointsFor } from '../lib/club'
 import { inr, plural, shortDate, todayISO } from '../lib/format'
 
 
@@ -178,6 +178,7 @@ export function BookingDetail() {
             <span className="text-[13px] font-bold tracking-[0.06em] text-ember-200 uppercase">{site.name} Club</span>
             <strong className="text-[22px]">You earned {pointsFor(booking.amount)} Club points</strong>
             <span className="text-sm text-[#D3DCEE]">Points are worth ₹1 each on your next stay.</span>
+            <span className="text-[11px] text-[#B9C5DD]">Valid till {expiryDate(pointsExpireOn(booking.amount, new Date(booking.created_at)))}</span>
             <Link to="/club" className="mt-auto font-bold text-ember-200 no-underline">
               How the Club works →
             </Link>

@@ -2,10 +2,13 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Building2, ChevronDown, Clock3, MapPin, Search, TrendingUp, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { cities, hotels } from '../data/hotels'
+import { cities } from '../data/hotels'
+import { hotelInPlace, states } from '../data/places'
+import type { Hotel } from '../data/types'
 import type { SearchParams } from '../data/types'
 import { parseISODate } from '../lib/format'
 import { searchToQuery } from '../lib/search'
+import { useHotels } from '../lib/useHotels'
 import DateRangeCalendar from './DateRangeCalendar'
 import { Stepper } from './ui'
 
@@ -21,7 +24,9 @@ interface Suggestion {
   label: string
   sub: string
   value: string
-  kind: 'city' | 'area' | 'hotel'
+  kind: 'city' | 'area' | 'hotel' | 'state'
+  /** No hotel listed there yet. */
+  soon?: boolean
 }
 
 export const priceRanges = [
@@ -55,11 +60,13 @@ const saveRecent = (city: string) => {
 
 const trending = ['Goa', 'New Delhi', 'Bengaluru', 'Mumbai']
 
-function useSuggestions(query: string): Suggestion[] {
+function useSuggestions(query: string, hotels: Hotel[]): Suggestion[] {
   return useMemo(() => {
     const q = query.trim().toLowerCase()
+    const listed = (place: string) => hotels.some((h) => hotelInPlace(h, place))
     const all: Suggestion[] = [
-      ...cities.map((c) => ({ label: c.name, sub: 'City · India', value: c.name, kind: 'city' as const })),
+      ...cities.map((c) => ({ label: c.name, sub: 'City · India', value: c.name, kind: 'city' as const, soon: !listed(c.name) })),
+      ...states.map((st) => ({ label: st.name, sub: `${st.kind} · India`, value: st.name, kind: 'state' as const, soon: !listed(st.name) })),
       ...Array.from(new Set(hotels.map((h) => `${h.area}|${h.city}`))).map((k) => {
         const [area, city] = k.split('|')
         return { label: area, sub: `Area in ${city}`, value: area, kind: 'area' as const }
@@ -67,9 +74,11 @@ function useSuggestions(query: string): Suggestion[] {
       ...hotels.map((h) => ({ label: h.name, sub: `${h.area}, ${h.city}`, value: h.name, kind: 'hotel' as const })),
     ]
     if (!q) return []
-    return all.filter((s) => s.label.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q)).slice(0, 8)
-  }, [query])
+    return all.filter((s) => s.label.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q)).slice(0, 10)
+  }, [query, hotels])
 }
+
+const Soon = () => <span className="ml-auto shrink-0 rounded-full bg-[#FFF3D6] px-2 py-0.5 text-[11px] font-bold text-[#8A5A00]">Coming soon</span>
 
 type Pop = 'city' | 'dates' | 'guests' | 'price' | null
 
@@ -86,7 +95,10 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
   const id = useId()
   const wrap = useRef<HTMLFormElement>(null)
   const queryRef = useRef<HTMLInputElement>(null)
-  const suggestions = useSuggestions(query)
+  const live = useHotels()
+  const hotels = useMemo(() => live ?? [], [live])
+  const suggestions = useSuggestions(query, hotels)
+  const soon = (place: string) => live !== null && !hotels.some((h) => hotelInPlace(h, place))
 
   useEffect(() => {
     if (!pop) return
@@ -141,7 +153,7 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
     </>
   )
   const weekday = (iso: string) => day(iso).toLocaleDateString('en-IN', { weekday: 'long' })
-  const cityInfo = cities.find((c) => c.name === s.city)
+  const cityInfo = cities.find((c) => c.name === s.city) ?? states.find((st) => st.name === s.city)
   const hotelInfo = hotels.find((h) => h.name === s.city || h.area === s.city)
   const priceLabel = priceRanges.find((p) => p.v === price)?.l
   const stack = layout === 'stack'
@@ -170,7 +182,7 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
         </span>
       </div>
 
-      <div className={`relative grid rounded-2xl border border-line-strong ${stack ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1.15fr_1.15fr]'}`}>
+      <div className={`relative grid rounded-2xl border border-line-strong ${stack ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-[2.2fr_1fr_1fr_1.1fr_1.1fr]'}`}>
         {/* Where */}
         <div className={`relative col-span-2 border-b border-line-strong ${stack ? '' : 'lg:col-span-1 lg:border-r lg:border-b-0'}`}>
           <button type="button" aria-haspopup="dialog" aria-expanded={pop === 'city'} onClick={() => setPop(pop === 'city' ? null : 'city')} className={cell(pop === 'city', 'rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none')}>
@@ -254,6 +266,7 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
                             <span className="block font-bold">{sg.label}</span>
                             <span className="block text-xs text-ink-500">{sg.sub}</span>
                           </span>
+                          {sg.soon && live !== null && <Soon />}
                         </li>
                       ))}
                     </>
@@ -270,11 +283,23 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
                           ))}
                         </>
                       )}
-                      <li className="px-4 pt-1.5 pb-1 text-[11px] font-black tracking-wider text-ink-400 uppercase">Suggestions</li>
+                      <li className="px-4 pt-1.5 pb-1 text-[11px] font-black tracking-wider text-ink-400 uppercase">Popular cities</li>
                       {cities.map((c) => (
                         <li key={c.name} role="option" aria-selected={false} onMouseDown={(e) => (e.preventDefault(), pickCity(c.name))} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-mist">
                           <TrendingUp className="h-4 w-4 text-leaf-700" aria-hidden="true" />
                           <span className="font-semibold">{c.name}</span>
+                          {soon(c.name) && <Soon />}
+                        </li>
+                      ))}
+                      <li className="px-4 pt-3 pb-1 text-[11px] font-black tracking-wider text-ink-400 uppercase">States &amp; union territories</li>
+                      {states.map((st) => (
+                        <li key={st.name} role="option" aria-selected={false} onMouseDown={(e) => (e.preventDefault(), pickCity(st.name))} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-mist">
+                          <MapPin className="h-4 w-4 text-ink-400" aria-hidden="true" />
+                          <span>
+                            <span className="block font-semibold">{st.name}</span>
+                            <span className="block text-xs text-ink-500">{st.kind}</span>
+                          </span>
+                          {soon(st.name) && <Soon />}
                         </li>
                       ))}
                     </>
@@ -379,7 +404,7 @@ export default function SearchForm({ initial, layout = 'row', onDone, initialPri
         <div className="relative">
           <button type="button" aria-haspopup="listbox" aria-expanded={pop === 'price'} onClick={() => setPop(pop === 'price' ? null : 'price')} className={cell(pop === 'price', 'rounded-br-2xl lg:rounded-r-2xl')}>
             <span className={cap}>Price Per Night</span>
-            <span className={`block w-full truncate text-lg font-bold ${priceLabel ? 'text-ink-900' : 'text-ink-400'}`}>{priceLabel ?? '₹0-₹1500, ₹1500-₹2500,…'}</span>
+            <span className={`block w-full truncate text-[15px] font-bold ${priceLabel ? 'text-ink-900' : 'text-ink-400'}`}>{priceLabel ?? 'Any price'}</span>
           </button>
           {priceLabel && (
             <button type="button" onClick={() => setPrice('')} className="absolute bottom-2.5 left-4 flex items-center gap-1 text-[13px] text-ink-500 hover:text-ember-600">

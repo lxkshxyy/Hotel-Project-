@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import HotelArt from '../components/HotelArt'
 import DatePopoverField from '../components/DatePopoverField'
-import { HotelTile, WishButton } from '../components/HotelCards'
+import { HotelTile, StarLine, WishButton } from '../components/HotelCards'
 import LocationSection from '../components/hotel/LocationSection'
 import PropertyRules from '../components/hotel/PropertyRules'
 import ReviewsSection from '../components/hotel/ReviewsSection'
 import { BrandPill, RatingBadge, Reveal, Spinner, Stepper, amenityMeta } from '../components/ui'
 import { site } from '../config/site'
-import { brandLabel, cheapestRoom, hotels as allHotels } from '../data/hotels'
+import { brandLabel, cheapestRoom } from '../data/hotels'
+import { useHotels } from '../lib/useHotels'
 import type { Hotel, Room } from '../data/types'
 import { getHotel } from '../lib/api'
 import { ratingSummary } from '../lib/reviews'
@@ -39,6 +40,7 @@ export default function HotelDetail() {
   const search = readSearch(params)
   const nights = nightsBetween(search.checkIn, search.checkOut)
   const guests = search.adults + search.children
+  const allHotels = useHotels() ?? []
 
   const [rawHotel, setHotel] = useState<Hotel | null | undefined>(undefined)
   const hotel = useMemo(() => (rawHotel ? hotelForStay(rawHotel, search.checkIn, search.checkOut) : rawHotel), [rawHotel, search.checkIn, search.checkOut])
@@ -67,6 +69,7 @@ export default function HotelDetail() {
     return (
       <div className="container-page py-20 text-center">
         <h1 className="text-2xl font-extrabold text-navy-800">Hotel not found</h1>
+        <p className="mt-2 text-ink-500">This hotel isn’t listed on {site.name} right now.</p>
         <Link to="/hotels" className="btn-navy mt-6">
           Browse hotels
         </Link>
@@ -144,7 +147,10 @@ export default function HotelDetail() {
 
         <div className="mt-3 mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <BrandPill>{brandLabel(hotel.brand)}</BrandPill>
+            <div className="flex flex-wrap items-center gap-3">
+              <BrandPill>{brandLabel(hotel.brand)}</BrandPill>
+              <StarLine hotel={hotel} />
+            </div>
             <h1 className="mt-2 text-[28px] leading-tight font-extrabold tracking-tight text-navy-800 sm:text-[34px]">{hotel.name}</h1>
             <p className="mt-1 flex items-start gap-1.5 text-sm text-ink-500">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

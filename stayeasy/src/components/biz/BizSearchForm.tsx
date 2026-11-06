@@ -5,18 +5,20 @@ import { useNavigate } from 'react-router-dom'
 import { useAccount } from '../../context/AccountContext'
 import { useAuth } from '../../context/AuthContext'
 import { bizRules, type BookingFor } from '../../data/business'
-import { cities, hotels } from '../../data/hotels'
+import { cities } from '../../data/hotels'
 import { getLastSearch, saveLastSearch } from '../../lib/bizApi'
 import { addDays, dayMonth, parseISODate, todayISO } from '../../lib/format'
 import { useProfile } from '../../lib/profile'
 import { bizQuery } from '../../pages/biz/shared'
 import DateRangeCalendar from '../DateRangeCalendar'
 import { Stepper } from '../ui'
+import { useHotels } from '../../lib/useHotels'
 
 type Pop = 'city' | 'dates' | 'guests' | 'for' | null
 
 /** Business hotel search in the big-travel-site style, with "Booking For". */
 export default function BizSearchForm({ cat = '' }: { cat?: string }) {
+  const hotels = useHotels() ?? []
   const navigate = useNavigate()
   const { user } = useAuth()
   const { company, isAdmin, updateCompany } = useAccount()

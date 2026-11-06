@@ -10,14 +10,17 @@ import { useAccount } from '../../context/AccountContext'
 import { bizCategories, bizCheapest, bizRules, cityLimit, hotelRoomsFree, inCategory, slabFor, womenFriendly, workAmenities } from '../../data/business'
 import { useAuth } from '../../context/AuthContext'
 import { getShortlist, toggleShortlist } from '../../lib/bizApi'
-import { brandLabel, cities, hotels } from '../../data/hotels'
+import { brandLabel, cities } from '../../data/hotels'
 import type { Brand } from '../../data/types'
 import { dayMonth, inr, nightsBetween, plural } from '../../lib/format'
 import { bizQuery, LimitChip, Pill, readBizSearch } from './shared'
+import { useHotels } from '../../lib/useHotels'
 
 type Sort = 'recommended' | 'price' | 'rooms' | 'rating'
 
 export default function BizResults() {
+  const live = useHotels()
+  const hotels = useMemo(() => live ?? [], [live])
   const { company } = useAccount()
   const { user } = useAuth()
   const c = company!
@@ -61,7 +64,7 @@ export default function BizResults() {
     return rows.sort((a, b) =>
       sort === 'price' ? a.rate - b.rate : sort === 'rooms' ? b.free - a.free : sort === 'rating' ? b.h.rating - a.h.rating : score(b) - score(a),
     )
-  }, [c, s.city, s.cat, s.rooms, nights, onlyLimit, negotiatedOnly, enoughRooms, amen, brands, sort, women])
+  }, [hotels, c, s.city, s.cat, s.rooms, nights, onlyLimit, negotiatedOnly, enoughRooms, amen, brands, sort, women])
 
   const cat = bizCategories.find((x) => x.id === s.cat)
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v])
@@ -252,7 +255,13 @@ export default function BizResults() {
               </button>
             </div>
           )}
-          {list.length === 0 && (
+          {live !== null && !hotels.some((h) => !s.city || h.city === s.city) ? (
+            <div className="card flex flex-col items-center gap-3 p-10 text-center">
+              <span className="rounded-full bg-[#FFF3D6] px-3 py-1 text-xs font-black tracking-wider text-[#8A5A00] uppercase">Coming soon</span>
+              <strong className="text-lg">{s.city ? `Business stays in ${s.city} are coming soon` : 'Business stays are coming soon'}</strong>
+              <p className="max-w-md text-ink-500">We're signing up hotels right now. Check back soon, or try another city.</p>
+            </div>
+          ) : list.length === 0 && (
             <div className="card flex flex-col items-center gap-3 p-10 text-center">
               <strong className="text-lg">No hotels match these filters</strong>
               <button type="button" className="btn-outline" onClick={clearAll}>

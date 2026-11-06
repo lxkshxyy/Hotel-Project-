@@ -147,49 +147,70 @@ export const bizCategories: BizCategory[] = [
     id: 'district',
     title: 'Business district hotels',
     description: 'Walk to offices in Aerocity, BKC, HITEC City, Whitefield and Indiranagar.',
-    photo: '/hotels/prime-oasis-blue/exterior-3.webp',
+    photo: '/photos/city-exterior.webp',
     slugs: ['prime-aerocity-delhi', 'prime-bkc-mumbai', 'hitec-suites-hyderabad', 'lite-whitefield-bengaluru', 'prime-indiranagar-bengaluru', 'garden-view-bengaluru'],
   },
   {
     id: 'airport',
     title: 'Airport hotels',
     description: 'Close to the airport, early check-in and late checkout on request.',
-    photo: '/hotels/prime-oasis-blue/lobby-3.webp',
+    photo: '/photos/rooftop-pool.webp',
     slugs: ['prime-aerocity-delhi', 'lite-station-inn-mumbai'],
   },
   {
     id: 'long',
     title: 'Long stays · 7+ nights',
     description: 'Weekly rates, laundry and a work desk for project work.',
-    photo: '/hotels/csfc/room-4.webp',
+    photo: '/photos/modern-exterior.webp',
     slugs: ['lite-whitefield-bengaluru', 'hitec-suites-hyderabad', 'garden-view-bengaluru', 'lotus-residency-delhi', 'koregaon-park-pune', 'park-street-kolkata'],
   },
   {
     id: 'team',
     title: 'Team and group stays',
     description: 'Hotels with 5 or more free rooms on your dates and team slab pricing.',
-    photo: '/hotels/red-vibe/lobby-1.webp',
+    photo: '/photos/courtyard-pool.webp',
     slugs: [],
   },
   {
     id: 'meetings',
     title: 'Meetings and offsites',
     description: 'Rooms plus a meeting or banquet hall, projector and working lunch.',
-    photo: '/hotels/red-vibe/banquet-1.webp',
+    photo: '/photos/grand-exterior.webp',
     slugs: ['prime-aerocity-delhi', 'prime-bkc-mumbai', 'prime-banjara-hyderabad', 'hitec-suites-hyderabad', 'prime-sunset-bay-goa', 'prime-palm-court-goa'],
   },
   {
     id: 'sites',
     title: 'Near plants and sites',
     description: 'Simple stays near stations, industrial areas and project sites.',
-    photo: '/hotels/csfc/exterior-1.webp',
+    photo: '/photos/heritage-palace.webp',
     slugs: ['lite-paharganj-delhi', 'lite-station-inn-mumbai', 'lite-sindhi-camp-jaipur', 'koregaon-park-pune', 'lite-whitefield-bengaluru'],
   },
 ]
 
+/** Words in a listing's tags, highlights, distance line and nearby places. */
+const said = (h: Hotel, ...words: string[]) => {
+  const text = [h.distance, h.area, ...h.tags, ...h.highlights, ...h.nearby.map((n) => n.name)].join(' ').toLowerCase()
+  return words.some((w) => text.includes(w))
+}
+
+/** Which business categories a hotel belongs to, from its own listing details. */
 export function inCategory(cat: string, hotel: Hotel) {
   if (cat === 'team') return hotelRoomsFree(hotel) >= bizRules.teamFrom
-  return bizCategories.find((c) => c.id === cat)?.slugs.includes(hotel.slug) ?? false
+  if (bizCategories.find((c) => c.id === cat)?.slugs.includes(hotel.slug)) return true
+  switch (cat) {
+    case 'district':
+      return said(hotel, 'business', 'office', 'work', 'tech park', 'it park', 'corporate')
+    case 'airport':
+      return said(hotel, 'airport')
+    case 'long':
+      return hotel.amenities.includes('wifi') && said(hotel, 'long stay', 'work', 'kitchen', 'laundry', 'apartment')
+    case 'meetings':
+      return hotel.amenities.includes('restaurant') || said(hotel, 'meeting', 'banquet', 'conference')
+    case 'sites':
+      return said(hotel, 'station', 'railway', 'industrial', 'highway', 'bus stand')
+    default:
+      return false
+  }
 }
 export const categoryHotels = (cat: string) => hotels.filter((h) => inCategory(cat, h))
 
