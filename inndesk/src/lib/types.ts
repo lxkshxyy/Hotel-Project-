@@ -92,8 +92,8 @@ export interface Listing {
     highlights: string[]
     phone: string
     email: string
-    /** Hotel or Homestays & Villas, chosen when the listing is started. */
-    category?: 'hotel' | 'homestay'
+    /** Hotel-type, home-type ('homestay') or unique-type, chosen when the listing is started. */
+    category?: 'hotel' | 'homestay' | 'unique'
     /** True once the owner has picked a star rating (0 = not rated). */
     starsChosen?: boolean
     yearBuilt?: number

@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, Link, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, createMemoryRouter, Link, Navigate, RouterProvider } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import { Spinner } from './components/ui'
 import { SessionProvider } from './context/Session'
@@ -27,7 +27,9 @@ function NotFound() {
   )
 }
 
-const router = createBrowserRouter([
+// The single-file review demo (VITE_SINGLE) has no real address, so it routes in memory and opens on My Properties.
+const makeRouter: typeof createBrowserRouter = import.meta.env.VITE_SINGLE ? (r) => createMemoryRouter(r, { initialEntries: ['/app/properties'] }) : createBrowserRouter
+const router = makeRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Landing /> },
   { path: '/signup', element: <Landing /> },

@@ -9,7 +9,7 @@ import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
 import PhotoManager from '../components/PhotoManager'
-import { PropertyTypePicker } from '../components/PropertyTypePicker'
+import { groupLabel, PropertyTypePicker } from '../components/PropertyTypePicker'
 import { Chip, KeyTag, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
@@ -163,7 +163,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         <h2 className="text-[32px] font-black text-ink-900">Basic Info</h2>
         <span className="flex items-center gap-2 text-[14px] text-ink-700">
           Property type: <strong className="text-ink-900">{b.propertyType}</strong>
-          {b.category && <span className="text-ink-500">({b.category === 'hotel' ? 'Hotel' : 'Homestays & Villas'})</span>}
+          {b.category && <span className="text-ink-500">({groupLabel(b.category)})</span>}
           <button type="button" onClick={onChangeType} className="font-bold text-pine-800 hover:underline">
             Change
           </button>
@@ -554,7 +554,7 @@ function RatingRule({ l }: { l: Listing }) {
       <div className="flex items-start gap-3 rounded-xl border border-pine-100 bg-pine-50 px-4 py-3 text-[14.5px] text-pine-900">
         <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <span>
-          <strong>{l.basics.category === 'homestay' ? 'Homestays and villas' : 'Not star-rated properties'} can skip this step.</strong> Tick what you have if you like, or press <strong>Skip</strong> below.
+          <strong>{l.basics.category === 'homestay' ? 'Home-type properties' : 'Not star-rated properties'} can skip this step.</strong> Tick what you have if you like, or press <strong>Skip</strong> below.
         </span>
       </div>
     )
@@ -2119,6 +2119,7 @@ export default function Wizard() {
       <PropertyTypePicker
         open={changingType}
         initial={l.basics.propertyType}
+        initialCategory={l.basics.category}
         confirmLabel="Save type"
         onClose={() => setChangingType(false)}
         onPick={(category, type) => {
