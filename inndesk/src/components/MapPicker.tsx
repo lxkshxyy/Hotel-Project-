@@ -96,7 +96,7 @@ export default function MapPicker({ lat, lng, onPin, onLocate, locating }: { lat
     [onPin],
   )
   return (
-    <div className="relative h-[360px] overflow-hidden rounded-lg border border-line-strong sm:h-[460px] lg:h-[560px]">
+    <div className="relative isolate z-0 h-[300px] overflow-hidden rounded-xl border border-line sm:h-[360px]">
       <MapContainer center={[view.lat, view.lng]} zoom={view.zoom} zoomControl={false} className="h-full w-full">
         <TileLayer attribution={site.map.attribution} url={site.map.tiles} />
         <ZoomControl position="bottomright" />

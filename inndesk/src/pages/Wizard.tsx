@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Baby, Ban, BedDouble, BedSingle, CalendarDays, Check, ChevronDown, CircleAlert, CircleCheck, Clock3, ExternalLink, IdCard, Info, Lightbulb, Lock, MapPin, PawPrint, Plus, Search, Star, Trash2, Upload, Users, UtensilsCrossed, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { AmenityExtrasBox, hasExtras, MultiSelect } from '../components/AmenityExtras'
 import { answered, policyGroups, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
@@ -300,7 +300,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
   )
 }
 
-function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
+function Location({ l, set, show, onSaveExit }: { l: Listing; set: Set; show: boolean; onSaveExit?: () => void }) {
   const loc = l.location
   const up = (p: Partial<Listing['location']>) => set((x) => ({ ...x, location: { ...x.location, ...p } }))
   const e = show ? locationErrors(l) : {}
@@ -319,7 +319,6 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
     document.addEventListener('mousedown', out)
     return () => document.removeEventListener('mousedown', out)
   }, [])
-  const showFields = manual || !!(loc.address || loc.area || loc.pincode || loc.city)
 
   // Suggestions a moment after the owner stops typing.
   useEffect(() => {
@@ -357,7 +356,7 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
     setQ(p.label)
     setOpen(false)
     fill(p)
-    setNote('Check the details below and drag the pin onto your entrance if needed.')
+    setNote('')
   }
 
   const current = () => {
@@ -376,7 +375,7 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
             setQ(p.label)
             fill(p)
           } else setManual(true)
-          setNote('Pin placed at your current location. Check the address below.')
+          setNote('Pin placed at your current location.')
         } catch {
           setManual(true)
           setNote('Pin placed at your current location. Enter the address below.')
@@ -405,77 +404,129 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
     </label>
   )
 
-  return (
-    <section className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-[30px] font-black text-ink-900 sm:text-[32px]">Property Location Details</h2>
-        <p className="text-[14px] text-ink-500">Please fill in the location details of your property.</p>
-      </div>
-      <div className="grid items-start gap-6 rounded-xl bg-white p-4 shadow-panel ring-1 ring-line sm:p-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-4">
-          <p className="flex gap-2 rounded-md border border-pine-100 bg-pine-50 px-3 py-2 text-[13px] text-ink-700">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />
-            Please enter the same address as on your address proof document (to be uploaded in a later step), to avoid rejections due to mismatch.
-          </p>
-          <div ref={box} className="relative">
-            <span className={`flex items-center gap-2 rounded-lg border bg-white px-3 focus-within:border-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none' : ''} border-line-strong`}>
-              <Search className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
-              <input
-                role="combobox"
-                aria-expanded={open && results.length > 0}
-                aria-controls="place-list"
-                aria-label="Search your property address"
-                className="min-h-[46px] min-w-0 flex-1 text-[15px] outline-none"
-                placeholder="Search here"
-                value={q}
-                onChange={(x) => setQ(x.target.value)}
-                onFocus={() => results.length && setOpen(true)}
-                onKeyDown={(x) => {
-                  if (x.key === 'Enter' && results[0]) {
-                    x.preventDefault()
-                    pick(results[0])
-                  }
-                  if (x.key === 'Escape') setOpen(false)
-                }}
-              />
-              {searching && <span className="text-[12px] text-ink-400">Searching…</span>}
-              {q && (
-                <button type="button" aria-label="Clear search" onClick={() => (setQ(''), setResults([]))} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
-                  <X className="h-4 w-4" aria-hidden="true" />
-                </button>
-              )}
-            </span>
-            {open && results.length > 0 && (
-              <ul id="place-list" role="listbox" className="absolute inset-x-0 top-full z-[600] max-h-72 overflow-y-auto rounded-b-lg border border-t-0 border-line-strong bg-white shadow-lift">
-                {results.map((r) => (
-                  <li key={`${r.lat},${r.lng},${r.label}`} role="option" aria-selected="false">
-                    <button type="button" onClick={() => pick(r)} className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-[14px] hover:bg-pine-50">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pine-700" aria-hidden="true" />
-                      <span>{r.label}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="-mt-1 flex flex-wrap items-center justify-between gap-2">
-            <button type="button" onClick={current} disabled={locating} className="text-[15px] font-bold text-pine-800 hover:underline disabled:opacity-60">
-              {locating ? 'Finding your location…' : 'Or Use My Current Location'}
-            </button>
-            {!showFields && (
-              <button type="button" onClick={() => setManual(true)} className="text-[13px] font-semibold text-ink-500 hover:text-ink-900 hover:underline">
-                Can’t find it? Enter manually
-              </button>
-            )}
-          </div>
-          {note && (
-            <p role="status" className="text-[13px] text-ink-700">
-              {note}
+  const fieldError = !!(e.address || e.area || e.pincode || e.state || e.city)
+  const fieldsOpen = manual || fieldError
+  const summary = [loc.address, loc.area, loc.city, [loc.state, loc.pincode].filter(Boolean).join(' ')].filter((x) => x && x.trim()).join(', ')
+  const stepNo = steps.findIndex((x) => x.id === 'location') + 1
+  const cityNote =
+    loc.city.trim() && !cityByName(loc.city)
+      ? (() => {
+          const served = servedCity(loc)
+          return served ? (
+            <p role="status" className="flex items-start gap-2 rounded-lg border border-pine-100 bg-pine-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+              <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-live" aria-hidden="true" />
+              <span>
+                Guests will find this property under <strong>{served}</strong> on {site.marketplace}, with {loc.city.trim()} shown in the address.
+              </span>
             </p>
-          )}
+          ) : (
+            <p role="status" className="flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
+              <span>
+                {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It covers {cities.map((c) => c.name).join(', ')} and places within {60} km of them. You can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
+              </span>
+            </p>
+          )
+        })()
+      : null
 
-          {showFields && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
+  return (
+    <section className="mx-auto flex w-full max-w-[680px] flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[14px] text-ink-500">
+          Step {stepNo}/{steps.length}
+        </span>
+        {onSaveExit && (
+          <button type="button" onClick={onSaveExit} className="text-[14px] font-semibold text-pine-800 hover:underline">
+            Save &amp; exit
+          </button>
+        )}
+      </div>
+      <h2 className="mt-1 text-[32px] font-bold text-ink-900">Location</h2>
+
+      <div ref={box} className="relative mt-6">
+        <span className={`flex items-center gap-3 rounded-full bg-[#e4ede7] px-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none rounded-t-[24px]' : ''}`}>
+          <Search className="h-5 w-5 shrink-0 text-ink-900" aria-hidden="true" />
+          <input
+            role="combobox"
+            aria-expanded={open && results.length > 0}
+            aria-controls="place-list"
+            aria-label="Search for your property location"
+            className="min-h-[48px] min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-500"
+            placeholder="Search for your property location"
+            value={q}
+            onChange={(x) => setQ(x.target.value)}
+            onFocus={() => results.length && setOpen(true)}
+            onKeyDown={(x) => {
+              if (x.key === 'Enter' && results[0]) {
+                x.preventDefault()
+                pick(results[0])
+              }
+              if (x.key === 'Escape') setOpen(false)
+            }}
+          />
+          {searching && <span className="text-[12px] text-ink-400">Searching…</span>}
+          {q && (
+            <button type="button" aria-label="Clear search" onClick={() => (setQ(''), setResults([]))} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-white">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </span>
+        {open && results.length > 0 && (
+          <ul id="place-list" role="listbox" className="absolute inset-x-0 top-full z-[600] max-h-72 overflow-y-auto rounded-b-[20px] border border-t-0 border-line bg-white py-1 shadow-lift">
+            {results.map((r) => (
+              <li key={`${r.lat},${r.lng},${r.label}`} role="option" aria-selected="false">
+                <button type="button" onClick={() => pick(r)} className="flex w-full items-start gap-2.5 px-5 py-2.5 text-left text-[14px] hover:bg-pine-50">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pine-700" aria-hidden="true" />
+                  <span>{r.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {!fieldsOpen && (
+        <p className="mt-4 text-[14px] text-ink-700">
+          Can’t find the exact location?{' '}
+          <button type="button" onClick={() => setManual(true)} className="ml-1 font-semibold text-pine-800 hover:underline">
+            Enter it manually
+          </button>
+        </p>
+      )}
+
+      {summary && !fieldsOpen && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-line bg-white px-4 py-3">
+          <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-pine-800" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-[14.5px] text-ink-900">{summary}</span>
+          <button type="button" onClick={() => setManual(true)} className="shrink-0 text-[14px] font-semibold text-pine-800 hover:underline">
+            Edit
+          </button>
+        </div>
+      )}
+
+      {note && (
+        <p role="status" className="mt-3 text-[13px] text-ink-700">
+          {note}
+        </p>
+      )}
+
+      <AnimatePresence initial={false}>
+        {fieldsOpen && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="mt-5 flex flex-col gap-4 rounded-xl border border-line bg-white p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <strong className="text-[16px] font-semibold text-ink-900">Property address</strong>
+                {!fieldError && (
+                  <button type="button" onClick={() => setManual(false)} className="text-[14px] font-semibold text-pine-800 hover:underline">
+                    Done
+                  </button>
+                )}
+              </div>
+              <p className="flex gap-2 rounded-md bg-pine-50 px-3 py-2 text-[13px] text-ink-700">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />
+                Enter the same address as on your address proof document (uploaded in a later step), to avoid rejections due to mismatch.
+              </p>
               {text('l-house', 'House/Building/Apartment No.', 'address', 'Please add details', { autoComplete: 'address-line1' })}
               {text('l-area', 'Locality/Area/Street/Sector', 'area', 'Please add details', { autoComplete: 'address-line2' })}
               <div className="grid gap-4 sm:grid-cols-2">
@@ -485,50 +536,36 @@ function Location({ l, set, show }: { l: Listing; set: Set; show: boolean }) {
                   <input className="field bg-paper text-ink-700" value="India" readOnly />
                 </label>
               </div>
-              {text('l-state', 'State', 'state', 'Please add details', { autoComplete: 'address-level1' })}
-              {text('l-city', 'City', 'city', 'Please add details', { autoComplete: 'address-level2' })}
-              {loc.city.trim() &&
-                (() => {
-                  const served = servedCity(loc)
-                  if (cityByName(loc.city)) return null
-                  return served ? (
-                    <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-pine-100 bg-pine-50 px-3 py-2.5 text-[13.5px] text-ink-700">
-                      <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-live" aria-hidden="true" />
-                      <span>
-                        Guests will find this property under <strong>{served}</strong> on {site.marketplace}, with {loc.city.trim()} shown in the address.
-                      </span>
-                    </p>
-                  ) : (
-                    <p role="status" className="-mt-2 flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
-                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
-                      <span>
-                        {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It covers {cities.map((c) => c.name).join(', ')} and places within {60} km of them. You can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
-                      </span>
-                    </p>
-                  )
-                })()}
-              {e.pin && (
-                <span role="alert" className="text-[13px] font-semibold text-alert">
-                  {e.pin}
-                </span>
-              )}
-              <label className="flex cursor-pointer items-start gap-3 text-[14px] text-ink-900">
-                <input type="checkbox" checked={!!loc.addressConfirmed} onChange={(x) => up({ addressConfirmed: x.target.checked })} className="mt-0.5 h-4 w-4 shrink-0 accent-pine-800" aria-invalid={!!e.confirm} />
-                <span>I agree to the {site.marketplace} partner terms and confirm the address provided here is as per the registration or lease document.</span>
-              </label>
-              {e.confirm && (
-                <span role="alert" className="-mt-2 text-[13px] font-semibold text-alert">
-                  {e.confirm}
-                </span>
-              )}
-            </motion.div>
-          )}
-        </div>
-        <div className="lg:sticky lg:top-[200px]">
-          <MapPicker lat={loc.lat} lng={loc.lng} onPin={onPin} onLocate={current} locating={locating} />
-          <span className="mt-2 block text-[13px] text-ink-500">{loc.lat != null ? 'Drag the pin onto your entrance, or tap the map to move it.' : 'Tap the map to place your pin.'}</span>
-        </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {text('l-state', 'State', 'state', 'Please add details', { autoComplete: 'address-level1' })}
+                {text('l-city', 'City', 'city', 'Please add details', { autoComplete: 'address-level2' })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {cityNote && <div className="mt-4">{cityNote}</div>}
+
+      <div className="mt-6">
+        <MapPicker lat={loc.lat} lng={loc.lng} onPin={onPin} onLocate={current} locating={locating} />
+        <p className="mt-3 text-[14px] text-ink-700">Is this the correct location of your property? If not, drag the pin to the correct location.</p>
+        {e.pin && (
+          <span role="alert" className="mt-1 block text-[13px] font-semibold text-alert">
+            {e.pin}
+          </span>
+        )}
       </div>
+
+      <label className="mt-5 flex cursor-pointer items-start gap-3 text-[14px] text-ink-900">
+        <input type="checkbox" checked={!!loc.addressConfirmed} onChange={(x) => up({ addressConfirmed: x.target.checked })} className="mt-0.5 h-4 w-4 shrink-0 accent-pine-800" aria-invalid={!!e.confirm} />
+        <span>I agree to the {site.marketplace} partner terms and confirm the address provided here is as per the registration or lease document.</span>
+      </label>
+      {e.confirm && (
+        <span role="alert" className="mt-1 text-[13px] font-semibold text-alert">
+          {e.confirm}
+        </span>
+      )}
     </section>
   )
 }
@@ -1815,6 +1852,7 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [toast])
   const index = steps.findIndex((s) => s.id === step)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!owner || id === 'new') return
@@ -1984,7 +2022,7 @@ export default function Wizard() {
 
   const stepBody = {
     basics: <Basics l={l} set={set} show={showErrors} onChangeType={() => setChangingType(true)} />,
-    location: <Location l={l} set={set} show={showErrors} />,
+    location: <Location l={l} set={set} show={showErrors} onSaveExit={isLive ? undefined : async () => (await save(l)) && navigate('/app/properties')} />,
     amenities: <Amenities l={l} set={set} />,
     rooms: roomId && l.rooms.some((r) => r.id === roomId) ? (
       <RoomEditor l={l} set={set} room={l.rooms.find((r) => r.id === roomId)!} sec={sec} openSec={(n) => openRoom(roomId, n)} tried={roomTried} goPhotos={() => go('photos')} />
