@@ -1,5 +1,6 @@
 import { Download, Info, Mail, Phone, Search, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { MultiFilter, PageSize, Pager, SortHead } from '../components/Filters'
 import { RangeCalendar, type DateFilter } from '../components/RangeCalendar'
 import { Modal, Notice, Spinner } from '../components/ui'
@@ -41,7 +42,11 @@ function Outlined({ label, children, focus }: { label: string; children: React.R
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
 
 export default function Reservations() {
-  const { data: listings } = useListings()
+  // Under a property (/app/properties/:id/reservations) only that property's bookings show.
+  const { id } = useParams()
+  const { data: allListings } = useListings()
+  const listings = id ? allListings?.filter((l) => l.id === id) : allListings
+  const scoped = id ? listings?.[0] : undefined
   const { list, offline, loading } = useReservations(listings)
   const [idText, setIdText] = useState('')
   const [range, setRange] = useState<Range>(null)
@@ -102,7 +107,10 @@ export default function Reservations() {
       <div className="bg-[#eef4f0]">
         <div className="mx-auto max-w-[1280px] px-4 pt-7 pb-6 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-[30px] font-bold text-ink-900 sm:text-[34px]">Reservations</h1>
+            <div>
+              <h1 className="text-[30px] font-bold text-ink-900 sm:text-[34px]">Reservations</h1>
+              {scoped && <p className="text-[15px] text-ink-500">{scoped.basics.name.trim() || 'Unnamed property'}</p>}
+            </div>
             <button type="button" onClick={exportCsv} disabled={!shown.length} className="flex items-center gap-2 text-[15px] font-semibold text-pine-800 hover:underline disabled:opacity-50">
               <Download className="h-5 w-5" aria-hidden="true" /> Export CSV
             </button>
@@ -127,7 +135,7 @@ export default function Reservations() {
           </form>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className="text-[14px] text-ink-700">Filters:</span>
-            <MultiFilter allLabel="All properties" unit="properties" search options={propOptions} selected={props} onChange={(v) => (setProps(v), setPage(1))} />
+            {!scoped && <MultiFilter allLabel="All properties" unit="properties" search options={propOptions} selected={props} onChange={(v) => (setProps(v), setPage(1))} />}
             <MultiFilter allLabel="All statuses" unit="statuses" options={statuses} selected={st} onChange={(v) => (setSt(v), setPage(1))} />
           </div>
         </div>

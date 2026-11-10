@@ -10,6 +10,7 @@ const PropertyOverview = lazy(() => import('./pages/PropertyOverview'))
 const Wizard = lazy(() => import('./pages/Wizard'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 const Reservations = lazy(() => import('./pages/Reservations'))
+const Analytics = lazy(() => import('./pages/Analytics'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
@@ -42,6 +43,8 @@ const router = makeRouter([
       { path: 'properties', element: s(<Properties />) },
       { path: 'properties/:id', element: s(<PropertyOverview />) },
       { path: 'properties/:id/edit', element: s(<Wizard />) },
+      { path: 'properties/:id/analytics', element: s(<Analytics />) },
+      { path: 'properties/:id/reservations', element: s(<Reservations />) },
       { path: 'calendar', element: s(<Calendar />) },
       { path: 'reservations', element: s(<Reservations />) },
       { path: 'payouts', element: s(<Payouts />) },

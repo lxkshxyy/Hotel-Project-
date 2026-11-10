@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { BedDouble, Building2, ChevronDown, ChevronRight, CircleUserRound, KeyRound } from 'lucide-react'
+import { ArrowLeft, BedDouble, Building2, ChartColumn, ChevronDown, ChevronRight, CircleUserRound, KeyRound, LayoutDashboard } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { site } from '../config/site'
@@ -99,11 +99,21 @@ export default function AppLayout() {
     window.scrollTo({ top: 0 })
   }, [pathname])
   const wizard = /\/app\/properties\/[^/]+\/edit/.test(pathname)
+  // Inside one property: its own menu with Overview, Analytics and Reservations.
+  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations))?\/?$/)?.[1]
+  const items = prop
+    ? [
+        { to: '/app/properties', label: 'All properties', Icon: ArrowLeft, end: true },
+        { to: `/app/properties/${prop}`, label: 'Overview', Icon: LayoutDashboard, end: true },
+        { to: `/app/properties/${prop}/analytics`, label: 'Analytics', Icon: ChartColumn, end: false },
+        { to: `/app/properties/${prop}/reservations`, label: 'Reservations', Icon: BedDouble, end: false },
+      ]
+    : nav.map((n) => ({ ...n, end: false }))
 
   return (
     <RequireOwner>
       <div className="flex min-h-dvh flex-col bg-[#f1f3f1]">
-        <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between border-b border-line bg-white px-3 sm:px-5">
+        <header className="sticky top-0 z-40 flex h-[68px] print:hidden items-center justify-between border-b border-line bg-white px-3 sm:px-5">
           <Link to="/app/properties" className="flex items-center gap-2 no-underline" aria-label={`${site.name} home`}>
             <Mark size={32} />
             <span className="text-[19px] font-black text-pine-900">{site.name}</span>
@@ -116,9 +126,9 @@ export default function AppLayout() {
 
         <div className={`flex flex-1 ${wizard ? '' : 'pb-20 md:pb-0'}`}>
           {!wizard && (
-            <nav aria-label="Panel" className="sticky top-[68px] hidden h-[calc(100dvh-68px)] w-[92px] shrink-0 flex-col gap-2 border-r border-line bg-white p-2 md:flex">
-              {nav.map(({ to, label, Icon }) => (
-                <NavLink key={to} to={to} className={({ isActive }) => `flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-center text-[12px] leading-tight font-bold no-underline transition-colors ${isActive ? 'bg-pine-50 text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`}>
+            <nav aria-label="Panel" className="sticky top-[68px] hidden h-[calc(100dvh-68px)] w-[92px] shrink-0 flex-col gap-2 border-r border-line bg-white p-2 md:flex print:hidden">
+              {items.map(({ to, label, Icon, end }, i) => (
+                <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-center text-[12px] leading-tight font-bold no-underline transition-colors ${prop && i === 0 ? 'mb-1 border-b border-line pb-3 text-ink-500 hover:bg-paper' : isActive ? 'bg-pine-50 text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`}>
                   <Icon className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />
                   {label}
                 </NavLink>
@@ -131,9 +141,9 @@ export default function AppLayout() {
         </div>
 
         {!wizard && (
-          <nav aria-label="Panel" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-white pt-2 md:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
-            {nav.map(({ to, label, Icon }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[12px] font-bold no-underline ${isActive ? 'text-pine-900' : 'text-ink-500'}`}>
+          <nav aria-label="Panel" className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-line bg-white pt-2 md:hidden print:hidden ${prop ? 'grid-cols-4' : 'grid-cols-2'}`} style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
+            {items.map(({ to, label, Icon, end }) => (
+              <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[12px] font-bold no-underline ${isActive ? 'text-pine-900' : 'text-ink-500'}`}>
                 <Icon className="h-6 w-6" aria-hidden="true" />
                 {label}
               </NavLink>
