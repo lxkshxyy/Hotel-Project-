@@ -20,7 +20,7 @@ const example = (() => {
 
 const manage = [
   { Icon: CalendarRange, t: 'Rates and availability', d: 'Change a price or close a date for one night or a whole season, room type by room type.' },
-  { Icon: BedDouble, t: 'Reservations', d: 'Every TRPotels booking at your property, with the guest’s name, phone, dates and what they paid.' },
+  { Icon: BedDouble, t: 'Reservations', d: 'Every TRPOTELS booking at your property, with the guest’s name, phone, dates and what they paid.' },
   { Icon: Camera, t: 'Photos and room types', d: 'Upload from your phone. Photos are resized for you and the first one becomes your cover.' },
   { Icon: Wallet, t: 'Payouts', d: `A statement for every stay: room amount, commission, GST on commission and what reaches your bank, ${site.payoutCycle}.` },
   { Icon: ShieldCheck, t: 'Policies', d: 'Check-in times, cancellation terms, couples, local IDs, pets and your own house rules.' },
@@ -29,8 +29,8 @@ const manage = [
 const faqs = [
   { q: 'Do I need a GST number to list?', a: 'No. You can list without a GSTIN and add it later. With a GSTIN, your commission invoices carry it so you can claim input credit.' },
   { q: 'Who decides the room price?', a: 'You do. Set a base price for each room type, then change single dates or date ranges in Rates and availability.' },
-  { q: 'Can I stop taking bookings for a while?', a: 'Yes. Pause the whole listing, or close specific dates. Paused listings disappear from TRPotels until you switch them back on.' },
-  { q: 'How soon does my hotel appear on TRPotels?', a: 'As soon as you press Publish and the checks pass: name, address and map pin, at least one priced room type, five photos and the partner terms.' },
+  { q: 'Can I stop taking bookings for a while?', a: 'Yes. Pause the whole listing, or close specific dates. Paused listings disappear from TRPOTELS until you switch them back on.' },
+  { q: 'How soon does my hotel appear on TRPOTELS?', a: 'As soon as you press Publish and the checks pass: name, address and map pin, at least one priced room type, five photos and the partner terms.' },
   { q: 'What happens to my bank details?', a: 'InnDesk keeps only the account holder name, bank, IFSC and the last four digits. The full account number is collected by the payments partner when payouts are set up.' },
 ]
 
@@ -85,7 +85,7 @@ export default function Landing() {
   return (
     <div className="bg-paper">
       <section className="relative isolate overflow-hidden text-white">
-        <img src="/img/hero-exterior.webp" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        <img src="/img/hero-hotel.webp" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(11,36,27,0.94)_0%,rgba(11,36,27,0.82)_45%,rgba(11,36,27,0.55)_100%)]" />
         <header className="container-page flex h-[76px] items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2.5 no-underline" aria-label={`${site.name} home`}>

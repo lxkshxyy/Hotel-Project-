@@ -19,8 +19,8 @@ function guessMainSite() {
 
 export const site = {
   name: 'InnDesk',
-  tagline: 'The property panel for TRPotels partners',
-  marketplace: 'TRPotels',
+  tagline: 'The property panel for TRPOTELS partners',
+  marketplace: 'TRPOTELS',
   /** The customer website that listings publish to. */
   mainSiteUrl: (env('VITE_MAIN_SITE_URL') || guessMainSite()).replace(/\/$/, ''),
   /** Partner support contacts (VITE_SUPPORT_PHONE / VITE_SUPPORT_EMAIL). Empty = hidden. */
