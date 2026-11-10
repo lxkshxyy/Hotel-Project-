@@ -1,0 +1,1 @@
+import{Ft as e}from"./index-E8f2Pr7u.js";function t(t){let n=t.amount-t.tax,r=Math.round(n*e.commissionRate),i=Math.round(r*e.gstOnCommission),a=t.pay_mode===`hotel`,o=a?-(r+i):t.amount-r-i;return{roomAmount:n,roomGst:t.tax,commission:r,gst:i,collectedByHotel:a,payout:o,earned:t.amount-r-i}}export{t};

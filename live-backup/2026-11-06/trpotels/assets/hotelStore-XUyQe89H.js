@@ -1,0 +1,1 @@
+var e=[],t=()=>e;function n(t){e=t}export{n,t};
