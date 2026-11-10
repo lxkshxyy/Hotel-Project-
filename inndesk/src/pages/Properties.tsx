@@ -102,11 +102,7 @@ function Row({ l, busy, onResume, onPause, onDelete }: { l: Listing; busy: boole
         )}
       </div>
       <div className="flex items-center gap-2 self-end sm:self-auto">
-        {draft ? (
-          <button type="button" onClick={onResume} className="btn-brass">
-            Resume listing
-          </button>
-        ) : (
+        {!draft && (
           <Link to={`/app/properties/${l.id}`} className="btn-ghost">
             Manage
           </Link>
