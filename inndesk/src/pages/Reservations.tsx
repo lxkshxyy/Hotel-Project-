@@ -1,10 +1,10 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarDays, Download, Info, Mail, Phone, Search, TriangleAlert, X } from 'lucide-react'
+import { Download, Info, Mail, Phone, Search, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { MultiFilter, PageSize, Pager, SortHead, usePopover } from '../components/Filters'
+import { MultiFilter, PageSize, Pager, SortHead } from '../components/Filters'
+import { RangeCalendar, type DateFilter } from '../components/RangeCalendar'
 import { Modal, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
-import { addDays, dayMonth, inr, parseISODate, plural, shortDate, todayISO } from '../lib/format'
+import { dayMonth, inr, plural, shortDate, todayISO } from '../lib/format'
 import { useListings, useReservations, type Desk, type ResvRow } from '../lib/hooks'
 import { settle } from '../lib/money'
 import { getMarks, setMark } from '../lib/store'
@@ -24,9 +24,8 @@ const deskStyle: Record<Desk, string> = {
   'no-show': 'bg-[#fff1e0] text-[#8a4b00]',
 }
 const deskText = Object.fromEntries(statuses.map((x) => [x.value, x.label])) as Record<Desk, string>
-const fmt = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
-type Range = { from: string; to: string } | null
+type Range = DateFilter
 type Sort = { key: 'check_in' | 'check_out'; dir: 'asc' | 'desc' }
 
 /** Outlined box with its label sitting on the border. */
@@ -35,66 +34,6 @@ function Outlined({ label, children, focus }: { label: string; children: React.R
     <div className={`relative flex h-[52px] items-center gap-2 rounded-lg border bg-white px-3.5 transition-colors focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700 ${focus ? 'border-pine-700 ring-1 ring-pine-700' : 'border-ink-400'}`}>
       <span className="pointer-events-none absolute -top-2.5 left-2.5 bg-white px-1 text-[12px] leading-5 text-ink-500">{label}</span>
       {children}
-    </div>
-  )
-}
-
-function DateRange({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
-  const { open, setOpen, box } = usePopover()
-  const t = todayISO()
-  const [from, setFrom] = useState(value?.from ?? t)
-  const [to, setTo] = useState(value?.to ?? addDays(t, 7))
-  const presets: [string, string, string][] = [
-    ['Next 7 days', t, addDays(t, 7)],
-    ['Next 30 days', t, addDays(t, 30)],
-    ['Last 7 days', addDays(t, -7), t],
-    ['Last 30 days', addDays(t, -30), t],
-  ]
-  const apply = (f: string, x: string) => {
-    onChange({ from: f <= x ? f : x, to: f <= x ? x : f })
-    setOpen(false)
-  }
-  return (
-    <div ref={box} className="relative min-w-0 flex-1">
-      <Outlined label="Check-in dates" focus={open}>
-        <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="dialog" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[15.5px]">
-          <CalendarDays className="h-4 w-4 shrink-0 text-ink-700" aria-hidden="true" />
-          <span className={`truncate ${value ? 'text-ink-900' : 'text-ink-500'}`}>{value ? `${fmt(value.from)} - ${fmt(value.to)}` : 'Any check-in date'}</span>
-        </button>
-        {value && (
-          <button type="button" aria-label="Clear dates" onClick={() => onChange(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        )}
-      </Outlined>
-      <AnimatePresence>
-        {open && (
-          <motion.div role="dialog" aria-label="Choose check-in dates" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className="absolute top-full right-0 left-0 z-40 mt-3 rounded-xl bg-white p-4 shadow-[0_12px_32px_-10px_rgba(18,55,42,0.28)] ring-1 ring-line sm:left-auto sm:w-[400px]">
-            <div className="flex flex-wrap gap-2">
-              {presets.map(([l, f, x]) => (
-                <button key={l} type="button" onClick={() => apply(f, x)} className="rounded-full border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink-900 hover:border-pine-700 hover:bg-pine-50">
-                  {l}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-[13px] text-ink-500">
-                From
-                <input type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
-              </label>
-              <label className="flex flex-col gap-1 text-[13px] text-ink-500">
-                To
-                <input type="date" className="field" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-              </label>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button type="button" disabled={!from || !to} onClick={() => apply(from, to)} className="h-10 rounded-full bg-pine-800 px-6 text-[14px] font-semibold text-white hover:bg-pine-900 disabled:opacity-50">
-                Apply
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -126,7 +65,7 @@ export default function Reservations() {
     const n = applied.q.trim().toLowerCase()
     const r = applied.range
     return list
-      .filter((x) => (!props.length || props.includes(x.hotel_slug)) && (!st.length || st.includes(x.desk)) && (!r || (x.check_in >= r.from && x.check_in <= r.to)) && (!n || [x.id, x.guest_name, x.guest_phone].some((v) => v.toLowerCase().includes(n))))
+      .filter((x) => (!props.length || props.includes(x.hotel_slug)) && (!st.length || st.includes(x.desk)) && (!r || (r.mode === 'checkin' ? x.check_in >= r.from && x.check_in <= r.to : r.mode === 'stay' ? x.check_in <= r.to && x.check_out > r.from : x.created_at.slice(0, 10) >= r.from && x.created_at.slice(0, 10) <= r.to)) && (!n || [x.id, x.guest_name, x.guest_phone].some((v) => v.toLowerCase().includes(n))))
       .sort((a, b) => (sort.dir === 'asc' ? 1 : -1) * a[sort.key].localeCompare(b[sort.key]))
   }, [list, applied, props, st, sort])
 
@@ -181,7 +120,7 @@ export default function Reservations() {
                 <input value={idText} onChange={(e) => setIdText(e.target.value)} placeholder="Booking ID, guest name or phone" aria-label="Booking ID, guest name or phone" className="min-w-0 flex-1 self-stretch bg-transparent text-[15.5px] outline-none placeholder:text-ink-500" />
               </Outlined>
             </div>
-            <DateRange value={range} onChange={setRange} />
+            <RangeCalendar value={range} onChange={setRange} />
             <button type="submit" className="h-12 shrink-0 rounded-full bg-pine-800 px-12 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(18,55,42,0.55)] transition-colors hover:bg-pine-900">
               Search
             </button>
