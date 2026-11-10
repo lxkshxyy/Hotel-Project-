@@ -1,103 +1,302 @@
-import { BedDouble, Mail, Phone, Search } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { CalendarDays, Download, Info, Mail, Phone, Search, TriangleAlert, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Empty, Modal, Notice, PageHead, Spinner } from '../components/ui'
+import { MultiFilter, PageSize, Pager, SortHead, usePopover } from '../components/Filters'
+import { Modal, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
-import { dayMonth, inr, plural, shortDate } from '../lib/format'
+import { addDays, dayMonth, inr, parseISODate, plural, shortDate, todayISO } from '../lib/format'
 import { useListings, useReservations, type Desk, type ResvRow } from '../lib/hooks'
 import { settle } from '../lib/money'
 import { getMarks, setMark } from '../lib/store'
 
-const tabs: { id: Desk | 'all'; label: string }[] = [
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'in-house', label: 'In house' },
-  { id: 'departed', label: 'Departed' },
-  { id: 'cancelled', label: 'Cancelled' },
-  { id: 'no-show', label: 'No-show' },
-  { id: 'all', label: 'All' },
+const statuses: { value: Desk; label: string }[] = [
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'in-house', label: 'In house' },
+  { value: 'departed', label: 'Departed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'no-show', label: 'No-show' },
 ]
-
 const deskStyle: Record<Desk, string> = {
   upcoming: 'bg-pine-50 text-pine-900',
-  'in-house': 'bg-brass-500 text-pine-950',
+  'in-house': 'bg-brass-50 text-brass-700',
   departed: 'bg-[#eceeed] text-ink-700',
   cancelled: 'bg-alert-50 text-alert',
   'no-show': 'bg-[#fff1e0] text-[#8a4b00]',
 }
-const deskText: Record<Desk, string> = { upcoming: 'Upcoming', 'in-house': 'In house', departed: 'Departed', cancelled: 'Cancelled', 'no-show': 'No-show' }
+const deskText = Object.fromEntries(statuses.map((x) => [x.value, x.label])) as Record<Desk, string>
+const fmt = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+
+type Range = { from: string; to: string } | null
+type Sort = { key: 'check_in' | 'check_out'; dir: 'asc' | 'desc' }
+
+/** Outlined box with its label sitting on the border. */
+function Outlined({ label, children, focus }: { label: string; children: React.ReactNode; focus?: boolean }) {
+  return (
+    <div className={`relative flex h-[52px] items-center gap-2 rounded-lg border bg-white px-3.5 transition-colors focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700 ${focus ? 'border-pine-700 ring-1 ring-pine-700' : 'border-ink-400'}`}>
+      <span className="pointer-events-none absolute -top-2.5 left-2.5 bg-white px-1 text-[12px] leading-5 text-ink-500">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+function DateRange({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
+  const { open, setOpen, box } = usePopover()
+  const t = todayISO()
+  const [from, setFrom] = useState(value?.from ?? t)
+  const [to, setTo] = useState(value?.to ?? addDays(t, 7))
+  const presets: [string, string, string][] = [
+    ['Next 7 days', t, addDays(t, 7)],
+    ['Next 30 days', t, addDays(t, 30)],
+    ['Last 7 days', addDays(t, -7), t],
+    ['Last 30 days', addDays(t, -30), t],
+  ]
+  const apply = (f: string, x: string) => {
+    onChange({ from: f <= x ? f : x, to: f <= x ? x : f })
+    setOpen(false)
+  }
+  return (
+    <div ref={box} className="relative min-w-0 flex-1">
+      <Outlined label="Check-in dates" focus={open}>
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="dialog" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[15.5px]">
+          <CalendarDays className="h-4 w-4 shrink-0 text-ink-700" aria-hidden="true" />
+          <span className={`truncate ${value ? 'text-ink-900' : 'text-ink-500'}`}>{value ? `${fmt(value.from)} - ${fmt(value.to)}` : 'Any check-in date'}</span>
+        </button>
+        {value && (
+          <button type="button" aria-label="Clear dates" onClick={() => onChange(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </Outlined>
+      <AnimatePresence>
+        {open && (
+          <motion.div role="dialog" aria-label="Choose check-in dates" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className="absolute top-full right-0 left-0 z-40 mt-3 rounded-xl bg-white p-4 shadow-[0_12px_32px_-10px_rgba(18,55,42,0.28)] ring-1 ring-line sm:left-auto sm:w-[400px]">
+            <div className="flex flex-wrap gap-2">
+              {presets.map(([l, f, x]) => (
+                <button key={l} type="button" onClick={() => apply(f, x)} className="rounded-full border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink-900 hover:border-pine-700 hover:bg-pine-50">
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[13px] text-ink-500">
+                From
+                <input type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
+              </label>
+              <label className="flex flex-col gap-1 text-[13px] text-ink-500">
+                To
+                <input type="date" className="field" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button type="button" disabled={!from || !to} onClick={() => apply(from, to)} className="h-10 rounded-full bg-pine-800 px-6 text-[14px] font-semibold text-white hover:bg-pine-900 disabled:opacity-50">
+                Apply
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
 
 export default function Reservations() {
   const { data: listings } = useListings()
   const { list, offline, loading } = useReservations(listings)
-  const [tab, setTab] = useState<Desk | 'all'>('upcoming')
-  const [q, setQ] = useState('')
+  const [idText, setIdText] = useState('')
+  const [range, setRange] = useState<Range>(null)
+  // What the table uses: the text box and dates apply on Search, the filters straight away.
+  const [applied, setApplied] = useState<{ q: string; range: Range }>({ q: '', range: null })
+  const [props, setProps] = useState<string[]>([])
+  const [st, setSt] = useState<string[]>([])
+  const [sort, setSort] = useState<Sort>({ key: 'check_in', dir: 'asc' })
+  const [size, setSize] = useState(100)
+  const [page, setPage] = useState(1)
   const [open, setOpen] = useState<ResvRow | null>(null)
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: list.length }
-    for (const r of list) c[r.desk] = (c[r.desk] ?? 0) + 1
-    return c
-  }, [list])
-  const n = q.trim().toLowerCase()
-  const shown = list
-    .filter((r) => (tab === 'all' || r.desk === tab) && (!n || [r.id, r.guest_name, r.guest_phone, r.room_name, r.hotel_name].some((v) => v.toLowerCase().includes(n))))
-    .sort((a, b) => (tab === 'departed' || tab === 'cancelled' ? b.check_in.localeCompare(a.check_in) : a.check_in.localeCompare(b.check_in)))
+  const propOptions = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const l of listings ?? []) if (l.slug && l.status !== 'draft') m.set(l.slug, l.basics.name.trim() || 'Unnamed property')
+    for (const r of list) if (!m.has(r.hotel_slug)) m.set(r.hotel_slug, r.hotel_name)
+    return [...m].map(([value, label]) => ({ value, label, sub: (listings ?? []).find((l) => l.slug === value)?.id.toUpperCase() }))
+  }, [listings, list])
+
+  const shown = useMemo(() => {
+    const n = applied.q.trim().toLowerCase()
+    const r = applied.range
+    return list
+      .filter((x) => (!props.length || props.includes(x.hotel_slug)) && (!st.length || st.includes(x.desk)) && (!r || (x.check_in >= r.from && x.check_in <= r.to)) && (!n || [x.id, x.guest_name, x.guest_phone].some((v) => v.toLowerCase().includes(n))))
+      .sort((a, b) => (sort.dir === 'asc' ? 1 : -1) * a[sort.key].localeCompare(b[sort.key]))
+  }, [list, applied, props, st, sort])
 
   if (!listings || loading) return <Spinner />
-  const many = new Set(list.map((r) => r.hotel_slug)).size > 1
+  const pages = Math.max(1, Math.ceil(shown.length / size))
+  const cur = Math.min(page, pages)
+  const rows = shown.slice((cur - 1) * size, cur * size)
+  const search = () => {
+    setApplied({ q: idText, range })
+    setPage(1)
+  }
+  const startOver = () => {
+    setIdText('')
+    setRange(null)
+    setApplied({ q: '', range: null })
+    setProps([])
+    setSt([])
+    setPage(1)
+  }
+  const toggleSort = (key: Sort['key']) => setSort((s) => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))
+  const exportCsv = () => {
+    const head = ['Property', 'Booking ID', 'Guest name', 'Phone', 'Email', 'Check-in', 'Check-out', 'Nights', 'Rooms', 'Room', 'Guests', 'Payment', 'Amount', 'Status']
+    const lines = shown.map((r) => [r.hotel_name, r.id, r.guest_name, r.guest_phone, r.guest_email, r.check_in, r.check_out, r.nights, r.rooms, r.room_name, r.guests, r.pay_mode === 'hotel' ? 'Pay at hotel' : 'Paid online', r.amount, deskText[r.desk]].map(csvCell).join(','))
+    const url = URL.createObjectURL(new Blob([[head.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv' }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: `reservations-${todayISO()}.csv` })
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  const quick = (r: ResvRow, m: Parameters<typeof setMark>[1]) => setMark(r.id, m)
+  const th = 'border-r border-line px-4 py-3.5 text-left text-[14px] font-semibold text-ink-900 last:border-r-0'
 
   return (
-    <div className="container-page flex flex-col gap-6 pt-8">
-      <PageHead title="Reservations" intro={`Bookings made on ${site.marketplace} at your properties.`} />
-      {offline && <Notice tone="warn">Can’t reach {site.marketplace} right now, so this list may be out of date.</Notice>}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="Reservation status" className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl bg-white p-1 ring-1 ring-line">
-          {tabs.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`min-h-10 shrink-0 rounded-lg px-3.5 text-sm font-bold ${tab === t.id ? 'bg-pine-900 text-white' : 'text-ink-700 hover:bg-paper'}`}>
-              {t.label} <span className="opacity-70">{counts[t.id] ?? 0}</span>
+    <div className="min-h-[calc(100dvh-68px)] bg-white">
+      <div className="bg-[#eef4f0]">
+        <div className="mx-auto max-w-[1280px] px-4 pt-7 pb-6 sm:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-[30px] font-bold text-ink-900 sm:text-[34px]">Reservations</h1>
+            <button type="button" onClick={exportCsv} disabled={!shown.length} className="flex items-center gap-2 text-[15px] font-semibold text-pine-800 hover:underline disabled:opacity-50">
+              <Download className="h-5 w-5" aria-hidden="true" /> Export CSV
             </button>
-          ))}
+          </div>
+          <form
+            className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center"
+            onSubmit={(e) => {
+              e.preventDefault()
+              search()
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <Outlined label="Booking ID">
+                <Search className="h-4 w-4 shrink-0 text-ink-700" aria-hidden="true" />
+                <input value={idText} onChange={(e) => setIdText(e.target.value)} placeholder="Booking ID, guest name or phone" aria-label="Booking ID, guest name or phone" className="min-w-0 flex-1 self-stretch bg-transparent text-[15.5px] outline-none placeholder:text-ink-500" />
+              </Outlined>
+            </div>
+            <DateRange value={range} onChange={setRange} />
+            <button type="submit" className="h-12 shrink-0 rounded-full bg-pine-800 px-12 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(18,55,42,0.55)] transition-colors hover:bg-pine-900">
+              Search
+            </button>
+          </form>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-[14px] text-ink-700">Filters:</span>
+            <MultiFilter allLabel="All properties" unit="properties" search options={propOptions} selected={props} onChange={(v) => (setProps(v), setPage(1))} />
+            <MultiFilter allLabel="All statuses" unit="statuses" options={statuses} selected={st} onChange={(v) => (setSt(v), setPage(1))} />
+          </div>
         </div>
-        <label className="flex h-11 w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3 sm:w-[280px]">
-          <Search className="h-4 w-4 text-ink-400" aria-hidden="true" />
-          <span className="sr-only">Search reservations</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Guest, phone or booking ID" className="min-w-0 flex-1 outline-none" />
-        </label>
       </div>
 
-      {shown.length === 0 ? (
-        <div className="panel">
-          <Empty icon={<BedDouble className="h-7 w-7" />} title={n ? 'No reservation matches that search' : `No ${tab === 'all' ? '' : deskText[tab as Desk].toLowerCase() + ' '}reservations`}>
-            {!list.length && <p className="max-w-sm text-ink-500">When a guest books one of your live properties on {site.marketplace}, it appears here within seconds.</p>}
-          </Empty>
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-6 sm:px-8">
+        {offline ? (
+          <Notice tone="warn">Can’t reach {site.marketplace} right now, so this list may be out of date.</Notice>
+        ) : (
+          <div className="flex gap-3 rounded-xl bg-pine-50 px-4 py-3 text-[14px] text-pine-900">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-pine-800" aria-hidden="true" />
+            <p>
+              <strong className="font-semibold">Every {site.marketplace} booking at your properties shows here, newest within seconds.</strong>
+              <br />
+              Export CSV downloads the bookings currently shown. Use the filters to narrow it down first.
+            </p>
+          </div>
+        )}
+
+        <div className="overflow-hidden rounded-xl border border-line">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1040px] border-collapse">
+              <thead className="bg-[#f3f6f4]">
+                <tr>
+                  <th className={th}>Property</th>
+                  <th className={th}>Booking ID</th>
+                  <th className={th}>Guest name</th>
+                  <th className={th}>
+                    <SortHead label="Check-in" dir={sort.key === 'check_in' ? sort.dir : null} onClick={() => toggleSort('check_in')} />
+                  </th>
+                  <th className={th}>
+                    <SortHead label="Check-out" dir={sort.key === 'check_out' ? sort.dir : null} onClick={() => toggleSort('check_out')} />
+                  </th>
+                  <th className={th}>Room &amp; occupancy</th>
+                  <th className={th}>Payment model</th>
+                  <th className={th}>Quick actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-t border-line align-top transition-colors hover:bg-[#f8faf9]">
+                    <td className="px-4 py-3.5 text-[14px] font-medium text-ink-900">{r.hotel_name}</td>
+                    <td className="px-4 py-3.5">
+                      <button type="button" onClick={() => setOpen(r)} className="text-[14px] font-semibold text-pine-800 hover:underline">
+                        {r.id}
+                      </button>
+                      <span className={`mt-1.5 block w-fit rounded-md px-2 py-0.5 text-[12px] font-bold ${deskStyle[r.desk]}`}>{deskText[r.desk]}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-[14px]">
+                      <span className="block font-medium text-ink-900">{r.guest_name}</span>
+                      <span className="block text-[13px] text-ink-500">{r.guest_phone}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-[14px] whitespace-nowrap text-ink-900">{shortDate(r.check_in)}</td>
+                    <td className="px-4 py-3.5 text-[14px] whitespace-nowrap text-ink-900">
+                      {shortDate(r.check_out)}
+                      <span className="block text-[13px] text-ink-500">{plural(r.nights, 'night')}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-[14px] text-ink-900">
+                      {r.rooms} × {r.room_name}
+                      <span className="block text-[13px] text-ink-500">{plural(r.guests, 'guest')}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-[14px] text-ink-900">
+                      {r.pay_mode === 'hotel' ? 'Pay at hotel' : 'Paid online'}
+                      <span className="block text-[13px] text-ink-500">{inr(r.amount)}</span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => setOpen(r)} className="h-8 rounded-full border border-line-strong px-3.5 text-[13px] font-semibold text-pine-800 hover:border-pine-700 hover:bg-pine-50">
+                          View
+                        </button>
+                        {r.desk === 'upcoming' && r.check_in <= todayISO() && (
+                          <button type="button" onClick={() => quick(r, 'checked-in')} className="h-8 rounded-full bg-pine-800 px-3.5 text-[13px] font-semibold text-white hover:bg-pine-900">
+                            Check in
+                          </button>
+                        )}
+                        {r.desk === 'in-house' && (
+                          <button type="button" onClick={() => quick(r, 'checked-out')} className="h-8 rounded-full bg-pine-800 px-3.5 text-[13px] font-semibold text-white hover:bg-pine-900">
+                            Check out
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows.length === 0 && (
+            <div className="flex flex-col items-center gap-2 px-4 py-16 text-center">
+              <TriangleAlert className="h-12 w-12 fill-[#e9eeeb] text-[#c5cfc9]" strokeWidth={1.6} aria-hidden="true" />
+              <strong className="mt-2 text-[16px] font-semibold text-ink-900">No bookings found</strong>
+              <p className="text-[14px] text-ink-700">{list.length ? 'Try your search again with new dates or filters' : `When a guest books one of your live properties on ${site.marketplace}, it appears here.`}</p>
+              {list.length > 0 && (
+                <button type="button" onClick={startOver} className="mt-3 h-11 rounded-full border border-line-strong px-6 text-[15px] font-semibold text-pine-800 hover:border-pine-700 hover:bg-pine-50">
+                  Start over
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {shown.map((r) => (
-            <li key={r.id}>
-              <button type="button" onClick={() => setOpen(r)} className="panel grid w-full gap-3 p-4 text-left hover:border-line-strong sm:grid-cols-[120px_1fr_auto] sm:items-center">
-                <span className="flex items-baseline gap-2 sm:flex-col sm:gap-0">
-                  <span className="font-display text-2xl font-bold text-pine-950">{dayMonth(r.check_in)}</span>
-                  <span className="text-sm text-ink-500">{plural(r.nights, 'night')}</span>
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-lg font-bold">{r.guest_name}</span>
-                  <span className="block text-sm text-ink-500">
-                    {r.rooms} × {r.room_name}, {plural(r.guests, 'guest')}
-                    {many ? `, ${r.hotel_name}` : ''}
-                  </span>
-                </span>
-                <span className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-                  <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${deskStyle[r.desk]}`}>{deskText[r.desk]}</span>
-                  <span className="text-right">
-                    <strong className="block">{inr(r.amount)}</strong>
-                    <span className="text-xs text-ink-500">{r.pay_mode === 'hotel' ? 'Pay at hotel' : 'Paid online'}</span>
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+
+        {shown.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <PageSize value={size} onChange={(n) => (setSize(n), setPage(1))} />
+            <Pager page={cur} pages={pages} onPage={setPage} />
+          </div>
+        )}
+      </div>
 
       <Modal open={!!open} onClose={() => setOpen(null)} title={open ? `${open.guest_name}` : ''} wide>
         {open && <Detail r={open} onDone={() => setOpen(null)} />}

@@ -215,6 +215,8 @@ export async function checkContactCode(channel: 'email' | 'phone', to: string, c
 export async function listReservations(slugs: string[]): Promise<{ list: Reservation[]; offline: boolean }> {
   if (!slugs.length) return { list: [], offline: false }
   if (isDemoMode || !supabase) {
+    // Review demo file: sample bookings set up by the demo itself.
+    if (import.meta.env.VITE_SINGLE) return { list: (globalThis as { __demoBookings?: Reservation[] }).__demoBookings ?? [], offline: false }
     // Hosted demo without a database: bookings from StayEasy can't reach this browser.
     if (!localChannel) return { list: [], offline: false }
     try {
