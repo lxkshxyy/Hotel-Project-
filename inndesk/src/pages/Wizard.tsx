@@ -13,7 +13,7 @@ import { groupLabel, PropertyTypePicker } from '../components/PropertyTypePicker
 import { Chip, KeyTag, Notice, Spinner } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
-import { amenityGroups, banks, cities, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
+import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { attachOptions, autoOccupancy, basicsErrors, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
@@ -408,27 +408,16 @@ function Location({ l, set, show, onSaveExit }: { l: Listing; set: Set; show: bo
   const fieldsOpen = manual || fieldError
   const summary = [loc.address, loc.area, loc.city, [loc.state, loc.pincode].filter(Boolean).join(' ')].filter((x) => x && x.trim()).join(', ')
   const stepNo = steps.findIndex((x) => x.id === 'location') + 1
-  const cityNote =
-    loc.city.trim() && !cityByName(loc.city)
-      ? (() => {
-          const served = servedCity(loc)
-          return served ? (
-            <p role="status" className="flex items-start gap-2 rounded-lg border border-pine-100 bg-pine-50 px-3 py-2.5 text-[13.5px] text-ink-700">
-              <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-live" aria-hidden="true" />
-              <span>
-                Guests will find this property under <strong>{served}</strong> on {site.marketplace}, with {loc.city.trim()} shown in the address.
-              </span>
-            </p>
-          ) : (
-            <p role="status" className="flex items-start gap-2 rounded-lg border border-brass-200 bg-brass-50 px-3 py-2.5 text-[13.5px] text-ink-700">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" aria-hidden="true" />
-              <span>
-                {site.marketplace} isn’t open in <strong>{loc.city.trim()}</strong> yet. It covers {cities.map((c) => c.name).join(', ')} and places within {60} km of them. You can finish the listing, and ask the {site.marketplace} team to add {loc.city.trim()} so it can go live.
-              </span>
-            </p>
-          )
-        })()
-      : null
+  // TRPOTELS lists properties anywhere in India. Only note when a nearby town is shown under a bigger city.
+  const served = loc.city.trim() && !cityByName(loc.city) ? servedCity(loc) : null
+  const cityNote = served ? (
+    <p role="status" className="flex items-start gap-2 rounded-lg border border-pine-100 bg-pine-50 px-3 py-2.5 text-[13.5px] text-ink-700">
+      <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-live" aria-hidden="true" />
+      <span>
+        Guests will also find this property under <strong>{served}</strong> on {site.marketplace}, with {loc.city.trim()} shown in the address.
+      </span>
+    </p>
+  ) : null
 
   return (
     <section className="mx-auto flex w-full max-w-[680px] flex-col">
@@ -445,7 +434,7 @@ function Location({ l, set, show, onSaveExit }: { l: Listing; set: Set; show: bo
       <h2 className="mt-1 text-[32px] font-bold text-ink-900">Location</h2>
 
       <div ref={box} className="relative mt-6">
-        <span className={`flex items-center gap-3 rounded-full bg-[#e4ede7] px-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none rounded-t-[24px]' : ''}`}>
+        <span className={`flex items-center gap-3 rounded-full bg-[#cfdfd5] px-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none rounded-t-[24px]' : ''}`}>
           <Search className="h-5 w-5 shrink-0 text-ink-900" aria-hidden="true" />
           <input
             role="combobox"

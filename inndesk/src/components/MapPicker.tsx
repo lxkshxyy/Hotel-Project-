@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import { LocateFixed } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
 import { site } from '../config/site'
 
@@ -83,6 +83,12 @@ function ClickToPlace({ onPick }: { onPick: (lat: number, lng: number) => void }
   return null
 }
 
+/** Map servers in order: the configured one, then a backup if the first can't load here. */
+const tileSources = [
+  { url: site.map.tiles, attribution: site.map.attribution },
+  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors' },
+]
+
 export default function MapPicker({ lat, lng, onPin, onLocate, locating }: { lat?: number; lng?: number; onPin: (lat: number, lng: number) => void; onLocate: () => void; locating: boolean }) {
   const has = lat != null && lng != null
   const view = has ? { lat: lat!, lng: lng!, zoom: 17 } : { ...site.map.start, zoom: 5 }
@@ -95,10 +101,31 @@ export default function MapPicker({ lat, lng, onPin, onLocate, locating }: { lat
     }),
     [onPin],
   )
+  // If the map pictures fail to load (blocked or offline), try the backup server, then say so.
+  const [src, setSrc] = useState(0)
+  const [blocked, setBlocked] = useState(false)
+  const tally = useRef({ ok: 0, bad: 0 })
+  const tileEvents = useMemo(
+    () => ({
+      tileload: () => {
+        tally.current.ok++
+      },
+      tileerror: () => {
+        const t = tally.current
+        t.bad++
+        if (t.ok === 0 && t.bad >= 4) {
+          tally.current = { ok: 0, bad: 0 }
+          if (src < tileSources.length - 1) setSrc(src + 1)
+          else setBlocked(true)
+        }
+      },
+    }),
+    [src],
+  )
   return (
     <div className="relative isolate z-0 h-[300px] overflow-hidden rounded-xl border border-line sm:h-[360px]">
       <MapContainer center={[view.lat, view.lng]} zoom={view.zoom} zoomControl={false} className="h-full w-full">
-        <TileLayer attribution={site.map.attribution} url={site.map.tiles} />
+        <TileLayer key={src} attribution={tileSources[src].attribution} url={tileSources[src].url} eventHandlers={tileEvents} />
         <ZoomControl position="bottomright" />
         <Follow {...view} />
         <ClickToPlace onPick={onPin} />
@@ -107,7 +134,13 @@ export default function MapPicker({ lat, lng, onPin, onLocate, locating }: { lat
       <button type="button" onClick={onLocate} disabled={locating} aria-label="Use my current location" title="Use my current location" className="absolute right-[10px] bottom-[86px] z-[500] flex h-[34px] w-[34px] items-center justify-center rounded border-2 border-black/20 bg-white text-ink-900 hover:bg-paper disabled:opacity-60">
         <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
       </button>
-      {!has && <span className="pointer-events-none absolute inset-x-0 top-3 z-[500] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-[13px] font-semibold text-ink-700 shadow">Search your address or tap the map</span>}
+      {blocked && (
+        <div className="absolute inset-0 z-[450] flex flex-col items-center justify-center gap-1 bg-[#e9eeeb]/90 px-6 text-center">
+          <strong className="text-[15px] text-ink-900">The map can’t load here</strong>
+          <span className="max-w-sm text-[13px] text-ink-700">This window is blocking the map pictures. Search your address above; the pin is still saved. Open InnDesk in Chrome to see and drag the map.</span>
+        </div>
+      )}
+      {!has && !blocked && <span className="pointer-events-none absolute inset-x-0 top-3 z-[500] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-[13px] font-semibold text-ink-700 shadow">Search your address or tap the map</span>}
     </div>
   )
 }

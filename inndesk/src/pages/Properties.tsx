@@ -226,7 +226,7 @@ export default function Properties() {
         )}
 
         <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <label className="flex h-12 w-full items-center gap-3 rounded-full bg-[#e4ede7] px-5 ring-pine-700 focus-within:bg-white focus-within:ring-1 lg:max-w-[560px]">
+          <label className="flex h-12 w-full items-center gap-3 rounded-full bg-[#cfdfd5] px-5 ring-pine-700 focus-within:bg-white focus-within:ring-1 lg:max-w-[560px]">
             <Search className="h-5 w-5 shrink-0 text-ink-900" aria-hidden="true" />
             <input value={q} onChange={(e) => (setQ(e.target.value), setPage(1))} placeholder="Search for a property" aria-label="Search for a property" className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-500" />
           </label>

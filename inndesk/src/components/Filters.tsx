@@ -75,7 +75,7 @@ export function MultiFilter({ allLabel, options, selected, onChange, style = 'ti
       {() => (
         <div className="flex flex-col">
           {search && (
-            <label className="mx-1 mt-1 mb-2 flex h-11 items-center gap-2 rounded-full bg-[#e4ede7] px-4 ring-pine-700 focus-within:bg-white focus-within:ring-1">
+            <label className="mx-1 mt-1 mb-2 flex h-11 items-center gap-2 rounded-full bg-[#cfdfd5] px-4 ring-pine-700 focus-within:bg-white focus-within:ring-1">
               <Search className="h-4 w-4 text-ink-900" aria-hidden="true" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="min-w-0 flex-1 bg-transparent text-[14px] outline-none" aria-label={`Search ${unit}`} />
             </label>
