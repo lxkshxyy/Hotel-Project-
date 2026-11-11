@@ -144,7 +144,6 @@ export default function Properties() {
   const [typeF, setTypeF] = useState<string[]>([])
   const [cityF, setCityF] = useState<string[]>([])
   const [stateF, setStateF] = useState<string[]>([])
-  const [areaF, setAreaF] = useState<string[]>([])
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' })
   const [size, setSize] = useState(100)
   const [page, setPage] = useState(1)
@@ -166,7 +165,6 @@ export default function Properties() {
         const n = inTab.filter((r) => r.state.toLowerCase() === x.name.toLowerCase()).length
         return { value: x.name, label: x.name, sub: `${x.ut ? 'Union territory · ' : ''}${n ? `${n} ${n === 1 ? 'property' : 'properties'}` : 'No properties'}` }
       }),
-      area: uniq(inTab.map((r) => r.area)).map((a) => ({ value: a, label: a, sub: inTab.find((r) => r.area === a)?.city || undefined })),
     }),
     [inTab], // eslint-disable-line react-hooks/exhaustive-deps
   )
@@ -174,21 +172,21 @@ export default function Properties() {
     const has = (f: string[], v: string) => !f.length || f.some((x) => x.toLowerCase() === v.toLowerCase())
     const val = (r: (typeof rows)[number]) => (sort.key === 'name' ? (r.l.basics.name.trim() || '~').toLowerCase() : sort.key === 'revenue' ? (r.revenue ?? -1) : sort.key === 'adr' ? (r.adr ?? -1) : r.score)
     return inTab
-      .filter((r) => (!propF.length || propF.includes(r.l.id)) && has(typeF, r.l.basics.propertyType) && has(cityF, r.city) && has(stateF, r.state) && has(areaF, r.area))
+      .filter((r) => (!propF.length || propF.includes(r.l.id)) && has(typeF, r.l.basics.propertyType) && has(cityF, r.city) && has(stateF, r.state))
       .sort((a, b) => {
         const x = val(a)
         const y = val(b)
         return (sort.dir === 'asc' ? 1 : -1) * (typeof x === 'string' ? x.localeCompare(y as string) : (x as number) - (y as number))
       })
-  }, [inTab, propF, typeF, cityF, stateF, areaF, sort])
+  }, [inTab, propF, typeF, cityF, stateF, sort])
 
   if (!data) return error ? <div className="p-6"><Notice tone="error">{error}</Notice></div> : <Spinner />
   const drafts = data.filter((l) => l.status === 'draft')
   const pages = Math.max(1, Math.ceil(shown.length / size))
   const cur = Math.min(page, pages)
   const pageRows = shown.slice((cur - 1) * size, cur * size)
-  const filtered = !!(propF.length || typeF.length || cityF.length || stateF.length || areaF.length)
-  const clearAll = () => (setPropF([]), setTypeF([]), setCityF([]), setStateF([]), setAreaF([]), setPage(1))
+  const filtered = !!(propF.length || typeF.length || cityF.length || stateF.length)
+  const clearAll = () => (setPropF([]), setTypeF([]), setCityF([]), setStateF([]), setPage(1))
 
   const start = async (category: Category, type: string) => {
     if (!owner) return
@@ -260,19 +258,21 @@ export default function Properties() {
           ))}
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <span className="text-[15px] font-semibold text-ink-900">Filter and Search by:</span>
-          <ApplyFilter label="Property" placeholder="Search property" options={opts.prop} selected={propF} onChange={reset(setPropF)} />
-          <ApplyFilter label="Stay type" placeholder="Search stay type" options={opts.type} selected={typeF} onChange={reset(setTypeF)} />
-          <ApplyFilter label="City" placeholder="Search city" options={opts.city} selected={cityF} onChange={reset(setCityF)} />
-          <ApplyFilter label="State" placeholder="Search state or union territory" options={opts.state} selected={stateF} onChange={reset(setStateF)} />
-          <ApplyFilter label="Area" placeholder="Search area or locality" options={opts.area} selected={areaF} onChange={reset(setAreaF)} />
-          {filtered && (
-            <button type="button" onClick={clearAll} className="text-[14.5px] font-semibold text-pine-800 hover:underline">
-              Clear all
-            </button>
-          )}
-        </div>
+        {/* Filters only on Active Properties. */}
+        {shownTab === 'live' && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <span className="text-[15px] font-semibold text-ink-900">Filter and Search by:</span>
+            <ApplyFilter label="Property" placeholder="Search property" options={opts.prop} selected={propF} onChange={reset(setPropF)} />
+            <ApplyFilter label="Stay type" placeholder="Search stay type" options={opts.type} selected={typeF} onChange={reset(setTypeF)} />
+            <ApplyFilter label="City" placeholder="Search city" options={opts.city} selected={cityF} onChange={reset(setCityF)} />
+            <ApplyFilter label="State" placeholder="Search state or union territory" options={opts.state} selected={stateF} onChange={reset(setStateF)} />
+            {filtered && (
+              <button type="button" onClick={clearAll} className="text-[14.5px] font-semibold text-pine-800 hover:underline">
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="relative mt-5 overflow-hidden rounded-xl border border-line">
           <div className="relative overflow-x-auto">
