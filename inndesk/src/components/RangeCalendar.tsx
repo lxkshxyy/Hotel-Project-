@@ -61,7 +61,7 @@ function Month({ y, m, start, end, hover, onPick, onHover }: { y: number; m: num
 }
 
 /** Date field + two-month range calendar with Check-in / Stay / Booking date tabs. */
-export function RangeCalendar({ value, onChange }: { value: DateFilter; onChange: (v: DateFilter) => void }) {
+export function RangeCalendar({ value, onChange, button = false }: { value: DateFilter; onChange: (v: DateFilter) => void; button?: boolean }) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<DateMode>('checkin')
   const [start, setStart] = useState('')
@@ -113,7 +113,13 @@ export function RangeCalendar({ value, onChange }: { value: DateFilter; onChange
   }
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className={`relative ${button ? '' : 'min-w-0 flex-1'}`}>
+      {button ? (
+        <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className={`flex h-11 items-center gap-2 rounded-lg border px-4 text-[14.5px] font-semibold transition-colors ${value || open ? 'border-pine-800 bg-pine-800 text-white' : 'border-line-strong bg-white text-pine-800 hover:border-pine-700'}`}>
+          <CalendarDays className="h-4 w-4" aria-hidden="true" />
+          {value ? (value.from === value.to ? fmt(value.from) : `${fmt(value.from)} – ${fmt(value.to)}`) : 'Select Date Range'}
+        </button>
+      ) : (
       <div className={`relative flex h-[52px] items-center gap-2 rounded-lg border bg-white px-3.5 transition-colors ${open ? 'border-pine-700 ring-1 ring-pine-700' : 'border-ink-400'}`}>
         {value && <span className="pointer-events-none absolute -top-2.5 left-2.5 bg-white px-1 text-[12px] leading-5 text-ink-500">{modeLabel(value.mode)}</span>}
         <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[15.5px]">
@@ -128,6 +134,7 @@ export function RangeCalendar({ value, onChange }: { value: DateFilter; onChange
           <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
         )}
       </div>
+      )}
 
       <AnimatePresence>
         {open && (
@@ -141,7 +148,7 @@ export function RangeCalendar({ value, onChange }: { value: DateFilter; onChange
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16 }}
-              className="fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-[min(700px,calc(100vw-48px))] sm:p-6"
+              className={`fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 ${button ? 'sm:left-0' : 'sm:right-0'} sm:w-[min(700px,calc(100vw-48px))] sm:p-6`}
               onMouseLeave={() => setHover('')}
             >
               <div role="tablist" className="grid grid-cols-3 border-b border-line">

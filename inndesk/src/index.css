@@ -151,3 +151,20 @@
 .leaflet-container .leaflet-bar a {
   font-family: var(--font-sans);
 }
+
+/* Print only the hotelier voucher while it is being printed (body.printing-voucher). */
+@media print {
+  body.printing-voucher * {
+    visibility: hidden !important;
+  }
+  body.printing-voucher .voucher-print,
+  body.printing-voucher .voucher-print * {
+    visibility: visible !important;
+  }
+  body.printing-voucher .voucher-print {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

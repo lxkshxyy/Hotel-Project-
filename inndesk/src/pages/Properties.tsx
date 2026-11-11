@@ -9,20 +9,14 @@ import { Notice, Spinner } from '../components/ui'
 import { useSession } from '../context/Session'
 import { inr, todayISO } from '../lib/format'
 import { useListings, useReservations, type ResvRow } from '../lib/hooks'
-import { blankListing, stepDone, steps } from '../lib/listing'
+import { blankListing } from '../lib/listing'
+import { contentScore } from '../lib/score'
 import { deleteListing, saveListing, setListingStatus } from '../lib/store'
 import type { Listing, ListingStatus } from '../lib/types'
 
-const tabSteps = steps.filter((s) => s.id !== 'review')
 const editHref = (l: Listing) => `/app/properties/${l.id}/edit`
 const statusText: Record<ListingStatus, string> = { live: 'Active', paused: 'Inactive', draft: 'Draft' }
 const statusColor: Record<ListingStatus, string> = { live: 'text-live', paused: 'text-ink-500', draft: 'text-brass-700' }
-
-/** How complete the listing is, out of 100: sections done (70), photos (20), a full description (10). */
-export function contentScore(l: Listing) {
-  const sections = tabSteps.filter((s) => stepDone(l, s.id)).length
-  return Math.round((sections / tabSteps.length) * 70 + Math.min(l.photos.length, 10) * 2 + ((l.basics.description ?? '').trim().length >= 100 ? 10 : 0))
-}
 
 /** Month-to-date revenue and average daily rate from this property's bookings. */
 function mtd(l: Listing, bookings: ResvRow[]) {

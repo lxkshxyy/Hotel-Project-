@@ -9,6 +9,7 @@ import { propertyMenu, type MenuItem } from '../lib/propertyMenu'
 import { isDemoMode } from '../lib/supabase'
 import { ChangePassword } from './Auth'
 import { NavIcon } from './navIcons'
+import { PropertyBar } from './PropertyBar'
 import { Mark, Spinner } from './ui'
 
 const nav = [
@@ -256,11 +257,8 @@ export default function AppLayout() {
               <span className={`text-[19px] font-black text-pine-900 ${pl ? 'hidden sm:inline' : ''}`}>{site.name}</span>
             </Link>
             {pl && (
-              <div className="min-w-0 border-l border-line pl-4">
-                <strong className="block truncate text-[15.5px] font-bold text-ink-900">{pl.basics.name.trim() || 'Unnamed property'}</strong>
-                <span className="block truncate text-[13px] text-ink-500">
-                  {[pl.basics.stars ? `${pl.basics.stars}-star ${pl.basics.propertyType.toLowerCase()}` : pl.basics.propertyType, [pl.location.area, pl.location.city].filter(Boolean).join(', ')].filter(Boolean).join(' | ')}
-                </span>
+              <div className="min-w-0 border-l border-line pl-3">
+                <PropertyBar l={pl} all={data ?? []} />
               </div>
             )}
           </div>

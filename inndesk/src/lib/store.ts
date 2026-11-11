@@ -250,6 +250,30 @@ export const setMark = (id: string, m: DeskMark | null) => {
   changed()
 }
 
+/**
+ * Hotel acknowledgements of bookings (Bookings → Acknowledge), kept in this browser for now.
+ * [LIVE] move to the database so every device sees the same state.
+ */
+const ACKS = 'inndesk.acks'
+export const getAcks = (): Record<string, string> => {
+  try {
+    return JSON.parse(localStorage.getItem(ACKS) || '{}')
+  } catch {
+    return {}
+  }
+}
+export const acknowledge = (ids: string[]) => {
+  const all = getAcks()
+  const at = new Date().toISOString()
+  for (const id of ids) all[id] = at
+  try {
+    localStorage.setItem(ACKS, JSON.stringify(all))
+  } catch {
+    /* storage unavailable: acknowledgement lasts until reload */
+  }
+  changed()
+}
+
 export async function channelOnline() {
   if (!isDemoMode && supabase) return true
   if (!localChannel) return false
