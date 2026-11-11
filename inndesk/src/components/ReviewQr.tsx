@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Download, X } from 'lucide-react'
+import { Download, ScanQrCode, X } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
 import { site } from '../config/site'
 import type { Listing } from '../lib/types'
-import { Modal } from './ui'
+import steps from '../assets/review-qr-steps.webp'
 
 // Closed for the rest of this visit (until the page is reloaded).
 let closedThisVisit = false
@@ -63,51 +63,6 @@ async function downloadCard(l: Listing) {
   setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
-/* Original illustrations for the three steps. */
-const Printer = () => (
-  <svg viewBox="0 0 200 170" className="h-[150px] w-full" aria-hidden="true">
-    <rect x="62" y="10" width="76" height="60" fill="#fff" stroke="#c9d3cd" />
-    <rect x="20" y="62" width="160" height="70" rx="8" fill="#3d4a44" />
-    <rect x="20" y="62" width="160" height="16" rx="6" fill="#56645d" />
-    <circle cx="160" cy="92" r="4" fill="#e0794a" />
-    <circle cx="170" cy="92" r="4" fill="#7fcf9a" />
-    <path d="M44 120h112l14 40H30z" fill="#fff" stroke="#c9d3cd" />
-    <rect x="56" y="122" width="88" height="36" fill="#183f31" transform="skewX(-8)" />
-    <rect x="96" y="128" width="22" height="22" fill="#fff" transform="skewX(-8)" />
-    <path d="M100 132h4v4h-4zM108 132h4v4h-4zM100 140h12v4h-12z" fill="#183f31" transform="skewX(-8)" />
-  </svg>
-)
-const Desk = () => (
-  <svg viewBox="0 0 200 170" className="h-[150px] w-full" aria-hidden="true">
-    <text x="100" y="22" textAnchor="middle" fontSize="13" fontWeight="700" fill="#8b9690" letterSpacing="1.5">
-      RECEPTION
-    </text>
-    <rect x="10" y="118" width="180" height="46" rx="4" fill="#d6dcd8" />
-    <rect x="10" y="110" width="180" height="12" fill="#b9c2bd" />
-    <rect x="22" y="70" width="30" height="24" rx="2" fill="#56645d" />
-    <rect x="34" y="94" width="6" height="16" fill="#56645d" />
-    <path d="M110 110l8-62h36l8 62z" fill="#183f31" />
-    <rect x="122" y="56" width="28" height="6" fill="#c8962e" />
-    <rect x="124" y="70" width="24" height="24" fill="#fff" />
-    <path d="M128 74h5v5h-5zM139 74h5v5h-5zM128 85h5v5h-5zM137 83h7v7h-7z" fill="#183f31" />
-  </svg>
-)
-const Scan = () => (
-  <svg viewBox="0 0 200 170" className="h-[150px] w-full" aria-hidden="true">
-    <rect x="10" y="118" width="180" height="46" rx="4" fill="#d6dcd8" />
-    <rect x="10" y="110" width="180" height="12" fill="#b9c2bd" />
-    <path d="M56 110l8-62h36l8 62z" fill="#183f31" />
-    <rect x="70" y="70" width="24" height="24" fill="#fff" />
-    <path d="M74 74h5v5h-5zM85 74h5v5h-5zM74 85h5v5h-5zM83 83h7v7h-7z" fill="#183f31" />
-    <path d="M150 150c-8-14-10-30-4-44l14-6 26 40-6 24z" fill="#e8b48f" />
-    <rect x="120" y="18" width="40" height="72" rx="7" fill="#fff" stroke="#1d2b24" strokeWidth="2.5" />
-    <rect x="128" y="34" width="24" height="24" fill="#183f31" />
-    <rect x="132" y="38" width="16" height="16" fill="#fff" />
-    <rect x="137" y="43" width="6" height="6" fill="#183f31" />
-    <path d="M144 96c-6-6-4-16 4-18l10 4" fill="#e8b48f" />
-  </svg>
-)
-
 /** Small reminder card above the Bookings filters, plus the 3-step QR pop-up. */
 export function ReviewQrCard({ l }: { l: Listing }) {
   const [hidden, setHidden] = useState(closedThisVisit)
@@ -148,26 +103,59 @@ export function ReviewQrCard({ l }: { l: Listing }) {
           </motion.div>
         )}
       </AnimatePresence>
-      <Modal open={open} onClose={() => setOpen(false)} title={`${site.marketplace} Review QR Code`} wide>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[
-            ['Download QR code & print it', <Printer key="p" />],
-            ['Display it somewhere visible', <Desk key="d" />],
-            ['Encourage guests to give a review when they check out.', <Scan key="s" />],
-          ].map(([text, art], i) => (
-            <div key={i} className="flex flex-col items-center text-center">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-pine-800 text-[14px] font-bold text-pine-800">{i + 1}</span>
-              <p className="mt-2 min-h-[44px] text-[14.5px] text-ink-900">{text}</p>
-              <div className="mt-3 w-full">{art}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 flex justify-end">
-          <button type="button" onClick={download} disabled={busy} className="flex h-11 items-center gap-2 rounded-lg bg-brass-500 px-6 text-[14.5px] font-bold tracking-wide text-pine-950 uppercase hover:bg-brass-600 disabled:opacity-60">
-            <Download className="h-4 w-4" aria-hidden="true" /> {busy ? 'Preparing…' : 'Download QR code'}
+      <AnimatePresence>
+        {open && <QrDialog title={`${site.marketplace} Review QR Code`} busy={busy} onDownload={download} onClose={() => setOpen(false)} />}
+      </AnimatePresence>
+    </>
+  )
+}
+
+const stepText = ['Download QR code & print it', 'Display it somewhere visible', 'Encourage guests to give a review when they check out.']
+
+/** The 3-step pop-up: icon header, numbered stepper, illustration strip and the download button. */
+function QrDialog({ title, busy, onDownload, onClose }: { title: string; busy: boolean; onDownload: () => void; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', esc)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', esc)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(e) => e.target === e.currentTarget && onClose()} className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-900/45 p-3 backdrop-blur-[2px] sm:p-6">
+      <motion.div role="dialog" aria-modal="true" aria-label={title} initial={{ y: 18, scale: 0.97, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 18, scale: 0.97, opacity: 0 }} transition={{ duration: 0.22 }} className="flex max-h-[calc(100dvh-24px)] w-full max-w-[900px] flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl sm:max-h-[calc(100dvh-48px)]">
+        <div className="flex shrink-0 items-center gap-4 border-b border-line px-5 py-4 sm:px-7 sm:py-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pine-800 text-white shadow-[0_4px_10px_rgba(24,63,49,0.25)] sm:h-12 sm:w-12">
+            <ScanQrCode className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <h2 className="min-w-0 flex-1 font-[Roboto,sans-serif] text-[19px] font-[700] text-ink-900 sm:text-[24px]">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-900 hover:bg-paper">
+            <X className="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
-      </Modal>
-    </>
+        <div className="overflow-y-auto px-5 pt-5 pb-6 sm:px-7 sm:pt-6">
+          <ol className="grid grid-cols-3 gap-2 sm:gap-4">
+            {stepText.map((t, i) => (
+              <li key={t} className="relative flex flex-col items-center text-center">
+                {i < 2 && <span aria-hidden="true" className="absolute top-[18px] left-[calc(50%+30px)] h-0.5 w-[calc(100%-60px)] bg-line sm:top-[22px] sm:left-[calc(50%+40px)] sm:w-[calc(100%-80px)]" />}
+                <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.08 + i * 0.08 }} className={`relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-pine-800 font-[Roboto,sans-serif] text-[16px] font-[700] sm:h-11 sm:w-11 sm:text-[19px] ${i === 0 ? 'bg-pine-800 text-white' : 'bg-white text-pine-800'}`}>
+                  {i + 1}
+                </motion.span>
+                <p className="mt-2.5 font-[Roboto,sans-serif] text-[12.5px] leading-snug text-ink-900 sm:mt-3 sm:text-[16px]">{t}</p>
+              </li>
+            ))}
+          </ol>
+          <img src={steps} alt="Print the QR card, place it on the reception desk, and guests scan it with their phone" width={1322} height={364} className="mt-5 block h-auto w-full rounded-2xl sm:mt-6 sm:rounded-[20px]" />
+          <div className="mt-5 flex justify-end sm:mt-6">
+            <button type="button" onClick={onDownload} disabled={busy} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#e8b53a] px-7 font-[Roboto,sans-serif] text-[15px] font-[700] tracking-wide text-ink-900 uppercase shadow-[0_8px_18px_rgba(200,150,46,0.35)] transition hover:bg-[#dfa92b] disabled:opacity-60 sm:h-14 sm:w-auto sm:text-[17px]">
+              <Download className="h-5 w-5" aria-hidden="true" /> {busy ? 'Preparing…' : 'Download QR code'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }

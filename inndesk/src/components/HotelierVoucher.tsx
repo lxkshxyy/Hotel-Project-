@@ -70,9 +70,9 @@ export function HotelierVoucher({ r, l, status, pending, onAcknowledge, onClose 
   return (
     <AnimatePresence>
       {r && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-ink-900/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Hotelier voucher" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-          <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 14, opacity: 0 }} className="w-full max-w-[860px] rounded-2xl bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-t-2xl border-b border-line bg-white px-5 py-3 print:hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] flex items-center justify-center bg-ink-900/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Hotelier voucher" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+          <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 14, opacity: 0 }} className="flex max-h-[calc(100dvh-24px)] w-full max-w-[860px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-48px)]">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-white px-5 py-3 print:hidden">
               <strong className="text-[16px] font-semibold text-ink-900">Voucher · {r.id}</strong>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={printVoucher} className="flex h-9 items-center gap-2 rounded-full border border-line-strong px-4 text-[14px] font-semibold text-pine-800 hover:border-pine-700 hover:bg-pine-50">
@@ -83,7 +83,10 @@ export function HotelierVoucher({ r, l, status, pending, onAcknowledge, onClose 
                 </button>
               </div>
             </div>
-            <Body r={r} l={l} status={status} pending={pending} onAcknowledge={onAcknowledge} />
+            {/* Only the voucher scrolls; the top bar stays fixed above it, so nothing can show through above the bar. */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <Body r={r} l={l} status={status} pending={pending} onAcknowledge={onAcknowledge} />
+            </div>
           </motion.div>
         </motion.div>
       )}
