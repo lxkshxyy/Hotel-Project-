@@ -9,6 +9,7 @@ import { dayMonth, inr, plural, shortDate, todayISO } from '../lib/format'
 import { useListings, useReservations, type Desk, type ResvRow } from '../lib/hooks'
 import { settle } from '../lib/money'
 import { getMarks, setMark } from '../lib/store'
+import type { Listing } from '../lib/types'
 
 const statuses: { value: Desk; label: string }[] = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -246,14 +247,14 @@ export default function Reservations() {
       </div>
 
       <Modal open={!!open} onClose={() => setOpen(null)} title={open ? `${open.guest_name}` : ''} wide>
-        {open && <Detail r={open} onDone={() => setOpen(null)} />}
+        {open && <Detail r={open} l={listings?.find((x) => x.slug === open.hotel_slug)} onDone={() => setOpen(null)} />}
       </Modal>
     </div>
   )
 }
 
-function Detail({ r, onDone }: { r: ResvRow; onDone: () => void }) {
-  const s = settle(r)
+function Detail({ r, l, onDone }: { r: ResvRow; l?: Listing; onDone: () => void }) {
+  const s = settle(r, l)
   const mark = getMarks()[r.id]
   const act = (m: Parameters<typeof setMark>[1]) => {
     setMark(r.id, m)
@@ -316,12 +317,16 @@ function Detail({ r, onDone }: { r: ResvRow; onDone: () => void }) {
             <dt>GST on commission</dt>
             <dd>− {inr(s.gst)}</dd>
           </div>
+          <div className="flex justify-between text-ink-700">
+            <dt>TDS{s.tcs ? ' + GST TCS' : ''}</dt>
+            <dd>− {inr(s.tds + s.tcs)}</dd>
+          </div>
           <div className="flex justify-between border-t border-line pt-2 font-bold">
             <dt>Yours</dt>
             <dd className="text-live">{inr(s.earned)}</dd>
           </div>
         </dl>
-        <p className="mt-2 text-sm text-ink-500">{s.collectedByHotel ? `Guest pays you at the hotel. The commission and its GST (${inr(s.commission + s.gst)}) come off your next payout.` : `Guest paid online. ${site.marketplace} pays you ${inr(s.payout)} after the stay.`}</p>
+        <p className="mt-2 text-sm text-ink-500">{s.collectedByHotel ? `Guest pays you at the hotel. The commission, its GST and TDS (${inr(-s.payout)}) come off your next payout.` : `Guest paid online. ${site.marketplace} pays you ${inr(s.payout)} after the stay.`}</p>
       </div>
       {r.status !== 'cancelled' && (
         <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">

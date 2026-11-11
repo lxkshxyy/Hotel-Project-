@@ -152,19 +152,20 @@
   font-family: var(--font-sans);
 }
 
-/* Print only the hotelier voucher while it is being printed (body.printing-voucher). */
+/* Print only the hotelier voucher: printVoucher() copies it into #voucher-print-root, a direct child of body. */
+#voucher-print-root {
+  display: none;
+}
 @media print {
-  body.printing-voucher * {
-    visibility: hidden !important;
+  body.printing-voucher {
+    overflow: visible !important;
+    background: #fff !important;
   }
-  body.printing-voucher .voucher-print,
-  body.printing-voucher .voucher-print * {
-    visibility: visible !important;
+  body.printing-voucher > *:not(#voucher-print-root) {
+    display: none !important;
   }
-  body.printing-voucher .voucher-print {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+  body.printing-voucher #voucher-print-root {
+    display: block;
   }
 }
+

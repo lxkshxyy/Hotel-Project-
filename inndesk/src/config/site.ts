@@ -30,6 +30,21 @@ export const site = {
   commissionRate: 0.15,
   /** GST charged on the commission (services by StayEasy to the hotel). */
   gstOnCommission: 0.18,
+  /** [CONFIRM with CA] TDS under Income-tax section 194-O, on the gross booking amount (0.1% since 1 Oct 2024). */
+  tdsRate: 0.001,
+  /** [CONFIRM with CA] GST TCS under CGST section 52, on the room value before GST, only for GST-registered properties (0.5% since 10 Jul 2024). */
+  tcsRate: 0.005,
+  /** [CONFIRM] Company details printed on the hotelier voucher (VITE_COMPANY_*). Empty = shown as "—". */
+  company: {
+    legalName: env('VITE_COMPANY_NAME') || 'TRP Hotels',
+    pan: env('VITE_COMPANY_PAN'),
+    gstin: env('VITE_COMPANY_GSTIN'),
+    cin: env('VITE_COMPANY_CIN'),
+    /** Registered address, one line per "|" (e.g. "Floor 2, Building 5|City Centre|Gwalior - 474011, MP, India"). */
+    address: env('VITE_COMPANY_ADDRESS'),
+    serviceCategory: 'Reservation services for accommodation',
+    noReplyEmail: env('VITE_NOREPLY_EMAIL'),
+  },
   /** [CONFIRM] Payout cycle shown to owners. */
   payoutCycle: 'every Tuesday, for stays that checked out the week before',
   minPhotos: 10,

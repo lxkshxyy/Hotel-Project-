@@ -119,7 +119,7 @@ export default function PropertyBookings() {
   const csv = (rows: ResvRow[], name: string) => {
     const head = ['Booking ID', 'Guest name', 'Phone', 'Email', 'Check-in', 'Check-out', 'Nights', 'Rooms', 'Room', 'Guests', 'Payment', 'Amount', 'Net amount', 'Status']
     const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
-    const body = rows.map((r) => [r.id, r.guest_name, r.guest_phone, r.guest_email, r.check_in, r.check_out, r.nights, r.rooms, r.room_name, r.guests, r.pay_mode === 'hotel' ? 'Pay at hotel' : 'Paid online', r.amount, settle(r).earned, statusText(r)].map(cell).join(','))
+    const body = rows.map((r) => [r.id, r.guest_name, r.guest_phone, r.guest_email, r.check_in, r.check_out, r.nights, r.rooms, r.room_name, r.guests, r.pay_mode === 'hotel' ? 'Pay at hotel' : 'Paid online', r.amount, settle(r, l).earned, statusText(r)].map(cell).join(','))
     const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')], { type: 'text/csv' }))
     Object.assign(document.createElement('a'), { href: url, download: `${name}-${t}.csv` }).click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
@@ -129,7 +129,7 @@ export default function PropertyBookings() {
     setPicked((p) => p.filter((x) => !ids.includes(x)))
     acks.reload?.()
   }
-  const pendingWorth = pending.reduce((n, r) => n + settle(r).earned, 0)
+  const pendingWorth = pending.reduce((n, r) => n + settle(r, l).earned, 0)
   const promoTo = `/app/properties/${l.id}/section/promotions`
 
   // Gaps of a week or more with no future check-ins between groups → promotion nudge.
@@ -162,7 +162,7 @@ export default function PropertyBookings() {
   }
 
   const card = (r: ResvRow, selectable = false) => {
-    const s = settle(r)
+    const s = settle(r, l)
     const pend = isPending(r)
     const st = statusText(r)
     return (
@@ -222,7 +222,7 @@ export default function PropertyBookings() {
         <AnimatePresence initial={false}>
           {openPay === r.id && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-line bg-[#f8faf9] px-4 py-3 text-[13.5px] sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-line bg-[#f8faf9] px-4 py-3 text-[13.5px] sm:grid-cols-5">
                 <div>
                   <dt className="text-ink-500">Room charges</dt>
                   <dd className="font-semibold text-ink-900">{inr(s.roomAmount)}</dd>
@@ -234,6 +234,10 @@ export default function PropertyBookings() {
                 <div>
                   <dt className="text-ink-500">Commission incl. GST</dt>
                   <dd className="font-semibold text-ink-900">− {inr(s.commission + s.gst)}</dd>
+                </div>
+                <div>
+                  <dt className="text-ink-500">TDS / TCS</dt>
+                  <dd className="font-semibold text-ink-900">− {inr(s.tds + s.tcs)}</dd>
                 </div>
                 <div>
                   <dt className="text-ink-500">{r.pay_mode === 'now' ? 'Payable to you' : 'Collect at check-in'}</dt>

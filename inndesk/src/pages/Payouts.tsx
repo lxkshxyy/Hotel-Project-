@@ -22,8 +22,8 @@ export default function Payouts() {
   const { list, loading, offline } = useReservations(listings)
   if (!listings || loading) return <Spinner />
 
-  const completed = list.filter((r) => r.desk === 'departed').map((r) => ({ r, s: settle(r) }))
-  const upcoming = list.filter((r) => r.desk === 'upcoming' || r.desk === 'in-house').map((r) => ({ r, s: settle(r) }))
+  const completed = list.filter((r) => r.desk === 'departed').map((r) => ({ r, s: settle(r, listings.find((x) => x.slug === r.hotel_slug)) }))
+  const upcoming = list.filter((r) => r.desk === 'upcoming' || r.desk === 'in-house').map((r) => ({ r, s: settle(r, listings.find((x) => x.slug === r.hotel_slug)) }))
   const due = completed.reduce((t, x) => t + x.s.payout, 0)
   const earned = completed.reduce((t, x) => t + x.s.earned, 0)
   const commission = completed.reduce((t, x) => t + x.s.commission + x.s.gst, 0)
@@ -39,8 +39,8 @@ export default function Payouts() {
             className="btn-ghost"
             onClick={() =>
               csv([
-                ['Booking ID', 'Property', 'Guest', 'Check-in', 'Check-out', 'Paid', 'Guest paid', 'Room GST', 'Commission', 'GST on commission', 'Payout'],
-                ...completed.map(({ r, s }) => [r.id, r.hotel_name, r.guest_name, r.check_in, r.check_out, s.collectedByHotel ? 'At hotel' : 'Online', r.amount, r.tax, s.commission, s.gst, s.payout]),
+                ['Booking ID', 'Property', 'Guest', 'Check-in', 'Check-out', 'Paid', 'Guest paid', 'Room GST', 'Commission', 'GST on commission', 'TDS', 'TCS', 'Payout'],
+                ...completed.map(({ r, s }) => [r.id, r.hotel_name, r.guest_name, r.check_in, r.check_out, s.collectedByHotel ? 'At hotel' : 'Online', r.amount, r.tax, s.commission, s.gst, s.tds, s.tcs, s.payout]),
               ])
             }
           >
@@ -118,6 +118,7 @@ export default function Payouts() {
                   <th className="px-4 py-3 font-semibold">Paid</th>
                   <th className="px-4 py-3 text-right font-semibold">Guest paid</th>
                   <th className="px-4 py-3 text-right font-semibold">Commission + GST</th>
+                  <th className="px-4 py-3 text-right font-semibold">TDS / TCS</th>
                   <th className="px-4 py-3 text-right font-semibold">Payout</th>
                 </tr>
               </thead>
@@ -132,6 +133,7 @@ export default function Payouts() {
                     <td className="px-4 py-3">{s.collectedByHotel ? 'At hotel' : 'Online'}</td>
                     <td className="px-4 py-3 text-right">{inr(r.amount)}</td>
                     <td className="px-4 py-3 text-right">− {inr(s.commission + s.gst)}</td>
+                    <td className="px-4 py-3 text-right">− {inr(s.tds + s.tcs)}</td>
                     <td className={`px-4 py-3 text-right font-bold ${s.payout < 0 ? 'text-alert' : 'text-live'}`}>
                       {s.payout < 0 ? '− ' : ''}
                       {inr(Math.abs(s.payout))}
