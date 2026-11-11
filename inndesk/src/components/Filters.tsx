@@ -181,3 +181,72 @@ export function Pager({ page, pages, onPage }: { page: number; pages: number; on
     </nav>
   )
 }
+
+/**
+ * Filter with a search box, checkboxes and Clear / Apply (choices take effect on Apply).
+ * Used by "Filter and Search by" on My Properties.
+ */
+export function ApplyFilter({ label, options, selected, onChange, placeholder, align = 'left' }: { label: string; options: Option[]; selected: string[]; onChange: (v: string[]) => void; placeholder: string; align?: 'left' | 'right' }) {
+  const { open, setOpen, box } = usePopover()
+  const [draft, setDraft] = useState<string[]>(selected)
+  const [q, setQ] = useState('')
+  useEffect(() => {
+    if (open) {
+      setDraft(selected)
+      setQ('')
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  const n = q.trim().toLowerCase()
+  const shown = options.filter((o) => !n || o.label.toLowerCase().includes(n) || o.sub?.toLowerCase().includes(n))
+  const on = selected.length > 0
+  return (
+    <div ref={box} className="relative">
+      <button type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={`flex h-10 items-center gap-2 rounded-[10px] border px-4 text-[14.5px] font-semibold whitespace-nowrap transition-colors ${open || on ? 'border-pine-800 bg-pine-50 text-pine-900' : 'border-ink-700 bg-white text-ink-900 hover:border-pine-800'}`}>
+        {label}
+        {on && <span className="rounded-full bg-pine-800 px-1.5 text-[12px] leading-5 font-bold text-white">{selected.length}</span>}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div role="dialog" aria-label={`Filter by ${label}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className={`absolute top-full z-40 mt-2.5 w-[300px] rounded-xl bg-white shadow-[0_14px_36px_-10px_rgba(18,55,42,0.3)] ring-1 ring-line max-sm:fixed max-sm:inset-x-4 max-sm:top-[22vh] max-sm:mt-0 max-sm:w-auto ${align === 'right' ? 'right-0' : 'left-0'}`}>
+            <div className="p-4 pb-2">
+              <label className="flex h-11 items-center gap-2 rounded-lg border border-ink-400 bg-white px-3 focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700">
+                <Search className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
+                <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-500" />
+              </label>
+            </div>
+            <div className="max-h-[260px] overflow-y-auto px-2 [scrollbar-width:thin]">
+              {shown.map((o) => {
+                const c = draft.includes(o.value)
+                return (
+                  <label key={o.value} className="flex cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2 hover:bg-pine-50">
+                    <input type="checkbox" checked={c} onChange={() => setDraft((d) => (c ? d.filter((x) => x !== o.value) : [...d, o.value]))} className="mt-1 h-[18px] w-[18px] shrink-0 accent-pine-800" />
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-semibold text-ink-900">{o.label}</span>
+                      {o.sub && <span className="block text-[13px] text-ink-500">{o.sub}</span>}
+                    </span>
+                  </label>
+                )
+              })}
+              {shown.length === 0 && <p className="px-2.5 py-4 text-[14px] text-ink-500">{options.length ? `Nothing matches “${q}”.` : 'Nothing to choose yet.'}</p>}
+            </div>
+            <div className="flex items-center gap-3 border-t border-line p-3">
+              <button type="button" onClick={() => setDraft([])} className="flex-1 py-2 text-[15px] font-semibold text-pine-800 hover:underline">
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(draft)
+                  setOpen(false)
+                }}
+                className="h-11 flex-[1.4] rounded-lg bg-pine-800 text-[15px] font-semibold text-white shadow-[0_6px_14px_-6px_rgba(18,55,42,0.55)] hover:bg-pine-900"
+              >
+                Apply
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

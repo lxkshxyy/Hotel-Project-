@@ -1247,3 +1247,9 @@ export const banks: [string, string][] = [
   ['PYTM', 'Paytm Payments Bank'],
   ['IPOS', 'India Post Payments Bank'],
 ]
+
+/** All 28 states and 8 union territories, for the My Properties State filter. */
+export const indianStates: { name: string; ut?: boolean }[] = [
+  ...['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'].map((name) => ({ name })),
+  ...['Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'].map((name) => ({ name, ut: true })),
+]
