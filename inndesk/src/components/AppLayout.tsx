@@ -1,11 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BedDouble, Building2, ChartColumn, ChevronDown, ChevronRight, CircleUserRound, KeyRound, LayoutDashboard } from 'lucide-react'
+import { BedDouble, Building2, ChevronDown, ChevronRight, CircleUserRound, KeyRound } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
+import { useListings } from '../lib/hooks'
+import { propertyMenu, type MenuItem } from '../lib/propertyMenu'
 import { isDemoMode } from '../lib/supabase'
 import { ChangePassword } from './Auth'
+import { NavIcon } from './navIcons'
 import { Mark, Spinner } from './ui'
 
 const nav = [
@@ -93,42 +96,187 @@ function ProfileMenu() {
   )
 }
 
+/** Property menu item (desktop): picture + label; items with a list open a flyout to the right. */
+function PropertySidebar({ items }: { items: MenuItem[] }) {
+  const { pathname, search } = useLocation()
+  const [fly, setFly] = useState<{ key: string; top: number } | null>(null)
+  const timer = useRef<number | undefined>(undefined)
+  const here = pathname + search
+  useEffect(() => setFly(null), [here])
+  useEffect(() => {
+    if (!fly) return
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setFly(null)
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [fly])
+  const isOn = (to: string, end?: boolean) => (end ? pathname === to.split('?')[0] : here === to || pathname.startsWith(to.split('?')[0] + '/') || pathname === to.split('?')[0])
+  const open = (key: string, el: HTMLElement) => {
+    window.clearTimeout(timer.current)
+    const n = items.find((i) => i.key === key)?.links?.length ?? 0
+    setFly({ key, top: Math.max(76, Math.min(el.getBoundingClientRect().top, window.innerHeight - (n * 46 + 24))) })
+  }
+  const later = () => {
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setFly(null), 180)
+  }
+  const tile = (on: boolean) => `relative flex w-full flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[11.5px] leading-[1.2] no-underline transition-colors ${on ? 'bg-pine-50 font-bold text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`
+  const badge = <span className="absolute top-0.5 right-2.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>
+  const current = items.find((i) => i.key === fly?.key)
+  return (
+    <nav aria-label="Property menu" className="sticky top-[68px] hidden h-[calc(100dvh-68px)] w-[96px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-white px-1.5 py-2 [scrollbar-width:none] md:flex print:hidden">
+      <Link to="/app/properties" className="mb-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11.5px] font-semibold text-ink-500 no-underline hover:bg-paper hover:text-ink-900">
+        <NavIcon name="back" className="h-4 w-4" /> All properties
+      </Link>
+      {items.map((i) => {
+        const on = i.to ? isOn(i.to, i.end) : !!i.links?.some((x) => isOn(x.to))
+        const inner = (
+          <>
+            {i.isNew && badge}
+            <NavIcon name={i.icon} className="h-10 w-10" />
+            <span>{i.label}</span>
+            {i.links && <ChevronRight className="absolute top-3 right-1 h-3.5 w-3.5 text-ink-500" aria-hidden="true" />}
+          </>
+        )
+        return (
+          <div key={i.key} className={i.divider ? 'mt-1 border-t border-line pt-2' : ''}>
+            {i.to ? (
+              <Link to={i.to} className={tile(on)} aria-current={on ? 'page' : undefined}>
+                {inner}
+              </Link>
+            ) : (
+              <button type="button" aria-haspopup="menu" aria-expanded={fly?.key === i.key} onClick={(e) => (fly?.key === i.key ? setFly(null) : open(i.key, e.currentTarget))} onMouseEnter={(e) => open(i.key, e.currentTarget)} onMouseLeave={later} className={`${tile(on || fly?.key === i.key)}`}>
+                {inner}
+              </button>
+            )}
+          </div>
+        )
+      })}
+      <AnimatePresence>
+        {current?.links && fly && (
+          <motion.div role="menu" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.13 }} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={later} style={{ top: fly.top }} className="fixed left-[100px] z-50 w-[250px] rounded-xl bg-white py-2 shadow-[0_14px_36px_-10px_rgba(18,55,42,0.3)] ring-1 ring-line">
+            {current.links.map((x) => (
+              <Link key={x.label} role="menuitem" to={x.to} className={`flex items-start gap-2 px-4 py-2.5 text-[14.5px] no-underline hover:bg-pine-50 ${isOn(x.to) ? 'font-semibold text-pine-900' : 'text-ink-900'}`}>
+                <span className="min-w-0 flex-1">
+                  {x.label}
+                  {x.sub && <span className="block text-[13px] text-ink-500">{x.sub}</span>}
+                </span>
+                {x.isNew && <span className="mt-0.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>}
+              </Link>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  )
+}
+
+/** Phone: Home, Bookings, Analytics and a Menu sheet with everything else. */
+function PropertyBottomBar({ items }: { items: MenuItem[] }) {
+  const { pathname, search } = useLocation()
+  const [sheet, setSheet] = useState(false)
+  useEffect(() => setSheet(false), [pathname, search])
+  const main = items.filter((i) => ['home', 'bookings', 'analytics'].includes(i.key))
+  return (
+    <>
+      <nav aria-label="Property menu" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-white pt-1.5 md:hidden print:hidden" style={{ paddingBottom: 'calc(6px + env(safe-area-inset-bottom))' }}>
+        {main.map((i) => {
+          const on = i.end ? pathname === i.to : pathname.startsWith(i.to!)
+          return (
+            <Link key={i.key} to={i.to!} className={`flex flex-col items-center gap-0.5 text-[11.5px] font-semibold no-underline ${on ? 'text-pine-900' : 'text-ink-500'}`}>
+              <NavIcon name={i.icon} className="h-7 w-7" />
+              {i.label}
+            </Link>
+          )
+        })}
+        <button type="button" onClick={() => setSheet(true)} className="flex flex-col items-center gap-0.5 text-[11.5px] font-semibold text-ink-500">
+          <NavIcon name="more" className="h-7 w-7" />
+          Menu
+        </button>
+      </nav>
+      <AnimatePresence>
+        {sheet && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-ink-900/40 md:hidden" onClick={() => setSheet(false)} />
+            <motion.div role="dialog" aria-label="Property menu" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-8 md:hidden">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line-strong" />
+              <Link to="/app/properties" className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-ink-500 no-underline">
+                <NavIcon name="back" className="h-4 w-4" /> All properties
+              </Link>
+              {items.map((i) => (
+                <div key={i.key} className="border-t border-line py-2">
+                  {i.to ? (
+                    <Link to={i.to} className="flex items-center gap-3 py-1.5 text-[15.5px] font-semibold text-ink-900 no-underline">
+                      <NavIcon name={i.icon} className="h-8 w-8" /> {i.label}
+                      {i.isNew && <span className="rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
+                    </Link>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-3 py-1.5 text-[15.5px] font-semibold text-ink-900">
+                        <NavIcon name={i.icon} className="h-8 w-8" /> {i.label}
+                      </span>
+                      <div className="ml-11 flex flex-col">
+                        {i.links!.map((x) => (
+                          <Link key={x.label} to={x.to} className="flex items-center gap-2 py-1.5 text-[14.5px] text-ink-700 no-underline">
+                            {x.label}
+                            {x.sub && <span className="text-ink-500">· {x.sub}</span>}
+                            {x.isNew && <span className="rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
 export default function AppLayout() {
   const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [pathname])
   const wizard = /\/app\/properties\/[^/]+\/edit/.test(pathname)
-  // Inside one property: its own menu with Overview, Analytics and Reservations.
-  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations))?\/?$/)?.[1]
-  const items = prop
-    ? [
-        { to: '/app/properties', label: 'All properties', Icon: ArrowLeft, end: true },
-        { to: `/app/properties/${prop}`, label: 'Overview', Icon: LayoutDashboard, end: true },
-        { to: `/app/properties/${prop}/analytics`, label: 'Analytics', Icon: ChartColumn, end: false },
-        { to: `/app/properties/${prop}/reservations`, label: 'Reservations', Icon: BedDouble, end: false },
-      ]
-    : nav.map((n) => ({ ...n, end: false }))
+  // Inside one property: the full property menu (Home, Bookings, … Help Centre).
+  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|section\/[^/]+))?\/?$/)?.[1]
+  const pmenu = prop ? propertyMenu(prop) : null
+  const { data } = useListings()
+  const pl = prop ? data?.find((x) => x.id === prop) : undefined
 
   return (
     <RequireOwner>
       <div className="flex min-h-dvh flex-col bg-[#f1f3f1]">
-        <header className="sticky top-0 z-40 flex h-[68px] print:hidden items-center justify-between border-b border-line bg-white px-3 sm:px-5">
-          <Link to="/app/properties" className="flex items-center gap-2 no-underline" aria-label={`${site.name} home`}>
-            <Mark size={32} />
-            <span className="text-[19px] font-black text-pine-900">{site.name}</span>
-          </Link>
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between gap-3 border-b border-line bg-white px-3 sm:px-5 print:hidden">
+          <div className="flex min-w-0 items-center gap-4">
+            <Link to="/app/properties" className="flex shrink-0 items-center gap-2 no-underline" aria-label={`${site.name} home`}>
+              <Mark size={32} />
+              <span className={`text-[19px] font-black text-pine-900 ${pl ? 'hidden sm:inline' : ''}`}>{site.name}</span>
+            </Link>
+            {pl && (
+              <div className="min-w-0 border-l border-line pl-4">
+                <strong className="block truncate text-[15.5px] font-bold text-ink-900">{pl.basics.name.trim() || 'Unnamed property'}</strong>
+                <span className="block truncate text-[13px] text-ink-500">
+                  {[pl.basics.stars ? `${pl.basics.stars}-star ${pl.basics.propertyType.toLowerCase()}` : pl.basics.propertyType, [pl.location.area, pl.location.city].filter(Boolean).join(', ')].filter(Boolean).join(' | ')}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
             {isDemoMode && <span className="hidden rounded-full bg-brass-50 px-3 py-1 text-[12px] font-bold text-brass-700 ring-1 ring-brass-200 md:inline">Demo mode</span>}
             <ProfileMenu />
           </div>
         </header>
 
         <div className={`flex flex-1 ${wizard ? '' : 'pb-20 md:pb-0'}`}>
-          {!wizard && (
+          {!wizard && pmenu && <PropertySidebar items={pmenu} />}
+          {!wizard && !pmenu && (
             <nav aria-label="Panel" className="sticky top-[68px] hidden h-[calc(100dvh-68px)] w-[92px] shrink-0 flex-col gap-2 border-r border-line bg-white p-2 md:flex print:hidden">
-              {items.map(({ to, label, Icon, end }, i) => (
-                <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-center text-[12px] leading-tight font-bold no-underline transition-colors ${prop && i === 0 ? 'mb-1 border-b border-line pb-3 text-ink-500 hover:bg-paper' : isActive ? 'bg-pine-50 text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`}>
+              {nav.map(({ to, label, Icon }) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-center text-[12px] leading-tight font-bold no-underline transition-colors ${isActive ? 'bg-pine-50 text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`}>
                   <Icon className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />
                   {label}
                 </NavLink>
@@ -140,10 +288,11 @@ export default function AppLayout() {
           </main>
         </div>
 
-        {!wizard && (
-          <nav aria-label="Panel" className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-line bg-white pt-2 md:hidden print:hidden ${prop ? 'grid-cols-4' : 'grid-cols-2'}`} style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
-            {items.map(({ to, label, Icon, end }) => (
-              <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[12px] font-bold no-underline ${isActive ? 'text-pine-900' : 'text-ink-500'}`}>
+        {!wizard && pmenu && <PropertyBottomBar items={pmenu} />}
+        {!wizard && !pmenu && (
+          <nav aria-label="Panel" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-white pt-2 md:hidden print:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
+            {nav.map(({ to, label, Icon }) => (
+              <NavLink key={to} to={to} className={({ isActive }) => `flex flex-col items-center gap-1 py-1 text-[12px] font-bold no-underline ${isActive ? 'text-pine-900' : 'text-ink-500'}`}>
                 <Icon className="h-6 w-6" aria-hidden="true" />
                 {label}
               </NavLink>
