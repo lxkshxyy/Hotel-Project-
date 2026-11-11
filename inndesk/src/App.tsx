@@ -12,6 +12,7 @@ const Calendar = lazy(() => import('./pages/Calendar'))
 const Reservations = lazy(() => import('./pages/Reservations'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const Section = lazy(() => import('./pages/Section'))
+const PartnerHelp = lazy(() => import('./pages/PartnerHelp'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
@@ -47,6 +48,8 @@ const router = makeRouter([
       { path: 'properties/:id/analytics', element: s(<Analytics />) },
       { path: 'properties/:id/reservations', element: s(<Reservations />) },
       { path: 'properties/:id/section/:slug', element: s(<Section />) },
+      { path: 'properties/:id/help', element: s(<PartnerHelp />) },
+      { path: 'properties/:id/help/:slug', element: s(<PartnerHelp />) },
       { path: 'calendar', element: s(<Calendar />) },
       { path: 'reservations', element: s(<Reservations />) },
       { path: 'payouts', element: s(<Payouts />) },

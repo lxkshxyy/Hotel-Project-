@@ -23,7 +23,6 @@ export const sections: Record<string, string> = {
   'margin-offers': 'Margin Offers',
   reports: 'Reports',
   'action-center': 'Action Center',
-  'help-centre': 'Help Centre',
 }
 
 export function propertyMenu(id: string): MenuItem[] {
@@ -94,6 +93,6 @@ export function propertyMenu(id: string): MenuItem[] {
         { label: 'Action Center', to: sec('action-center') },
       ],
     },
-    { key: 'help', label: 'Help Centre', icon: 'help', to: sec('help-centre'), divider: true },
+    { key: 'help', label: 'Help Centre', icon: 'help', to: `${base}/help`, divider: true },
   ]
 }

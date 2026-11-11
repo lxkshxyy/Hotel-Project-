@@ -236,7 +236,7 @@ export default function AppLayout() {
   }, [pathname])
   const wizard = /\/app\/properties\/[^/]+\/edit/.test(pathname)
   // Inside one property: the full property menu (Home, Bookings, … Help Centre).
-  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|section\/[^/]+))?\/?$/)?.[1]
+  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|section\/[^/]+|help(?:\/[^/]+)?))?\/?$/)?.[1]
   const pmenu = prop ? propertyMenu(prop) : null
   const { data } = useListings()
   const pl = prop ? data?.find((x) => x.id === prop) : undefined
