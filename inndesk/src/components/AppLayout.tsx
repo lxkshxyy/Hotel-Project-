@@ -119,14 +119,11 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setFly(null), 180)
   }
-  const tile = (on: boolean) => `relative flex w-full flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[11.5px] leading-[1.2] no-underline transition-colors ${on ? 'bg-pine-50 font-bold text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`
+  const tile = (on: boolean) => `group relative flex w-full flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[11.5px] leading-[1.2] no-underline transition-colors ${on ? 'bg-pine-50 font-bold text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`
   const badge = <span className="absolute top-0.5 right-2.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>
   const current = items.find((i) => i.key === fly?.key)
   return (
-    <nav aria-label="Property menu" className="sticky top-[68px] hidden h-[calc(100dvh-68px)] w-[96px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-white px-1.5 py-2 [scrollbar-width:none] md:flex print:hidden">
-      <Link to="/app/properties" className="mb-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11.5px] font-semibold text-ink-500 no-underline hover:bg-paper hover:text-ink-900">
-        <NavIcon name="back" className="h-4 w-4" /> All properties
-      </Link>
+    <nav aria-label="Property menu" className="sticky top-[68px] z-30 hidden h-[calc(100dvh-68px)] w-[96px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-white px-1.5 py-2 [scrollbar-width:none] md:flex print:hidden">
       {items.map((i) => {
         const on = i.to ? isOn(i.to, i.end) : !!i.links?.some((x) => isOn(x.to))
         const inner = (
@@ -134,7 +131,7 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
             {i.isNew && badge}
             <NavIcon name={i.icon} className="h-10 w-10" />
             <span>{i.label}</span>
-            {i.links && <ChevronRight className="absolute top-3 right-1 h-3.5 w-3.5 text-ink-500" aria-hidden="true" />}
+            {i.links && <ChevronRight className={`absolute top-3 right-1 h-3.5 w-3.5 text-ink-500 transition-opacity group-hover:opacity-0 ${fly?.key === i.key ? 'opacity-0' : ''}`} aria-hidden="true" />}
           </>
         )
         return (
@@ -199,9 +196,6 @@ function PropertyBottomBar({ items }: { items: MenuItem[] }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-ink-900/40 md:hidden" onClick={() => setSheet(false)} />
             <motion.div role="dialog" aria-label="Property menu" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-8 md:hidden">
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line-strong" />
-              <Link to="/app/properties" className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-ink-500 no-underline">
-                <NavIcon name="back" className="h-4 w-4" /> All properties
-              </Link>
               {items.map((i) => (
                 <div key={i.key} className="border-t border-line py-2">
                   {i.to ? (
