@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { BedDouble, Building2, ChevronDown, ChevronRight, CircleUserRound, KeyRound } from 'lucide-react'
+import { ArrowLeft, BedDouble, Building2, ChevronDown, ChevronRight, CircleUserRound, KeyRound } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { site } from '../config/site'
@@ -246,6 +246,11 @@ export default function AppLayout() {
       <div className="flex min-h-dvh flex-col bg-[#f1f3f1]">
         <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between gap-3 border-b border-line bg-white px-3 sm:px-5 print:hidden">
           <div className="flex min-w-0 items-center gap-4">
+            {prop && (
+              <Link to="/app/properties" aria-label="Back to all properties" title="Back to all properties" className="-mr-2 flex h-8 w-7 shrink-0 items-center justify-center rounded-md text-ink-700 transition-colors hover:bg-paper hover:text-pine-900">
+                <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden="true" />
+              </Link>
+            )}
             <Link to="/app/properties" className="flex shrink-0 items-center gap-2 no-underline" aria-label={`${site.name} home`}>
               <Mark size={32} />
               <span className={`text-[19px] font-black text-pine-900 ${pl ? 'hidden sm:inline' : ''}`}>{site.name}</span>
