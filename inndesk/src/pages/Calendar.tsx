@@ -178,7 +178,7 @@ export default function Calendar() {
                         onClick={() => openEdit(r.id, d)}
                         aria-label={`${r.name}, ${d}: ${c.closed ? 'closed' : `${inr(c.price ?? r.price)}, ${left} of ${open} rooms left`}. Edit`}
                         className={`flex h-[68px] w-full flex-col items-center justify-center rounded-lg text-center transition-colors ${
-                          c.closed ? 'bg-alert-50 text-alert ring-1 ring-[#f3c5c2]' : left === 0 ? 'bg-[#f0eee6] text-ink-500' : custom ? 'bg-pine-50 ring-1 ring-pine-100 hover:ring-pine-700' : 'bg-paper hover:bg-pine-50'
+                          c.closed ? 'bg-alert-50 text-alert ring-1 ring-[#f3c5c2]' : left === 0 ? 'bg-[#E6EEF7] text-ink-500' : custom ? 'bg-pine-50 ring-1 ring-pine-100 hover:ring-pine-700' : 'bg-paper hover:bg-pine-50'
                         }`}
                       >
                         {c.closed ? (

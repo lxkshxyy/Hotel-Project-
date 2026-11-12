@@ -113,8 +113,8 @@ const ago = (iso: string) => {
 }
 
 /* Lifted "3D" card: rises with a soft shadow on hover, pops when picked and stays raised. */
-const rest = '0 0 0 rgba(18,55,42,0)'
-const lift = '0 14px 28px -12px rgba(18,55,42,0.28), 0 3px 8px -2px rgba(18,55,42,0.10)'
+const rest = '0 0 0 rgba(26, 44, 91,0)'
+const lift = '0 14px 28px -12px rgba(26, 44, 91,0.28), 0 3px 8px -2px rgba(26, 44, 91,0.10)'
 
 function LiftCard({ on, onClick, className = '', children, role = 'radio' }: { on: boolean; onClick: () => void; className?: string; children: ReactNode; role?: string }) {
   return (
@@ -330,7 +330,7 @@ export function PropertyTypePicker({
               <button type="button" onClick={back} className="flex h-12 min-w-[120px] items-center justify-center rounded-full border border-line-strong bg-white px-8 text-[16px] font-semibold text-pine-800 transition-colors hover:border-pine-700 hover:bg-pine-50 sm:min-w-[140px]">
                 {backLabel}
               </button>
-              <button type="button" onClick={next} disabled={!canNext} className="flex h-12 min-w-[120px] items-center justify-center rounded-full bg-pine-800 px-8 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(18,55,42,0.55)] transition-colors hover:bg-pine-900 disabled:cursor-not-allowed disabled:bg-ink-400/50 disabled:shadow-none sm:min-w-[140px]">
+              <button type="button" onClick={next} disabled={!canNext} className="flex h-12 min-w-[120px] items-center justify-center rounded-full bg-pine-800 px-8 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(26, 44, 91,0.55)] transition-colors hover:bg-pine-900 disabled:cursor-not-allowed disabled:bg-ink-400/50 disabled:shadow-none sm:min-w-[140px]">
                 {nextLabel}
               </button>
             </div>

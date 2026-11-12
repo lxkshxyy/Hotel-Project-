@@ -12,34 +12,38 @@
   --font-weight-extrabold: 500;
   --font-weight-black: 500;
 
-  /* Front-desk palette: ledger-cloth pine, room-key brass, cool paper. */
-  --color-pine-950: #0b241b;
-  --color-pine-900: #12372a;
-  --color-pine-800: #1a4a39;
-  --color-pine-700: #24614b;
-  --color-pine-100: #dceae2;
-  --color-pine-50: #eef5f0;
+  /*
+   * Deep Blue Horizon palette: only four colours — cobalt #0047AB, white #FFFFFF,
+   * sky #AFDBF5 and navy #1A2C5B. The token names (pine, brass) are kept so the code didn't change;
+   * greys and the soft tint are light mixes of navy/sky with white.
+   */
+  --color-pine-950: #1a2c5b;
+  --color-pine-900: #1a2c5b;
+  --color-pine-800: #0047ab;
+  --color-pine-700: #0047ab;
+  --color-pine-100: #afdbf5;
+  --color-pine-50: #eaf5fc;
 
-  --color-brass-700: #8f6614;
-  --color-brass-600: #ad7d1d;
-  --color-brass-500: #c8962e;
-  --color-brass-200: #ecd7a6;
-  --color-brass-50: #fbf5e6;
+  --color-brass-700: #0047ab;
+  --color-brass-600: #1a2c5b;
+  --color-brass-500: #afdbf5;
+  --color-brass-200: #afdbf5;
+  --color-brass-50: #eaf5fc;
 
-  --color-paper: #f5f7f3;
-  --color-ink-900: #18221e;
-  --color-ink-700: #3a4741;
-  --color-ink-500: #5d6a64;
-  --color-ink-400: #8b9690;
-  --color-line: #dfe5e0;
-  --color-line-strong: #c4cec7;
+  --color-paper: #f4f8fc;
+  --color-ink-900: #1a2c5b;
+  --color-ink-700: #48567c;
+  --color-ink-500: #67728f;
+  --color-ink-400: #9aa1b6;
+  --color-line: #dce3ee;
+  --color-line-strong: #c3cddd;
 
   --color-live: #1f7a4d;
   --color-alert: #b3261e;
   --color-alert-50: #fdeceb;
 
-  --shadow-panel: 0 1px 2px rgba(18, 55, 42, 0.06), 0 8px 24px rgba(18, 55, 42, 0.06);
-  --shadow-lift: 0 20px 48px rgba(11, 36, 27, 0.18);
+  --shadow-panel: 0 1px 2px rgba(26, 44, 91, 0.06), 0 8px 24px rgba(26, 44, 91, 0.06);
+  --shadow-lift: 0 20px 48px rgba(26, 44, 91, 0.18);
 }
 
 @layer base {
@@ -57,7 +61,7 @@
     text-wrap: balance;
   }
   :focus-visible {
-    outline: 3px solid var(--color-brass-500);
+    outline: 3px solid var(--color-pine-700);
     outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {

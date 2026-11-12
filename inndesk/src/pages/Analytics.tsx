@@ -138,24 +138,24 @@ function Chart({ cats, bars, line, yTitle, fmt }: { cats: string[]; bars: number
         )}
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={left} x2={left + plotW} y1={y(t)} y2={y(t)} stroke="#e6ebe8" />
+            <line x1={left} x2={left + plotW} y1={y(t)} y2={y(t)} stroke="#E6EEF7" />
             <text x={left - 8} y={y(t) + 4} textAnchor="end" className="fill-ink-700 text-[11.5px]">
               {short(t)}
             </text>
           </g>
         ))}
-        <line x1={left} x2={left} y1={top} y2={top + plotH} stroke="#dfe5e0" />
+        <line x1={left} x2={left} y1={top} y2={top + plotH} stroke="#DCE3EE" />
         {bars.map((v, i) => (
           <g key={i} onMouseEnter={() => setTip(i)}>
             <rect x={left + step * i} y={top} width={step} height={plotH} fill={tip === i ? 'rgba(36,97,75,0.05)' : 'transparent'} />
-            {v > 0 && <rect x={x(i) - bw / 2} y={y(v)} width={bw} height={top + plotH - y(v)} rx={3} fill="#c8962e" />}
+            {v > 0 && <rect x={x(i) - bw / 2} y={y(v)} width={bw} height={top + plotH - y(v)} rx={3} fill="#AFDBF5" />}
           </g>
         ))}
         {line && (
           <>
             {/* A gap in the line where the previous year had no stays (e.g. no rate to compare). */}
-            <path d={line.map((v, i) => (v == null ? '' : `${i && line[i - 1] != null ? 'L' : 'M'}${x(i)},${y(v)}`)).join(' ')} fill="none" stroke="#24614b" strokeWidth={1.6} />
-            {line.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={3.5} fill="white" stroke="#24614b" strokeWidth={1.6} className="pointer-events-none" />))}
+            <path d={line.map((v, i) => (v == null ? '' : `${i && line[i - 1] != null ? 'L' : 'M'}${x(i)},${y(v)}`)).join(' ')} fill="none" stroke="#0047AB" strokeWidth={1.6} />
+            {line.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={3.5} fill="white" stroke="#0047AB" strokeWidth={1.6} className="pointer-events-none" />))}
           </>
         )}
         {cats.map((c, i) =>
@@ -186,8 +186,8 @@ function Legend({ name, compare }: { name: string; compare: boolean }) {
       {compare && (
         <span className="flex items-center gap-1.5">
           <svg width="18" height="8" aria-hidden="true">
-            <line x1="0" x2="18" y1="4" y2="4" stroke="#24614b" strokeWidth="1.6" />
-            <circle cx="9" cy="4" r="3" fill="white" stroke="#24614b" strokeWidth="1.6" />
+            <line x1="0" x2="18" y1="4" y2="4" stroke="#0047AB" strokeWidth="1.6" />
+            <circle cx="9" cy="4" r="3" fill="white" stroke="#0047AB" strokeWidth="1.6" />
           </svg>
           Previous year
         </span>
@@ -224,7 +224,7 @@ function ChartCard({ title, cats, longs, bars, line, unit, fmt, note }: { title:
       {table && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-line">
           <table className="w-full min-w-[520px] border-collapse text-[14px]">
-            <thead className="bg-[#eef4f0] text-left">
+            <thead className="bg-[#EAF5FC] text-left">
               <tr>
                 <th className="border-r border-line px-4 py-2.5 font-semibold">{cats.length > 16 || longs[0] === cats[0] ? 'Day' : 'Month'}</th>
                 <th className="border-r border-line px-4 py-2.5 font-semibold">
@@ -239,7 +239,7 @@ function ChartCard({ title, cats, longs, bars, line, unit, fmt, note }: { title:
               {longs.map((m, i) => {
                 const d = line ? pct(bars[i], line[i]) : null
                 return (
-                  <tr key={m} className="border-t border-line even:bg-[#f7faf8]">
+                  <tr key={m} className="border-t border-line even:bg-[#F4F8FC]">
                     <td className="border-r border-line px-4 py-2">{m}</td>
                     <td className="border-r border-line px-4 py-2">{fmt(bars[i])}</td>
                     {line && <td className="border-r border-line px-4 py-2">{line[i] == null ? '0' : fmt(line[i]!)}</td>}

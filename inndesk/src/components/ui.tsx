@@ -9,9 +9,9 @@ import type { ListingStatus } from '../lib/types'
 export function Mark({ size = 34 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="14" fill="#12372A" />
-      <path d="M22 14h20a6 6 0 0 1 6 6v18L32 52 16 38V20a6 6 0 0 1 6-6z" fill="#C8962E" />
-      <circle cx="32" cy="24" r="4.5" fill="#12372A" />
+      <rect width="64" height="64" rx="14" fill="#1A2C5B" />
+      <path d="M22 14h20a6 6 0 0 1 6 6v18L32 52 16 38V20a6 6 0 0 1 6-6z" fill="#AFDBF5" />
+      <circle cx="32" cy="24" r="4.5" fill="#1A2C5B" />
     </svg>
   )
 }
@@ -27,7 +27,7 @@ export function Logo({ to = '/', light = false }: { to?: string; light?: boolean
 
 const tagStyle: Record<ListingStatus, string> = {
   live: 'bg-brass-500 text-pine-950',
-  paused: 'bg-[#e6e9e6] text-ink-700',
+  paused: 'bg-[#E6EEF7] text-ink-700',
   draft: 'border border-dashed border-ink-400 bg-white text-ink-700',
 }
 const tagText: Record<ListingStatus, string> = { live: 'Live', paused: 'Paused', draft: 'Draft' }

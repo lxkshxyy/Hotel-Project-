@@ -37,7 +37,7 @@ export default function Rooms({ l, commit, base }: InfoProps) {
             <Plus className="h-4 w-4" aria-hidden="true" /> Create New Room
           </button>
         </div>
-        <div className="hidden grid-cols-[1fr_1.6fr_0.9fr_1fr] border-y border-line-strong bg-[#e9ecea] text-[14px] font-semibold text-ink-900 md:grid">
+        <div className="hidden grid-cols-[1fr_1.6fr_0.9fr_1fr] border-y border-line-strong bg-[#E6EEF7] text-[14px] font-semibold text-ink-900 md:grid">
           <span className="px-4 py-3">Room Name</span>
           <span className="border-l border-line-strong px-4 py-3">Description</span>
           <span className="border-l border-line-strong px-4 py-3">Actions</span>
@@ -47,7 +47,7 @@ export default function Rooms({ l, commit, base }: InfoProps) {
         {l.rooms.map((r, i) => {
           const plans = ratePlansOf(r)
           return (
-            <div key={r.id} className={`grid gap-3 border-b border-line px-4 py-4 text-[14.5px] text-ink-900 last:border-b-0 md:grid-cols-[1fr_1.6fr_0.9fr_1fr] md:gap-0 md:p-0 ${i % 2 ? '' : 'md:bg-[#f7f8f7]'}`}>
+            <div key={r.id} className={`grid gap-3 border-b border-line px-4 py-4 text-[14.5px] text-ink-900 last:border-b-0 md:grid-cols-[1fr_1.6fr_0.9fr_1fr] md:gap-0 md:p-0 ${i % 2 ? '' : 'md:bg-[#F4F8FC]'}`}>
               <div className="md:px-4 md:py-4">
                 <strong className="font-semibold md:font-normal">{r.name.trim() || `Room type ${i + 1}`}</strong>
                 <span className="block text-[13px] text-ink-500">

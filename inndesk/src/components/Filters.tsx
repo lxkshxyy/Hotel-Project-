@@ -31,7 +31,7 @@ export function Pop({ label, active, children, align = 'left', width = 260 }: { 
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} style={{ width }} className={`absolute top-full z-40 mt-3 max-w-[calc(100vw-32px)] rounded-xl bg-white p-2 shadow-[0_12px_32px_-10px_rgba(18,55,42,0.28)] ring-1 ring-line ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} style={{ width }} className={`absolute top-full z-40 mt-3 max-w-[calc(100vw-32px)] rounded-xl bg-white p-2 shadow-[0_12px_32px_-10px_rgba(26, 44, 91,0.28)] ring-1 ring-line ${align === 'right' ? 'right-0' : 'left-0'}`}>
             <span aria-hidden="true" className={`absolute -top-[6px] h-3 w-3 rotate-45 border-t border-l border-line bg-white ${align === 'right' ? 'right-8' : 'left-8'}`} />
             <div className="relative">{children(() => setOpen(false))}</div>
           </motion.div>
@@ -75,7 +75,7 @@ export function MultiFilter({ allLabel, options, selected, onChange, style = 'ti
       {() => (
         <div className="flex flex-col">
           {search && (
-            <label className="mx-1 mt-1 mb-2 flex h-11 items-center gap-2 rounded-full bg-[#cfdfd5] px-4 ring-pine-700 focus-within:bg-white focus-within:ring-1">
+            <label className="mx-1 mt-1 mb-2 flex h-11 items-center gap-2 rounded-full bg-[#AFDBF5] px-4 ring-pine-700 focus-within:bg-white focus-within:ring-1">
               <Search className="h-4 w-4 text-ink-900" aria-hidden="true" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="min-w-0 flex-1 bg-transparent text-[14px] outline-none" aria-label={`Search ${unit}`} />
             </label>
@@ -118,7 +118,7 @@ export function PageSize({ value, onChange, sizes = [10, 100, 1000] }: { value: 
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div role="listbox" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }} className="absolute top-full left-8 z-40 mt-3 w-[140px] rounded-xl bg-white p-2 shadow-[0_12px_32px_-10px_rgba(18,55,42,0.28)] ring-1 ring-line">
+          <motion.div role="listbox" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }} className="absolute top-full left-8 z-40 mt-3 w-[140px] rounded-xl bg-white p-2 shadow-[0_12px_32px_-10px_rgba(26, 44, 91,0.28)] ring-1 ring-line">
             <span aria-hidden="true" className="absolute -top-[6px] left-6 h-3 w-3 rotate-45 border-t border-l border-line bg-white" />
             {sizes.map((s) => (
               <button
@@ -151,8 +151,8 @@ export function SortHead({ label, dir, onClick, className = '' }: { label: strin
     <button type="button" onClick={onClick} className={`inline-flex items-center gap-1.5 font-semibold text-ink-900 ${className}`} aria-label={`Sort by ${label}`}>
       {label}
       <svg viewBox="0 0 10 14" className="h-3.5 w-2.5" aria-hidden="true">
-        <path d="M5 1 9 5.5H1z" fill={dir === 'asc' ? 'currentColor' : '#8b9690'} />
-        <path d="M5 13 1 8.5h8z" fill={dir === 'desc' ? 'currentColor' : '#8b9690'} />
+        <path d="M5 1 9 5.5H1z" fill={dir === 'asc' ? 'currentColor' : '#9AA1B6'} />
+        <path d="M5 13 1 8.5h8z" fill={dir === 'desc' ? 'currentColor' : '#9AA1B6'} />
       </svg>
     </button>
   )
@@ -207,7 +207,7 @@ export function ApplyFilter({ label, options, selected, onChange, placeholder, a
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div role="dialog" aria-label={`Filter by ${label}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className={`absolute top-full z-40 mt-2.5 w-[300px] rounded-xl bg-white shadow-[0_14px_36px_-10px_rgba(18,55,42,0.3)] ring-1 ring-line max-sm:fixed max-sm:inset-x-4 max-sm:top-[22vh] max-sm:mt-0 max-sm:w-auto ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          <motion.div role="dialog" aria-label={`Filter by ${label}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className={`absolute top-full z-40 mt-2.5 w-[300px] rounded-xl bg-white shadow-[0_14px_36px_-10px_rgba(26, 44, 91,0.3)] ring-1 ring-line max-sm:fixed max-sm:inset-x-4 max-sm:top-[22vh] max-sm:mt-0 max-sm:w-auto ${align === 'right' ? 'right-0' : 'left-0'}`}>
             <div className="p-4 pb-2">
               <label className="flex h-11 items-center gap-2 rounded-lg border border-ink-400 bg-white px-3 focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700">
                 <Search className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
@@ -239,7 +239,7 @@ export function ApplyFilter({ label, options, selected, onChange, placeholder, a
                   onChange(draft)
                   setOpen(false)
                 }}
-                className="h-11 flex-[1.4] rounded-lg bg-pine-800 text-[15px] font-semibold text-white shadow-[0_6px_14px_-6px_rgba(18,55,42,0.55)] hover:bg-pine-900"
+                className="h-11 flex-[1.4] rounded-lg bg-pine-800 text-[15px] font-semibold text-white shadow-[0_6px_14px_-6px_rgba(26, 44, 91,0.55)] hover:bg-pine-900"
               >
                 Apply
               </button>

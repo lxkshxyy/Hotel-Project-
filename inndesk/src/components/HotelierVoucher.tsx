@@ -148,7 +148,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-0 overflow-hidden rounded-lg bg-[#f6f7f6] sm:grid-cols-2">
+      <div className="mt-6 grid gap-0 overflow-hidden rounded-lg bg-[#F4F8FC] sm:grid-cols-2">
         <div className="p-5 sm:border-r-2 sm:border-ink-700">
           <span className={label}>Primary guest details</span>
           <span className="mt-1 flex items-center gap-2 text-[18px] font-medium text-ink-900">

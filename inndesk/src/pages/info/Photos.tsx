@@ -19,7 +19,7 @@ export default function Photos({ l, commit, base }: InfoProps) {
 
   const Thumb = ({ label, list }: { label: string; list: ListingPhoto[] }) => (
     <button type="button" onClick={() => list.length && setView({ title: label, list, i: 0 })} disabled={!list.length} className="group w-[116px] shrink-0 text-left disabled:cursor-default">
-      <span className="relative block h-[76px] w-[116px] overflow-hidden rounded-md bg-[#e9ecea]">
+      <span className="relative block h-[76px] w-[116px] overflow-hidden rounded-md bg-[#E6EEF7]">
         {list[0] ? <img src={list[0].url} alt="" className="h-full w-full object-cover transition-transform group-hover:scale-105" /> : <ImagePlus className="absolute inset-0 m-auto h-6 w-6 text-ink-400" aria-hidden="true" />}
         <span className="absolute top-1 right-1 flex items-center gap-1 rounded bg-ink-900/60 px-1.5 text-[11.5px] font-semibold text-white">
           {list.length} <Images className="h-3 w-3" aria-hidden="true" />
@@ -101,7 +101,7 @@ export default function Photos({ l, commit, base }: InfoProps) {
                   className={`relative overflow-hidden rounded-md ring-offset-2 hover:ring-2 hover:ring-pine-700 ${i === 0 ? 'ring-2 ring-brass-500' : ''}`}
                 >
                   <img src={p.url} alt="" className="aspect-[4/3] w-full object-cover" />
-                  {i === 0 && <span className="absolute top-1 left-1 rounded bg-brass-500 px-1.5 text-[11px] font-bold text-white">Cover</span>}
+                  {i === 0 && <span className="absolute top-1 left-1 rounded bg-brass-500 px-1.5 text-[11px] font-bold text-pine-950">Cover</span>}
                 </button>
               ))}
             </div>

@@ -24,7 +24,7 @@ function Month({ y, m, start, end, hover, onPick, onHover, min }: { y: number; m
   const last = end || (start && hover > start ? hover : '')
   return (
     <div className="min-w-0 flex-1">
-      <div className="grid grid-cols-7 bg-[#eef4f0] py-2.5 text-center text-[14px] font-semibold text-ink-900">
+      <div className="grid grid-cols-7 bg-[#EAF5FC] py-2.5 text-center text-[14px] font-semibold text-ink-900">
         {week.map((w) => (
           <span key={w}>{w}</span>
         ))}

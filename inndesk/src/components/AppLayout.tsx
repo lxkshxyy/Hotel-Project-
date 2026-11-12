@@ -122,7 +122,7 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
     timer.current = window.setTimeout(() => setFly(null), 180)
   }
   const tile = (on: boolean) => `group relative flex w-full flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[11.5px] leading-[1.2] no-underline transition-colors ${on ? 'bg-pine-50 font-bold text-pine-900 ring-1 ring-pine-100' : 'text-ink-700 hover:bg-paper'}`
-  const badge = <span className="absolute top-0.5 right-2.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>
+  const badge = <span className="absolute top-0.5 right-2.5 rounded-full bg-[#0047AB] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>
   const current = items.find((i) => i.key === fly?.key)
   return (
     <nav aria-label="Property menu" className="sticky top-[68px] z-30 hidden h-[calc(100dvh-68px)] w-[96px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-line bg-white px-1.5 py-2 [scrollbar-width:none] md:flex print:hidden">
@@ -152,14 +152,14 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
       })}
       <AnimatePresence>
         {current?.links && fly && (
-          <motion.div role="menu" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.13 }} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={later} style={{ top: fly.top }} className="fixed left-[100px] z-50 w-[250px] rounded-xl bg-white py-2 shadow-[0_14px_36px_-10px_rgba(18,55,42,0.3)] ring-1 ring-line">
+          <motion.div role="menu" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.13 }} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={later} style={{ top: fly.top }} className="fixed left-[100px] z-50 w-[250px] rounded-xl bg-white py-2 shadow-[0_14px_36px_-10px_rgba(26, 44, 91,0.3)] ring-1 ring-line">
             {current.links.map((x) => (
               <Link key={x.label} role="menuitem" to={x.to} className={`flex items-start gap-2 px-4 py-2.5 text-[14.5px] no-underline hover:bg-pine-50 ${isOn(x.to) ? 'font-semibold text-pine-900' : 'text-ink-900'}`}>
                 <span className="min-w-0 flex-1">
                   {x.label}
                   {x.sub && <span className="block text-[13px] text-ink-500">{x.sub}</span>}
                 </span>
-                {x.isNew && <span className="mt-0.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>}
+                {x.isNew && <span className="mt-0.5 rounded-full bg-[#0047AB] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>}
                 {x.dot && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-alert" aria-label="needs attention" />}
               </Link>
             ))}
@@ -204,7 +204,7 @@ function PropertyBottomBar({ items }: { items: MenuItem[] }) {
                   {i.to ? (
                     <Link to={i.to} className="flex items-center gap-3 py-1.5 text-[15.5px] font-semibold text-ink-900 no-underline">
                       <NavIcon name={i.icon} className="h-8 w-8" /> {i.label}
-                      {i.isNew && <span className="rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
+                      {i.isNew && <span className="rounded-full bg-[#0047AB] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
                     </Link>
                   ) : (
                     <>
@@ -216,7 +216,7 @@ function PropertyBottomBar({ items }: { items: MenuItem[] }) {
                           <Link key={x.label} to={x.to} className="flex items-center gap-2 py-1.5 text-[14.5px] text-ink-700 no-underline">
                             {x.label}
                             {x.sub && <span className="text-ink-500">· {x.sub}</span>}
-                            {x.isNew && <span className="rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
+                            {x.isNew && <span className="rounded-full bg-[#0047AB] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
                             {x.dot && <span className="h-2 w-2 rounded-full bg-alert" aria-label="needs attention" />}
                           </Link>
                         ))}
@@ -247,7 +247,7 @@ export default function AppLayout() {
 
   return (
     <RequireOwner>
-      <div className="flex min-h-dvh flex-col bg-[#f1f3f1]">
+      <div className="flex min-h-dvh flex-col bg-[#F4F8FC]">
         <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between gap-3 border-b border-line bg-white px-3 sm:px-5 print:hidden">
           <div className="flex min-w-0 items-center gap-4">
             {prop && (

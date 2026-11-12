@@ -269,7 +269,7 @@ function Reach({ l, set, base }: InfoProps) {
                 <Radio name="vehicles" checked={a.vehicles === 'selected'} onChange={() => putA({ vehicles: 'selected' })} hint="Note: Do not select vehicles that frequently get stuck or cannot manage the terrain.">
                   Only selected vehicle types can reach the property or the nearest drop-off point
                 </Radio>
-                <div className={`ml-7 flex flex-col gap-3 rounded-lg bg-[#f4f6f5] p-4 transition-opacity ${a.vehicles === 'selected' ? '' : 'pointer-events-none opacity-50'}`}>
+                <div className={`ml-7 flex flex-col gap-3 rounded-lg bg-[#F4F8FC] p-4 transition-opacity ${a.vehicles === 'selected' ? '' : 'pointer-events-none opacity-50'}`}>
                   {vehicleTypes.map(([name, text]) => (
                     <label key={name} className="flex cursor-pointer items-start gap-3">
                       <input type="checkbox" disabled={a.vehicles !== 'selected'} checked={a.types?.includes(name) ?? false} onChange={() => putA({ types: a.types?.includes(name) ? a.types.filter((t) => t !== name) : [...(a.types ?? []), name] })} className="mt-1 h-4 w-4 accent-pine-800" />
@@ -283,7 +283,7 @@ function Reach({ l, set, base }: InfoProps) {
               </div>
             </div>
           </div>
-          <div className="border-t-8 border-[#f1f3f2] p-4 sm:p-6">
+          <div className="border-t-8 border-[#F4F8FC] p-4 sm:p-6">
             <h3 className="text-[22px] font-bold text-ink-900">Directions and Landmarks</h3>
             <p className="mt-3 flex items-start gap-2.5 rounded-lg bg-pine-50 px-3 py-2.5 text-[13.5px] font-medium text-pine-900">
               <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -296,7 +296,7 @@ function Reach({ l, set, base }: InfoProps) {
                 <button type="button" onClick={() => setShowSample((s) => !s)} className="mt-3 text-[14px] font-semibold text-pine-800 hover:underline">
                   {showSample ? 'Hide the sample' : 'See a Sample Direction Description'}
                 </button>
-                {showSample && <pre className="mt-2 rounded-lg bg-[#f4f6f5] p-3 font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700">{sample}</pre>}
+                {showSample && <pre className="mt-2 rounded-lg bg-[#F4F8FC] p-3 font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700">{sample}</pre>}
               </div>
               <div>
                 <div className="overflow-hidden rounded-lg border border-ink-400 focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700">
@@ -324,7 +324,7 @@ function Reach({ l, set, base }: InfoProps) {
         <h3 className="border-b border-line px-4 py-3.5 text-[17px] font-semibold text-ink-900">Property Location as on {site.marketplace}</h3>
         <div className="p-4">
           {has ? (
-            <a href={mapHref} target="_blank" rel="noreferrer" className="relative block h-[160px] overflow-hidden rounded-lg bg-[#e8ece9] no-underline">
+            <a href={mapHref} target="_blank" rel="noreferrer" className="relative block h-[160px] overflow-hidden rounded-lg bg-[#E6EEF7] no-underline">
               <img src={tileUrl(l.location.lat!, l.location.lng!)} alt="" className="h-full w-full object-cover" />
               <span className="absolute inset-0 flex items-center justify-center">
                 <span className="flex items-center gap-1.5 rounded-lg border border-pine-800 bg-white px-3 py-2 text-[14px] font-semibold text-pine-800 shadow">
@@ -333,7 +333,7 @@ function Reach({ l, set, base }: InfoProps) {
               </span>
             </a>
           ) : (
-            <p className="rounded-lg bg-[#f4f6f5] p-3 text-[13.5px] text-ink-700">The map pin isn’t set yet.</p>
+            <p className="rounded-lg bg-[#F4F8FC] p-3 text-[13.5px] text-ink-700">The map pin isn’t set yet.</p>
           )}
           <span className="mt-3 flex items-center gap-1.5 text-[12.5px] text-ink-500">
             Address <CopyBtn text={addr} label="address" />

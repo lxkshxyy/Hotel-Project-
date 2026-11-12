@@ -69,7 +69,7 @@ function RowMenu({ l, onResume, onPause, onDelete }: { l: Listing; onResume: () 
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div ref={menuRef} role="menu" style={pos ?? undefined} initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ duration: 0.14 }} className="fixed z-50 w-[230px] text-left overflow-hidden rounded-xl bg-white py-1.5 shadow-[0_16px_40px_-12px_rgba(18,55,42,0.3)] ring-1 ring-line">
+          <motion.div ref={menuRef} role="menu" style={pos ?? undefined} initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ duration: 0.14 }} className="fixed z-50 w-[230px] text-left overflow-hidden rounded-xl bg-white py-1.5 shadow-[0_16px_40px_-12px_rgba(26, 44, 91,0.3)] ring-1 ring-line">
             {l.status !== 'live' && (
               <button role="menuitem" type="button" className={item} onClick={pick(onResume)}>
                 <Play className="h-4 w-4 text-pine-800" aria-hidden="true" /> Resume listing
@@ -271,7 +271,7 @@ export default function Properties() {
         <div className="relative mt-5 overflow-hidden rounded-xl border border-line">
           <div className="relative overflow-x-auto">
             <table className="w-full border-collapse md:min-w-[860px]">
-              <thead className="bg-[#f3f6f4] text-[13.5px]">
+              <thead className="bg-[#F4F8FC] text-[13.5px]">
                 <tr>
                   <th className="px-4 py-3.5 text-left">
                     <SortHead label="Name" dir={dir('name')} onClick={() => toggleSort('name')} />
@@ -295,7 +295,7 @@ export default function Properties() {
                   {pageRows.map(({ l, revenue, adr, score, city, state }) => {
                     const href = l.status === 'draft' ? `${editHref(l)}?step=basics` : `/app/properties/${l.id}`
                     return (
-                      <motion.tr key={l.id} layout initial={{ opacity: 0 }} animate={{ opacity: working === l.id ? 0.5 : 1 }} exit={{ opacity: 0 }} className="border-t border-line transition-colors hover:bg-[#f8faf9]">
+                      <motion.tr key={l.id} layout initial={{ opacity: 0 }} animate={{ opacity: working === l.id ? 0.5 : 1 }} exit={{ opacity: 0 }} className="border-t border-line transition-colors hover:bg-[#F4F8FC]">
                         <td className="px-4 py-3">
                           <Link to={href} className="group flex items-center gap-3.5 no-underline">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-pine-50 to-brass-50 ring-1 ring-line">
@@ -326,7 +326,7 @@ export default function Properties() {
           </div>
           {pageRows.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-4 py-16 text-center">
-              <TriangleAlert className="h-12 w-12 fill-[#e9eeeb] text-[#c5cfc9]" strokeWidth={1.6} aria-hidden="true" />
+              <TriangleAlert className="h-12 w-12 fill-[#E6EEF7] text-[#C3CDDD]" strokeWidth={1.6} aria-hidden="true" />
               <strong className="mt-2 text-[16px] font-semibold text-ink-900">{filtered ? 'No properties found' : shownTab === 'live' ? 'No Active Properties' : shownTab === 'draft' ? 'No In-Progress Properties' : 'No Inactive Properties'}</strong>
               <p className="max-w-md text-[14px] text-ink-700">{filtered ? 'Try another search or change the filters.' : shownTab === 'live' ? 'Properties appear here once they are live. Finish a listing to start getting bookings.' : shownTab === 'draft' ? 'You don’t have any properties in the listing process.' : 'Paused properties appear here.'}</p>
               <button type="button" onClick={filtered ? clearAll : () => setPicking(true)} className="mt-3 h-11 rounded-full border border-line-strong px-6 text-[15px] font-semibold text-pine-800 hover:border-pine-700 hover:bg-pine-50">

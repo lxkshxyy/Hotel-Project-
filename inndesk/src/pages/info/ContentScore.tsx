@@ -44,7 +44,7 @@ function Ring({ value }: { value: number }) {
   return (
     <svg viewBox="0 0 128 128" className="h-[120px] w-[120px] shrink-0 sm:h-[132px] sm:w-[132px]" role="img" aria-label={`Content score ${value} out of 100`}>
       <circle cx="64" cy="64" r={r} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="12" />
-      <motion.circle cx="64" cy="64" r={r} fill="none" stroke="#1d5c45" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - value / 100) }} transition={{ duration: 0.9, ease: 'easeOut' }} transform="rotate(-90 64 64)" />
+      <motion.circle cx="64" cy="64" r={r} fill="none" stroke="#0047AB" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - value / 100) }} transition={{ duration: 0.9, ease: 'easeOut' }} transform="rotate(-90 64 64)" />
       <text x="64" y="70" textAnchor="middle" className="fill-ink-900" style={{ fontSize: 20, fontWeight: 600 }}>
         {value}/100
       </text>
@@ -64,10 +64,10 @@ export default function ContentScore({ l, base }: InfoProps) {
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
       <div className="flex min-w-0 flex-col gap-5">
-        <section className="relative overflow-hidden rounded-lg bg-gradient-to-r from-[#bfe6cf] via-[#cdeedb] to-[#9fd9b8] px-5 py-6 sm:px-7">
+        <section className="relative overflow-hidden rounded-lg bg-gradient-to-r from-[#AFDBF5] via-[#EAF5FC] to-[#AFDBF5] px-5 py-6 sm:px-7">
           <svg aria-hidden="true" viewBox="0 0 600 200" preserveAspectRatio="none" className="absolute inset-0 h-full w-full opacity-40">
             <path d="M0 140 C 150 90, 300 190, 600 110 L600 200 L0 200 Z" fill="#ffffff" />
-            <path d="M0 170 C 200 120, 380 200, 600 150 L600 200 L0 200 Z" fill="#e8f6ee" />
+            <path d="M0 170 C 200 120, 380 200, 600 150 L600 200 L0 200 Z" fill="#EAF5FC" />
           </svg>
           <div className="relative flex flex-col items-center gap-5 sm:flex-row">
             <Ring value={score} />
@@ -117,7 +117,7 @@ export default function ContentScore({ l, base }: InfoProps) {
                   {isOpen ? 'Hide' : 'Show'} <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                 </button>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e6ebe8]">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E6EEF7]">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${(p.got / p.max) * 100}%` }} transition={{ duration: 0.7 }} className={`h-full rounded-full ${done ? 'bg-live' : 'bg-brass-500'}`} />
               </div>
               {isOpen && (
@@ -126,7 +126,7 @@ export default function ContentScore({ l, base }: InfoProps) {
                     <li className="text-[14px] text-ink-700">Nothing to do here.</li>
                   ) : (
                     p.tasks.map((t) => (
-                      <li key={t.text} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#f6f8f7] px-3 py-2.5 text-[14px] text-ink-900">
+                      <li key={t.text} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F4F8FC] px-3 py-2.5 text-[14px] text-ink-900">
                         <span>
                           {t.text} <span className="text-[12.5px] text-live">+{t.pts}</span>
                         </span>

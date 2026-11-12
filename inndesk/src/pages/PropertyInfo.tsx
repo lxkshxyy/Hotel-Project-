@@ -110,7 +110,7 @@ export default function PropertyInfo() {
 
       <AnimatePresence>
         {(dirty || error) && (
-          <motion.div initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }} transition={{ duration: 0.2 }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 shadow-[0_-6px_18px_-12px_rgba(18,55,42,0.35)] backdrop-blur max-md:bottom-[64px] md:left-[96px]">
+          <motion.div initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }} transition={{ duration: 0.2 }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 shadow-[0_-6px_18px_-12px_rgba(26, 44, 91,0.35)] backdrop-blur max-md:bottom-[64px] md:left-[96px]">
             <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3 px-4 py-3 sm:px-8">
               <span className={`min-w-0 text-[13.5px] ${error ? 'text-alert' : 'text-ink-700'}`}>{error || 'You have unsaved changes.'}</span>
               <div className="flex shrink-0 gap-3">

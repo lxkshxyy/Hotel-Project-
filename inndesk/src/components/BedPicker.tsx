@@ -12,21 +12,21 @@ export function BedIcon({ type, className = 'h-9 w-12' }: { type: string; classN
   const floor = type === 'Futon' || type === 'Floor Mattress'
   const deck = (y: number) => (
     <g>
-      {!floor && <rect x={x0 - 1.5} y={y - 9} width={3} height={14} rx={1} fill="#8f6614" />}
-      <rect x={x0} y={y} width={w} height={7} rx={1.5} fill="#ad7d1d" />
-      <rect x={x0 + 1} y={y - 3} width={w - 2} height={5} rx={2} fill="#dceae2" stroke="#24614b" strokeWidth={0.8} />
-      <rect x={x0 + 2.5} y={y - 6} width={Math.min(9, w / 2.6)} height={4} rx={1.6} fill="#ffffff" stroke="#24614b" strokeWidth={0.6} />
-      {w > 26 && <rect x={x0 + w - 2.5 - Math.min(9, w / 2.6)} y={y - 6} width={Math.min(9, w / 2.6)} height={4} rx={1.6} fill="#ffffff" stroke="#24614b" strokeWidth={0.6} />}
+      {!floor && <rect x={x0 - 1.5} y={y - 9} width={3} height={14} rx={1} fill="#0047AB" />}
+      <rect x={x0} y={y} width={w} height={7} rx={1.5} fill="#0047AB" />
+      <rect x={x0 + 1} y={y - 3} width={w - 2} height={5} rx={2} fill="#AFDBF5" stroke="#0047AB" strokeWidth={0.8} />
+      <rect x={x0 + 2.5} y={y - 6} width={Math.min(9, w / 2.6)} height={4} rx={1.6} fill="#ffffff" stroke="#0047AB" strokeWidth={0.6} />
+      {w > 26 && <rect x={x0 + w - 2.5 - Math.min(9, w / 2.6)} y={y - 6} width={Math.min(9, w / 2.6)} height={4} rx={1.6} fill="#ffffff" stroke="#0047AB" strokeWidth={0.6} />}
     </g>
   )
   return (
     <svg viewBox="0 0 48 36" className={className} aria-hidden="true">
       {sofa ? (
         <g>
-          <rect x={x0} y={14} width={w} height={8} rx={2} fill="#dceae2" stroke="#24614b" strokeWidth={0.8} />
-          <rect x={x0} y={22} width={w} height={6} rx={1.5} fill="#ad7d1d" />
-          <rect x={x0 - 2} y={16} width={4} height={12} rx={1.5} fill="#8f6614" />
-          <rect x={x0 + w - 2} y={16} width={4} height={12} rx={1.5} fill="#8f6614" />
+          <rect x={x0} y={14} width={w} height={8} rx={2} fill="#AFDBF5" stroke="#0047AB" strokeWidth={0.8} />
+          <rect x={x0} y={22} width={w} height={6} rx={1.5} fill="#0047AB" />
+          <rect x={x0 - 2} y={16} width={4} height={12} rx={1.5} fill="#0047AB" />
+          <rect x={x0 + w - 2} y={16} width={4} height={12} rx={1.5} fill="#0047AB" />
         </g>
       ) : bunk ? (
         <g>
@@ -46,32 +46,32 @@ export function BathIcon({ type, className = 'h-9 w-12' }: { type: string; class
   const has = (w: string) => (item?.size ?? '').toLowerCase().includes(w)
   return (
     <svg viewBox="0 0 48 36" className={className} aria-hidden="true">
-      <rect x={2} y={3} width={44} height={30} rx={3} fill="#eef4f0" stroke="#cfe0d6" />
-      <line x1={2} y1={27} x2={46} y2={27} stroke="#cfe0d6" />
+      <rect x={2} y={3} width={44} height={30} rx={3} fill="#EAF5FC" stroke="#AFDBF5" />
+      <line x1={2} y1={27} x2={46} y2={27} stroke="#AFDBF5" />
       {has('shower') && (
-        <g stroke="#24614b" strokeWidth={1.2} fill="none">
+        <g stroke="#0047AB" strokeWidth={1.2} fill="none">
           <path d="M8 27 V8 h5" />
-          <path d="M11 8 h5 l1.5 2.5 h-6z" fill="#ad7d1d" stroke="#8f6614" />
+          <path d="M11 8 h5 l1.5 2.5 h-6z" fill="#0047AB" stroke="#0047AB" />
           <path d="M12.5 13 v2 M14.5 13 v3 M16.5 13 v2" stroke="#7fb3d5" />
         </g>
       )}
       {has('bathtub') && (
         <g>
-          <path d={`M${has('shower') ? 6 : 5} 20 h17 v3 a3 3 0 0 1 -3 3 h-11 a3 3 0 0 1 -3 -3z`} fill="#ffffff" stroke="#24614b" strokeWidth={1} />
-          <rect x={has('shower') ? 5 : 4} y={18.6} width={19} height={1.8} rx={0.9} fill="#ad7d1d" />
+          <path d={`M${has('shower') ? 6 : 5} 20 h17 v3 a3 3 0 0 1 -3 3 h-11 a3 3 0 0 1 -3 -3z`} fill="#ffffff" stroke="#0047AB" strokeWidth={1} />
+          <rect x={has('shower') ? 5 : 4} y={18.6} width={19} height={1.8} rx={0.9} fill="#0047AB" />
         </g>
       )}
       {has('toilet') && (
-        <g fill="#ffffff" stroke="#24614b" strokeWidth={1}>
+        <g fill="#ffffff" stroke="#0047AB" strokeWidth={1}>
           <rect x={36} y={12} width={6} height={7} rx={1} />
           <path d="M31 19 h11 v1.5 a5 5 0 0 1 -5 5 h-1 a5 5 0 0 1 -5 -5z" />
         </g>
       )}
       {has('sink') && (
         <g>
-          <rect x={has('toilet') ? 24 : 30} y={7} width={6} height={4} rx={1} fill="#dceae2" stroke="#24614b" strokeWidth={0.6} />
-          <path d={`M${has('toilet') ? 23 : 29} 15 h8 a4 4 0 0 1 -4 4 a4 4 0 0 1 -4 -4z`} fill="#ffffff" stroke="#24614b" strokeWidth={1} />
-          <rect x={has('toilet') ? 26.3 : 32.3} y={19} width={1.4} height={8} fill="#8f6614" />
+          <rect x={has('toilet') ? 24 : 30} y={7} width={6} height={4} rx={1} fill="#AFDBF5" stroke="#0047AB" strokeWidth={0.6} />
+          <path d={`M${has('toilet') ? 23 : 29} 15 h8 a4 4 0 0 1 -4 4 a4 4 0 0 1 -4 -4z`} fill="#ffffff" stroke="#0047AB" strokeWidth={1} />
+          <rect x={has('toilet') ? 26.3 : 32.3} y={19} width={1.4} height={8} fill="#0047AB" />
         </g>
       )}
     </svg>

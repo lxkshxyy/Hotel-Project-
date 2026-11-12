@@ -225,7 +225,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
           )}
         </Row>
 
-        <div className="border-t border-line bg-[#f1f3f1] px-4 pt-6 pb-4 sm:px-5">
+        <div className="border-t border-line bg-[#F4F8FC] px-4 pt-6 pb-4 sm:px-5">
           <h3 className="text-[20px] font-bold text-ink-900">Contact details to be shared with guests</h3>
           <p className="text-[14px] text-ink-500">Guests see these details after they book</p>
         </div>
@@ -244,7 +244,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
           </span>
         </Row>
         <Row id="b-phone" title="Mobile number" error={e.phone ?? e.whatsapp}>
-          <span className={`flex overflow-hidden rounded-[10px] border focus-within:border-pine-700 ${phoneVerified ? 'border-line bg-[#eef0ee]' : e.phone ? 'border-alert bg-white' : 'border-line-strong bg-white'}`}>
+          <span className={`flex overflow-hidden rounded-[10px] border focus-within:border-pine-700 ${phoneVerified ? 'border-line bg-[#E6EEF7]' : e.phone ? 'border-alert bg-white' : 'border-line-strong bg-white'}`}>
             <span className={`flex items-center px-3 text-sm font-bold ${phoneVerified ? 'text-ink-400' : 'bg-paper text-ink-700'}`}>+91</span>
             <input
               id="b-phone"
@@ -434,7 +434,7 @@ function Location({ l, set, show, onSaveExit }: { l: Listing; set: Set; show: bo
       <h2 className="mt-1 text-[32px] font-bold text-ink-900">Location</h2>
 
       <div ref={box} className="relative mt-6">
-        <span className={`flex items-center gap-3 rounded-full bg-[#cfdfd5] px-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none rounded-t-[24px]' : ''}`}>
+        <span className={`flex items-center gap-3 rounded-full bg-[#AFDBF5] px-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-pine-700 focus-within:shadow-[0_0_0_3px_var(--color-pine-100)] ${open && results.length ? 'rounded-b-none rounded-t-[24px]' : ''}`}>
           <Search className="h-5 w-5 shrink-0 text-ink-900" aria-hidden="true" />
           <input
             role="combobox"
@@ -656,7 +656,7 @@ const SQFT_PER_SQM = 10.7639
 /** The numbered line on the left of Create Room. */
 function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' }) {
   return (
-    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-brass-500 text-white ring-4 ring-brass-200' : state === 'done' ? 'bg-pine-800 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
+    <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${state === 'active' ? 'bg-pine-700 text-white ring-4 ring-pine-100' : state === 'done' ? 'bg-pine-900 text-white' : 'bg-white text-ink-500 ring-2 ring-line-strong'}`}>
       {state === 'done' ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Done" /> : n}
     </span>
   )
@@ -908,7 +908,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
             {stepper(r.extraBedMax ?? 1, (v) => setBeds(b, { extraBedMax: Math.max(1, v) }), 'extra beds', 5)}
           </Row>
         )}
-        <div className="border-t-8 border-[#f1f3f1] px-4 pt-5 sm:px-5">
+        <div className="border-t-8 border-[#F4F8FC] px-4 pt-5 sm:px-5">
           <h4 className="text-[18px] font-black text-ink-900">Occupancy</h4>
           <p className="text-[14px] text-ink-500">Occupancy details have been pre-filled based on the selected bed arrangement above</p>
         </div>
@@ -980,7 +980,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
         <Row id="r-meal" title="Select a meal plan" help="Select the meals included with this room type (e.g., breakfast only, breakfast & dinner, or all meals)" error={e.mealPlan}>
           <SearchSelect id="r-meal" value={r.mealPlan ?? ''} options={mealPlans} onChange={(v) => up({ mealPlan: v, breakfast: v !== mealPlans[0] })} searchPlaceholder="Search for meal plans" invalid={!!e.mealPlan} />
         </Row>
-        <h4 className="mt-1 border-t-8 border-[#f1f3f1] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Room Prices</h4>
+        <h4 className="mt-1 border-t-8 border-[#F4F8FC] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Room Prices</h4>
         <Row id="r-price" title={`Base Rate for ${occ.baseAdults} adult${occ.baseAdults === 1 ? '' : 's'}`} help={`Enter the standard room rate for ${occ.baseAdults} adult${occ.baseAdults === 1 ? '' : 's'}`} error={e.price}>
           {money('r-price', r.price || undefined, (v) => up({ price: v ?? 0 }), 'Enter base rate', !!e.price)}
           {r.price >= site.minPrice && <span className="text-[13px] text-ink-500">You receive about {inr(net(r.price))} a night after commission and its GST.</span>}
@@ -995,7 +995,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
             {money('r-child', r.childCharge, (v) => up({ childCharge: v }), 'Enter charge for child', !!e.childCharge)}
           </Row>
         )}
-        <h4 className="mt-1 border-t-8 border-[#f1f3f1] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Inventory Calendar</h4>
+        <h4 className="mt-1 border-t-8 border-[#F4F8FC] px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Inventory Calendar</h4>
         <div className="grid gap-3 px-4 py-5 sm:grid-cols-[1fr_minmax(0,480px)] sm:gap-8 sm:px-5">
           <div>
             <strong className="block text-[16px] text-ink-900">Select a date range</strong>

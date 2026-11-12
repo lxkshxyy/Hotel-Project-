@@ -122,7 +122,7 @@ export default function Reviews() {
                           return (
                             <button key={s} type="button" onClick={() => put('rating')(f.rating === String(s) ? 'all' : String(s))} className="grid grid-cols-[34px_1fr_28px] items-center gap-2 text-left text-[13.5px] text-ink-900 hover:text-pine-800">
                               <span>{s} ★</span>
-                              <span className="h-1.5 overflow-hidden rounded-full bg-[#e6ebe8]">
+                              <span className="h-1.5 overflow-hidden rounded-full bg-[#E6EEF7]">
                                 <motion.span initial={{ width: 0 }} animate={{ width: `${(n / all.length) * 100}%` }} className="block h-full rounded-full bg-pine-700" />
                               </span>
                               <span className="text-right text-ink-700">{n}</span>
@@ -145,7 +145,7 @@ export default function Reviews() {
                           <div key={t} className="grid grid-cols-[1fr_28px] items-center gap-2 text-[13.5px] text-ink-900">
                             <span>
                               {t}
-                              <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#e6ebe8]">
+                              <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#E6EEF7]">
                                 <motion.span initial={{ width: 0 }} animate={{ width: `${(n / all.length) * 100}%` }} className="block h-full rounded-full bg-brass-500" />
                               </span>
                             </span>
@@ -193,7 +193,7 @@ export default function Reviews() {
         <div className="mt-4">
           {all.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line-strong px-4 py-12 text-center">
-              <Star className="mx-auto h-8 w-8 text-brass-500" aria-hidden="true" />
+              <Star className="mx-auto h-8 w-8 text-pine-700" aria-hidden="true" />
               <p className="mt-2 text-[15px] font-medium text-ink-900">Reviews from guests will show here.</p>
               <p className="mt-1 text-[13.5px] text-ink-700">Guests can review your property on {l.slug ? 'its page on the site' : 'the site'} after they stay.</p>
             </div>
@@ -242,7 +242,7 @@ function ReviewRow({ r, reply }: { r: GuestReview; reply?: { text: string; at: s
       {r.topics.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {r.topics.map((t) => (
-            <span key={t} className="rounded-full bg-[#f1f4f2] px-2.5 py-0.5 text-[12.5px] text-ink-700">
+            <span key={t} className="rounded-full bg-[#F4F8FC] px-2.5 py-0.5 text-[12.5px] text-ink-700">
               {t}
             </span>
           ))}

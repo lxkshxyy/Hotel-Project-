@@ -34,7 +34,7 @@ function csv(name: string, rows: (string | number)[][]) {
 /** One booking with its money worked out. */
 type Tx = { r: ResvRow; s: ReturnType<typeof settle>; pay: string; status: 'stay' | 'awaiting' | 'released' | 'cancelled' | 'no-show' }
 const statusText: Record<Tx['status'], string> = { stay: 'Stay not completed', awaiting: 'Awaiting payout', released: 'Released', cancelled: 'Cancelled', 'no-show': 'No-show' }
-const statusTone: Record<Tx['status'], string> = { stay: 'bg-[#eef1ef] text-ink-700', awaiting: 'bg-brass-50 text-brass-700', released: 'bg-[#e6f4ec] text-live', cancelled: 'bg-alert-50 text-alert', 'no-show': 'bg-alert-50 text-alert' }
+const statusTone: Record<Tx['status'], string> = { stay: 'bg-[#E6EEF7] text-ink-700', awaiting: 'bg-brass-50 text-brass-700', released: 'bg-[#e6f4ec] text-live', cancelled: 'bg-alert-50 text-alert', 'no-show': 'bg-alert-50 text-alert' }
 
 function toTx(r: ResvRow, l: Listing, t: string): Tx {
   const s = settle(r, l)
@@ -190,7 +190,7 @@ function TxTable({ rows, compact = false }: { rows: Tx[]; compact?: boolean }) {
   return (
     <div className="relative overflow-x-auto">
       <table className="w-full min-w-[860px] border-collapse text-[13.5px]">
-        <thead className="bg-[#f4f6f5] text-left text-ink-900">
+        <thead className="bg-[#F4F8FC] text-left text-ink-900">
           <tr>
             <th className="px-4 py-2.5 font-semibold">Booking ID</th>
             <th className="px-3 py-2.5 font-semibold">Guest</th>
@@ -296,7 +296,7 @@ function Transactions({ l, txs }: P) {
             ['Net payout', money(live.reduce((n, x) => n + x.s.payout, 0))],
           ] as const
         ).map(([k, v]) => (
-          <div key={k} className="rounded-lg bg-[#f4f6f5] px-4 py-3">
+          <div key={k} className="rounded-lg bg-[#F4F8FC] px-4 py-3">
             <span className="block text-[12.5px] text-ink-500">{k}</span>
             <strong className="text-[18px] font-semibold text-ink-900">{v}</strong>
           </div>
@@ -323,7 +323,7 @@ function Past({ l, txs }: P) {
     <>
       <PageTitle title="Past payouts" l={l} intro="Payouts whose release date has passed, newest first." />
       <Card className="mt-6 overflow-hidden">
-        <div className="hidden grid-cols-[1.2fr_1fr_1.4fr_1fr_1fr_40px] bg-[#f4f6f5] px-4 py-2.5 text-[13.5px] font-semibold text-ink-900 md:grid">
+        <div className="hidden grid-cols-[1.2fr_1fr_1.4fr_1fr_1fr_40px] bg-[#F4F8FC] px-4 py-2.5 text-[13.5px] font-semibold text-ink-900 md:grid">
           <span>Payout date</span>
           <span>Stays</span>
           <span>Check-outs covered</span>
@@ -338,7 +338,7 @@ function Past({ l, txs }: P) {
           const amt = rows.reduce((n, x) => n + x.s.payout, 0)
           return (
             <div key={d} className="border-t border-line">
-              <button type="button" onClick={() => setOpen(isOpen ? '' : d)} aria-expanded={isOpen} className="grid w-full grid-cols-2 gap-2 px-4 py-3 text-left text-[14px] text-ink-900 hover:bg-[#f8faf9] md:grid-cols-[1.2fr_1fr_1.4fr_1fr_1fr_40px] md:items-center">
+              <button type="button" onClick={() => setOpen(isOpen ? '' : d)} aria-expanded={isOpen} className="grid w-full grid-cols-2 gap-2 px-4 py-3 text-left text-[14px] text-ink-900 hover:bg-[#F4F8FC] md:grid-cols-[1.2fr_1fr_1.4fr_1fr_1fr_40px] md:items-center">
                 <span className="font-medium">
                   {day(d)}
                   <span className="ml-2 inline-block rounded bg-[#e6f4ec] px-1.5 text-[11.5px] font-semibold text-live">Released</span>
@@ -354,7 +354,7 @@ function Past({ l, txs }: P) {
               <AnimatePresence initial={false}>
                 {isOpen && (
                   <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                    <div className="border-t border-line bg-[#fbfcfb]">
+                    <div className="border-t border-line bg-[#F4F8FC]">
                       <TxTable rows={rows} compact />
                       <div className="flex justify-end px-4 py-2.5">
                         <button type="button" onClick={() => csv(`payout-${d}`, [['Booking ID', 'Guest', 'Check-out', 'Booking amount', 'Commission', 'GST on commission', 'TDS', 'TCS', 'Net payout'], ...rows.map((x) => [x.r.id, x.r.guest_name, x.r.check_out, x.r.amount, x.s.commission, x.s.gst, x.s.tds, x.s.tcs, x.s.payout])])} className="flex items-center gap-1.5 text-[13.5px] font-semibold text-pine-800">
@@ -464,11 +464,11 @@ function Advance({ l, txs }: P) {
           </span>
           <strong className="text-[26px] font-semibold text-brass-200">{inr(total)}</strong>
         </div>
-        <div className="rounded-lg bg-[#f4f6f5] px-4 py-4">
+        <div className="rounded-lg bg-[#F4F8FC] px-4 py-4">
           <span className="block text-[13px] text-ink-500">Prepaid bookings</span>
           <strong className="text-[26px] font-semibold text-ink-900">{held.length}</strong>
         </div>
-        <div className="rounded-lg bg-[#f4f6f5] px-4 py-4">
+        <div className="rounded-lg bg-[#F4F8FC] px-4 py-4">
           <span className="block text-[13px] text-ink-500">Guests paid in total</span>
           <strong className="text-[26px] font-semibold text-ink-900">{inr(held.reduce((n, x) => n + x.r.amount, 0))}</strong>
         </div>
@@ -479,7 +479,7 @@ function Advance({ l, txs }: P) {
         ) : (
           <div className="relative overflow-x-auto">
             <table className="w-full min-w-[760px] border-collapse text-[13.5px]">
-              <thead className="bg-[#f4f6f5] text-left text-ink-900">
+              <thead className="bg-[#F4F8FC] text-left text-ink-900">
                 <tr>
                   <th className="px-4 py-2.5 font-semibold">Booking ID</th>
                   <th className="px-3 py-2.5 font-semibold">Guest</th>
@@ -573,7 +573,7 @@ function Invoices({ l, txs }: P) {
       <Card className="mt-6 overflow-hidden">
         <div className="relative overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-[14px]">
-            <thead className="bg-[#f4f6f5] text-left text-ink-900">
+            <thead className="bg-[#F4F8FC] text-left text-ink-900">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Month</th>
                 <th className="px-3 py-2.5 font-semibold">Stays</th>
@@ -622,7 +622,7 @@ function Invoices({ l, txs }: P) {
       <AnimatePresence>
         {view && (
           <Dialog title={`Commission statement · ${label(view[0])}`} onClose={() => setView(null)} wide>
-            <div className="flex items-start gap-3 rounded-lg bg-[#f4f6f5] p-3 text-[13.5px] text-ink-700">
+            <div className="flex items-start gap-3 rounded-lg bg-[#F4F8FC] p-3 text-[13.5px] text-ink-700">
               <FileText className="mt-0.5 h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />
               <span>
                 Billed to <strong className="text-ink-900">{l.legal.legalName || l.basics.name}</strong>
@@ -656,7 +656,7 @@ function Invoices({ l, txs }: P) {
 /* ---------------- Chargeback disputes ---------------- */
 
 const evidenceOptions = ['Guest’s ID proof collected at check-in', 'Signed registration card', 'Check-in and check-out record', 'Bill / folio shared with the guest', 'Messages with the guest']
-const dTone: Record<Dispute['status'], string> = { open: 'bg-alert-50 text-alert', responded: 'bg-brass-50 text-brass-700', won: 'bg-[#e6f4ec] text-live', lost: 'bg-[#eef1ef] text-ink-700' }
+const dTone: Record<Dispute['status'], string> = { open: 'bg-alert-50 text-alert', responded: 'bg-brass-50 text-brass-700', won: 'bg-[#e6f4ec] text-live', lost: 'bg-[#E6EEF7] text-ink-700' }
 const dText: Record<Dispute['status'], string> = { open: 'Action needed', responded: 'Response sent', won: 'Won', lost: 'Lost' }
 
 function Disputes({ l }: P) {
@@ -695,7 +695,7 @@ function Disputes({ l }: P) {
                   Raised {nice(d.raised_at)}
                   {d.status === 'open' ? ` · Respond by ${nice(d.respond_by)}` : ''}
                 </p>
-                {answers[d.id] && <p className="mt-2 rounded-md bg-[#f4f6f5] px-3 py-2 text-[13px] text-ink-700">Your response: {answers[d.id].text}</p>}
+                {answers[d.id] && <p className="mt-2 rounded-md bg-[#F4F8FC] px-3 py-2 text-[13px] text-ink-700">Your response: {answers[d.id].text}</p>}
               </div>
               {d.status === 'open' && (
                 <button type="button" onClick={() => setAnswering(d)} className={btnSolid}>

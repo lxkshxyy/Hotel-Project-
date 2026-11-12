@@ -91,12 +91,12 @@ export default function PartnerHelp() {
         <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <h1 className="text-[32px] font-semibold text-ink-900">Partner Help</h1>
           <div className="relative w-full sm:max-w-[420px]">
-            <label className="flex h-12 items-center gap-3 rounded-full bg-[#cfdfd5] px-5 ring-pine-700 focus-within:bg-white focus-within:ring-1">
+            <label className="flex h-12 items-center gap-3 rounded-full bg-[#AFDBF5] px-5 ring-pine-700 focus-within:bg-white focus-within:ring-1">
               <Search className="h-5 w-5 shrink-0 text-ink-900" aria-hidden="true" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help articles" aria-label="Search help articles" className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-500" />
             </label>
             {q.trim().length >= 2 && (
-              <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl bg-white shadow-[0_14px_36px_-10px_rgba(18,55,42,0.3)] ring-1 ring-line">
+              <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl bg-white shadow-[0_14px_36px_-10px_rgba(26, 44, 91,0.3)] ring-1 ring-line">
                 {hits.length ? (
                   hits.map((a) => (
                     <Link key={a.slug} to={`${base}/${a.slug}`} className="flex items-center justify-between gap-3 px-4 py-3 text-[15px] text-ink-900 no-underline hover:bg-pine-50">
@@ -121,7 +121,7 @@ export default function PartnerHelp() {
           {mostViewed.map((s) => {
             const a = articleBySlug(s)!
             return (
-              <Link key={s} to={`${base}/${s}`} className="group flex min-h-[176px] flex-col justify-between rounded-xl border border-line-strong p-4 no-underline transition-all hover:-translate-y-0.5 hover:border-pine-700 hover:shadow-[0_12px_26px_-14px_rgba(18,55,42,0.35)]">
+              <Link key={s} to={`${base}/${s}`} className="group flex min-h-[176px] flex-col justify-between rounded-xl border border-line-strong p-4 no-underline transition-all hover:-translate-y-0.5 hover:border-pine-700 hover:shadow-[0_12px_26px_-14px_rgba(26, 44, 91,0.35)]">
                 <strong className="text-[18.5px] leading-snug font-medium text-ink-900 group-hover:text-pine-900">{a.title}</strong>
                 <span className="text-[13.5px] text-ink-500">{a.tag ?? topicById(a.topic)?.title}</span>
               </Link>

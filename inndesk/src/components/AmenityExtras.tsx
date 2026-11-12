@@ -105,7 +105,7 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
       // Clip only while opening/closing, so dropdown lists can hang over the tiles below.
       className={`col-span-full ${settled ? 'overflow-visible' : 'overflow-hidden'}`}
     >
-      <div className="flex flex-col gap-3 rounded-xl bg-[#eef0ee] p-3 sm:p-4">
+      <div className="flex flex-col gap-3 rounded-xl bg-[#E6EEF7] p-3 sm:p-4">
         <span className="text-[13px] font-semibold text-ink-700">{label} details</span>
         {fields && (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -492,7 +492,7 @@ function AmenityFormModal({ form, entry, l, onClose, onSave }: { form?: AmenityF
                     <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                   <div className="flex gap-3 pr-6">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass-500 text-white">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass-500 text-pine-950">
                       <CircleAlert className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <div>

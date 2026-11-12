@@ -12,7 +12,7 @@ import { site } from '../config/site'
 
 const pin = L.divIcon({
   className: '',
-  html: '<svg width="34" height="46" viewBox="0 0 34 46" aria-hidden="true"><path d="M17 45C17 45 33 27 33 16.5A16 16 0 0 0 1 16.5C1 27 17 45 17 45z" fill="#C8962E" stroke="#12372A" stroke-width="2"/><circle cx="17" cy="16" r="5.5" fill="#12372A"/></svg>',
+  html: '<svg width="34" height="46" viewBox="0 0 34 46" aria-hidden="true"><path d="M17 45C17 45 33 27 33 16.5A16 16 0 0 0 1 16.5C1 27 17 45 17 45z" fill="#AFDBF5" stroke="#1A2C5B" stroke-width="2"/><circle cx="17" cy="16" r="5.5" fill="#1A2C5B"/></svg>',
   iconSize: [34, 46],
   iconAnchor: [17, 45],
 })
@@ -135,7 +135,7 @@ export default function MapPicker({ lat, lng, onPin, onLocate, locating }: { lat
         <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
       </button>
       {blocked && (
-        <div className="absolute inset-0 z-[450] flex flex-col items-center justify-center gap-1 bg-[#e9eeeb]/90 px-6 text-center">
+        <div className="absolute inset-0 z-[450] flex flex-col items-center justify-center gap-1 bg-[#E6EEF7]/90 px-6 text-center">
           <strong className="text-[15px] text-ink-900">The map can’t load here</strong>
           <span className="max-w-sm text-[13px] text-ink-700">This window is blocking the map pictures. Search your address above; the pin is still saved. Open InnDesk in Chrome to see and drag the map.</span>
         </div>

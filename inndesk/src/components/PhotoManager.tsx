@@ -515,33 +515,33 @@ const tipArt: Record<string, ReactNode> = {
   size: (
     <g>
       <path d="M3 3v6M3 3h6M41 35v-6M41 35h-6" stroke="#3d4a44" strokeWidth={1.5} fill="none" />
-      <rect x={8} y={8} width={28} height={22} rx={2} fill="#eef4f0" />
-      <circle cx={27} cy={15} r={3} fill="#e9b949" />
+      <rect x={8} y={8} width={28} height={22} rx={2} fill="#EAF5FC" />
+      <circle cx={27} cy={15} r={3} fill="#AFDBF5" />
       <path d="M8 30l10-12 7 8 4-4 7 8z" fill="#2f7a55" />
     </g>
   ),
   light: (
     <g>
-      <circle cx={10} cy={9} r={5} fill="#e9b949" />
+      <circle cx={10} cy={9} r={5} fill="#AFDBF5" />
       <path d="M12 20l12-9 12 9" fill="#c0503c" />
-      <rect x={14} y={19} width={20} height={15} rx={1} fill="#fbe9d0" />
-      <rect x={21} y={25} width={6} height={9} fill="#e8c9a0" />
-      <circle cx={7} cy={27} r={4} fill="#7fae6b" />
+      <rect x={14} y={19} width={20} height={15} rx={1} fill="#EAF5FC" />
+      <rect x={21} y={25} width={6} height={9} fill="#AFDBF5" />
+      <circle cx={7} cy={27} r={4} fill="#AFDBF5" />
     </g>
   ),
   rooms: (
     <g>
-      <rect x={4} y={5} width={36} height={28} rx={1.5} fill="#f6edd8" stroke="#e1d2ad" />
-      <path d="M22 5v28M4 19h36" stroke="#e1d2ad" />
+      <rect x={4} y={5} width={36} height={28} rx={1.5} fill="#EAF5FC" stroke="#AFDBF5" />
+      <path d="M22 5v28M4 19h36" stroke="#AFDBF5" />
       <rect x={11} y={23} width={14} height={6} rx={2} fill="#3d5a99" />
-      <path d="M30 31v-9l3-4 3 4v9" fill="#7fae6b" />
+      <path d="M30 31v-9l3-4 3 4v9" fill="#AFDBF5" />
     </g>
   ),
   ten: (
     <g>
       <rect x={10} y={4} width={26} height={22} rx={2} fill="#dbe4f5" />
       <rect x={6} y={9} width={28} height={24} rx={2} fill="#ffffff" stroke="#b9c6e4" />
-      <circle cx={26} cy={16} r={2.6} fill="#e9b949" />
+      <circle cx={26} cy={16} r={2.6} fill="#AFDBF5" />
       <path d="M6 33l11-12 8 8 4-3 5 7z" fill="#3d5a7a" />
     </g>
   ),
@@ -549,16 +549,16 @@ const tipArt: Record<string, ReactNode> = {
     <g>
       <rect x={14} y={14} width={26} height={11} rx={1.5} fill="#ececec" stroke="#cfcfcf" />
       <rect x={18} y={8} width={6} height={4} fill="#d9534f" />
-      <circle cx={7} cy={22} r={3} fill="#3b3b6d" />
+      <circle cx={7} cy={22} r={3} fill="#1A2C5B" />
       <path d="M5 26h4l1 9H4z" fill="#5a4fcf" />
-      <path d="M9 23l5-2" stroke="#3b3b6d" strokeWidth={1.4} />
+      <path d="M9 23l5-2" stroke="#1A2C5B" strokeWidth={1.4} />
     </g>
   ),
   watermark: (
     <g>
       <rect x={5} y={5} width={30} height={26} rx={3} fill="#d9dcf7" />
-      <circle cx={20} cy={14} r={4.5} fill="#8a82e0" />
-      <path d="M9 31c2-7 6-10 11-10s9 3 11 10z" fill="#8a82e0" />
+      <circle cx={20} cy={14} r={4.5} fill="#0047AB" />
+      <path d="M9 31c2-7 6-10 11-10s9 3 11 10z" fill="#0047AB" />
       <circle cx={35} cy={31} r={6} fill="#e5484d" />
       <path d="M32.5 28.5l5 5M37.5 28.5l-5 5" stroke="#fff" strokeWidth={1.6} />
     </g>

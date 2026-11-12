@@ -62,8 +62,8 @@ export default function Inclusions({ l, commit, base }: InfoProps) {
             const isOpen = open.includes(r.id)
             return (
               <div key={r.id} className="overflow-hidden rounded-lg border border-line-strong">
-                <button type="button" aria-expanded={isOpen} onClick={() => setOpen((o) => (o.includes(r.id) ? o.filter((x) => x !== r.id) : [...o, r.id]))} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-[#f8faf9]">
-                  <span className="flex h-8 w-8 items-center justify-center rounded bg-[#eef1ef] text-pine-800">{isOpen ? <Minus className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}</span>
+                <button type="button" aria-expanded={isOpen} onClick={() => setOpen((o) => (o.includes(r.id) ? o.filter((x) => x !== r.id) : [...o, r.id]))} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-[#F4F8FC]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded bg-[#E6EEF7] text-pine-800">{isOpen ? <Minus className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}</span>
                   <strong className="flex-1 text-[14.5px] font-semibold text-ink-900">{r.name || `Room type ${i + 1}`}</strong>
                   <span className="text-[13px] text-ink-500">
                     {items.length} inclusion{items.length === 1 ? '' : 's'}

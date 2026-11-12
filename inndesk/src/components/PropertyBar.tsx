@@ -53,7 +53,7 @@ export function PropertyBar({ l, all }: { l: Listing; all: Listing[] }) {
         </button>
         <AnimatePresence>
           {open && (
-            <motion.div role="dialog" aria-label="Switch property" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className="fixed inset-x-3 top-[70px] z-50 rounded-xl bg-white shadow-[0_16px_40px_-12px_rgba(18,55,42,0.35)] ring-1 ring-line sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 sm:w-[400px]">
+            <motion.div role="dialog" aria-label="Switch property" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14 }} className="fixed inset-x-3 top-[70px] z-50 rounded-xl bg-white shadow-[0_16px_40px_-12px_rgba(26, 44, 91,0.35)] ring-1 ring-line sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 sm:w-[400px]">
               <div className="p-3">
                 <label className="flex h-11 items-center gap-2 rounded-lg border border-ink-400 px-3 focus-within:border-pine-700 focus-within:ring-1 focus-within:ring-pine-700">
                   <Search className="h-4 w-4 text-ink-500" aria-hidden="true" />
@@ -90,7 +90,7 @@ export function PropertyBar({ l, all }: { l: Listing; all: Listing[] }) {
       <span aria-hidden="true" className="hidden h-10 w-px bg-line lg:block" />
       <Link to={`${base}/reviews`} className="group hidden flex-col no-underline lg:flex">
         <span className="flex items-center gap-1 text-[12.5px] text-ink-500 group-hover:text-pine-800">
-          <Star className="h-3.5 w-3.5 fill-brass-500 text-brass-500" aria-hidden="true" /> Ratings <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          <Star className="h-3.5 w-3.5 fill-pine-700 text-pine-700" aria-hidden="true" /> Ratings <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         {reviews.length ? (
           <span className="text-[17px] font-bold text-ink-900">
@@ -106,8 +106,8 @@ export function PropertyBar({ l, all }: { l: Listing; all: Listing[] }) {
       <Link to={`${base}/info/content-score`} className="group hidden flex-col no-underline lg:flex">
         <span className="flex items-center gap-1 text-[12.5px] text-ink-500 group-hover:text-pine-800">
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
-            <circle cx="8" cy="8" r="6.5" fill="none" stroke="#cfe3d7" strokeWidth="3" />
-            <circle cx="8" cy="8" r="6.5" fill="none" stroke="#24614b" strokeWidth="3" strokeDasharray={`${(score / 100) * 40.8} 41`} transform="rotate(-90 8 8)" />
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="#AFDBF5" strokeWidth="3" />
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="#0047AB" strokeWidth="3" strokeDasharray={`${(score / 100) * 40.8} 41`} transform="rotate(-90 8 8)" />
           </svg>
           Content Score <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>

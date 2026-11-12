@@ -171,7 +171,7 @@ export default function PropertyBookings() {
     const s = settle(r, l)
     const st = statusText(r)
     return (
-      <div key={r.id} className="rounded-xl border border-line bg-white transition-shadow hover:shadow-[0_10px_24px_-16px_rgba(18,55,42,0.35)]">
+      <div key={r.id} className="rounded-xl border border-line bg-white transition-shadow hover:shadow-[0_10px_24px_-16px_rgba(26, 44, 91,0.35)]">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-3 md:grid-cols-[1.4fr_1.3fr_1.4fr_1.2fr_1.1fr_0.9fr] md:items-center">
           <div className="col-span-2 flex items-start gap-3 md:col-span-1">
             <div className="min-w-0">
@@ -193,7 +193,7 @@ export default function PropertyBookings() {
             <span>
               {r.rooms} {r.room_name}
             </span>
-            <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${r.pay_mode === 'now' ? 'bg-pine-50 text-pine-900' : 'bg-[#eceeed] text-ink-700'}`}>{r.pay_mode === 'now' ? 'Prepaid' : 'Pay@hotel'}</span>
+            <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${r.pay_mode === 'now' ? 'bg-pine-50 text-pine-900' : 'bg-[#E6EEF7] text-ink-700'}`}>{r.pay_mode === 'now' ? 'Prepaid' : 'Pay@hotel'}</span>
           </div>
           <div className="text-[13.5px] text-ink-900">
             <span className="text-ink-500 md:hidden">Booking ID </span>
@@ -219,7 +219,7 @@ export default function PropertyBookings() {
         <AnimatePresence initial={false}>
           {openPay === r.id && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-line bg-[#f8faf9] px-4 py-3 text-[13.5px] sm:grid-cols-5">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-line bg-[#F4F8FC] px-4 py-3 text-[13.5px] sm:grid-cols-5">
                 <div>
                   <dt className="text-ink-500">Room charges</dt>
                   <dd className="font-semibold text-ink-900">{inr(s.roomAmount)}</dd>
@@ -297,7 +297,7 @@ export default function PropertyBookings() {
   )
 
   const headRow = (
-    <div className="hidden grid-cols-[1.4fr_1.3fr_1.4fr_1.2fr_1.1fr_0.9fr] gap-x-4 rounded-lg border-l-4 border-pine-800 bg-[#eef4f0] px-4 py-3 text-[14px] font-semibold text-ink-900 md:grid">
+    <div className="hidden grid-cols-[1.4fr_1.3fr_1.4fr_1.2fr_1.1fr_0.9fr] gap-x-4 rounded-lg border-l-4 border-pine-800 bg-[#EAF5FC] px-4 py-3 text-[14px] font-semibold text-ink-900 md:grid">
       <span>Guest Name</span>
       <span>Stay Duration</span>
       <span>Room &amp; Payment</span>
@@ -361,7 +361,7 @@ export default function PropertyBookings() {
                     <div key={day} className="flex flex-col gap-3">
                       {view === 'list' ? (
                         <>
-                          <div className="flex items-center gap-3 rounded-lg bg-[#eef4f0] px-4 py-2.5 text-[14px] font-semibold text-ink-900">
+                          <div className="flex items-center gap-3 rounded-lg bg-[#EAF5FC] px-4 py-2.5 text-[14px] font-semibold text-ink-900">
                             {day === end ? dm(day) : `${dm(day)} – ${dm(end)}`}
                             <span className="h-4 w-px bg-ink-400" />
                             {rows.length} {unit[field][rows.length === 1 ? 0 : 1]}
@@ -462,7 +462,7 @@ function Hourly({ title, count, label, start }: { title: string; count: number; 
             {lbl(h)}
           </span>
         ))}
-        <div className="absolute inset-x-0 top-[26px] h-5 rounded-full bg-[#f4f6f5]" />
+        <div className="absolute inset-x-0 top-[26px] h-5 rounded-full bg-[#F4F8FC]" />
         <div className="absolute top-[26px] flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-brass-200 via-brass-200 to-brass-200/30 text-[12px] font-semibold text-ink-900" style={{ left: `${pos(start)}%`, right: 0 }}>
           {count} {label}
         </div>

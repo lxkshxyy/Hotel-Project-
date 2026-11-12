@@ -21,9 +21,9 @@ const statuses: { value: Desk; label: string }[] = [
 const deskStyle: Record<Desk, string> = {
   upcoming: 'bg-pine-50 text-pine-900',
   'in-house': 'bg-brass-50 text-brass-700',
-  departed: 'bg-[#eceeed] text-ink-700',
+  departed: 'bg-[#E6EEF7] text-ink-700',
   cancelled: 'bg-alert-50 text-alert',
-  'no-show': 'bg-[#fff1e0] text-[#8a4b00]',
+  'no-show': 'bg-[#EAF5FC] text-[#8a4b00]',
 }
 const deskText = Object.fromEntries(statuses.map((x) => [x.value, x.label])) as Record<Desk, string>
 
@@ -105,7 +105,7 @@ export default function Reservations() {
 
   return (
     <div className="min-h-[calc(100dvh-68px)] bg-white">
-      <div className="bg-[#eef4f0]">
+      <div className="bg-[#EAF5FC]">
         <div className="mx-auto max-w-[1280px] px-4 pt-7 pb-6 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -130,7 +130,7 @@ export default function Reservations() {
               </Outlined>
             </div>
             <RangeCalendar value={range} onChange={setRange} />
-            <button type="submit" className="h-12 shrink-0 rounded-full bg-pine-800 px-12 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(18,55,42,0.55)] transition-colors hover:bg-pine-900">
+            <button type="submit" className="h-12 shrink-0 rounded-full bg-pine-800 px-12 text-[16px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(26, 44, 91,0.55)] transition-colors hover:bg-pine-900">
               Search
             </button>
           </form>
@@ -159,7 +159,7 @@ export default function Reservations() {
         <div className="overflow-hidden rounded-xl border border-line">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1040px] border-collapse">
-              <thead className="bg-[#f3f6f4]">
+              <thead className="bg-[#F4F8FC]">
                 <tr>
                   <th className={th}>Property</th>
                   <th className={th}>Booking ID</th>
@@ -177,7 +177,7 @@ export default function Reservations() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-line align-top transition-colors hover:bg-[#f8faf9]">
+                  <tr key={r.id} className="border-t border-line align-top transition-colors hover:bg-[#F4F8FC]">
                     <td className="px-4 py-3.5 text-[14px] font-medium text-ink-900">{r.hotel_name}</td>
                     <td className="px-4 py-3.5">
                       <button type="button" onClick={() => setOpen(r)} className="text-[14px] font-semibold text-pine-800 hover:underline">
@@ -226,7 +226,7 @@ export default function Reservations() {
           </div>
           {rows.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-4 py-16 text-center">
-              <TriangleAlert className="h-12 w-12 fill-[#e9eeeb] text-[#c5cfc9]" strokeWidth={1.6} aria-hidden="true" />
+              <TriangleAlert className="h-12 w-12 fill-[#E6EEF7] text-[#C3CDDD]" strokeWidth={1.6} aria-hidden="true" />
               <strong className="mt-2 text-[16px] font-semibold text-ink-900">No bookings found</strong>
               <p className="text-[14px] text-ink-700">{list.length ? 'Try your search again with new dates or filters' : `When a guest books one of your live properties on ${site.marketplace}, it appears here.`}</p>
               {list.length > 0 && (

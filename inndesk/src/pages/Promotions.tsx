@@ -77,7 +77,7 @@ export default function Promotions({ l }: { l: Listing }) {
                 ['mine', 'My Promotions'],
               ] as const
             ).map(([k, text]) => (
-              <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border border-line-strong px-4 py-2.5 text-[15px] transition-colors sm:px-5 sm:text-[17px] ${tab === k ? 'border-t-[3px] border-t-pine-800 border-b-white bg-white font-semibold text-ink-900' : 'bg-[#f4f6f5] text-pine-800 hover:bg-pine-50'} ${k === 'mine' ? '-ml-px' : ''}`}>
+              <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border border-line-strong px-4 py-2.5 text-[15px] transition-colors sm:px-5 sm:text-[17px] ${tab === k ? 'border-t-[3px] border-t-pine-800 border-b-white bg-white font-semibold text-ink-900' : 'bg-[#F4F8FC] text-pine-800 hover:bg-pine-50'} ${k === 'mine' ? '-ml-px' : ''}`}>
                 {text}
               </button>
             ))}
@@ -125,7 +125,7 @@ function CreateTab({ l, promos, unsold, onCreate, onViewAll, onCustomise }: { l:
   return (
     <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_330px]">
       <div className="flex min-w-0 flex-col gap-5">
-        <section className="rounded-lg border border-line-strong p-4 shadow-[0_2px_6px_-4px_rgba(18,55,42,0.25)] sm:p-5">
+        <section className="rounded-lg border border-line-strong p-4 shadow-[0_2px_6px_-4px_rgba(26, 44, 91,0.25)] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-3 text-[22px] font-semibold text-ink-900 sm:text-[24px]">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pine-50 text-pine-800">
@@ -188,7 +188,7 @@ function CreateTab({ l, promos, unsold, onCreate, onViewAll, onCustomise }: { l:
 
 function TierCard({ icon, title, tier, badge, text, onCreate }: { icon: ReactNode; title: string; tier: number; badge?: string; text: string; onCreate: () => void }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-line-strong p-4 shadow-[0_2px_6px_-4px_rgba(18,55,42,0.25)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section className="flex flex-col gap-4 rounded-lg border border-line-strong p-4 shadow-[0_2px_6px_-4px_rgba(26, 44, 91,0.25)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="min-w-0">
         <h2 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[21px] font-semibold text-ink-900 sm:text-[24px]">
           <span className="text-pine-800">{icon}</span>
@@ -219,10 +219,10 @@ function PriceCard({ l, promos, onCustomise }: { l: Listing; promos: Promotion[]
       <div className="p-4">
         <p className="text-[14px] leading-relaxed text-ink-700">The post-promotion price is the final selling rate after applying the promotions (Tier 1), special audience promotions (Tier 2), and coupons (Tier 3). Please check the example below:</p>
         {!room || !r ? (
-          <p className="mt-3 rounded-md bg-[#f4f6f5] p-3 text-[13.5px] text-ink-700">Add a room with a price under Property Information → Rooms &amp; Rateplans to see the price.</p>
+          <p className="mt-3 rounded-md bg-[#F4F8FC] p-3 text-[13.5px] text-ink-700">Add a room with a price under Property Information → Rooms &amp; Rateplans to see the price.</p>
         ) : (
           <>
-            <div className="mt-3 rounded-md bg-[#f4f6f5] p-3 text-[12.5px] text-ink-700">
+            <div className="mt-3 rounded-md bg-[#F4F8FC] p-3 text-[12.5px] text-ink-700">
               <strong className="block text-[13px] font-semibold text-ink-900">Check-in Settings</strong>
               <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
                 <div>
@@ -285,7 +285,7 @@ function Breakup({ r }: { r: ReturnType<typeof postPromotionPrice> }) {
           <span className="shrink-0">− {inr(x.off)}</span>
         </div>
       ))}
-      <div className="flex items-center justify-between gap-3 border-t border-line bg-[#f4f6f5] px-4 py-3 font-semibold text-ink-900">
+      <div className="flex items-center justify-between gap-3 border-t border-line bg-[#F4F8FC] px-4 py-3 font-semibold text-ink-900">
         <span>
           Final Selling Rate <span className="font-normal">({formula})</span>
         </span>
@@ -330,7 +330,7 @@ function Faq() {
         <div>
           {faqs.map(([q, a], i) => (
             <div key={q} className="border-t border-line">
-              <button type="button" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-[14.5px] ${open === i ? 'bg-pine-50 text-pine-800' : 'text-pine-800 hover:bg-[#f8faf9]'}`}>
+              <button type="button" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-[14.5px] ${open === i ? 'bg-pine-50 text-pine-800' : 'text-pine-800 hover:bg-[#F4F8FC]'}`}>
                 {q}
                 <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-ink-700 transition-transform ${open === i ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
@@ -454,7 +454,7 @@ function MineTab({ promos, list, onEdit, onPrice, onExtra }: { promos: Promotion
 
       <div className="relative mt-4 overflow-x-auto rounded-md border border-line-strong">
         <table className="w-full min-w-[960px] border-collapse text-[14px]">
-          <thead className="bg-[#f4f6f5] text-left text-ink-900">
+          <thead className="bg-[#F4F8FC] text-left text-ink-900">
             <tr>
               <th className="px-3 py-3 align-top font-semibold">Promotion Name</th>
               {head('type', 'Promotion Type')}
@@ -512,7 +512,7 @@ function Row({ p, s, expired, onEdit, onExtra }: { p: Promotion; s: { roomNights
                 {p.name}
               </button>
               {p.kind === 'coupon' && p.code && <span className="mt-1 block w-fit rounded border border-dashed border-brass-600 px-1.5 text-[12px] font-semibold tracking-wider text-brass-700">{p.code}</span>}
-              {p.paused && <span className="mt-1 block w-fit rounded bg-[#eceeed] px-1.5 text-[11.5px] font-semibold text-ink-700 uppercase">Paused</span>}
+              {p.paused && <span className="mt-1 block w-fit rounded bg-[#E6EEF7] px-1.5 text-[11.5px] font-semibold text-ink-700 uppercase">Paused</span>}
             </div>
           </div>
         </td>
@@ -892,7 +892,7 @@ function PriceDialog({ l, promos, onClose }: { l: Listing; promos: Promotion[]; 
                 Per night, before GST. For {nights} night{nights === 1 ? '' : 's'}: <strong className="font-semibold text-ink-900">{inr(r.final * nights)}</strong> + GST {inr(Math.round(r.final * nights * gst))} ({gst * 100}%).
               </p>
               {missed.length > 0 && (
-                <p className="mt-3 flex items-start gap-2 rounded-md bg-[#f4f6f5] px-3 py-2 text-[12.5px] text-ink-700">
+                <p className="mt-3 flex items-start gap-2 rounded-md bg-[#F4F8FC] px-3 py-2 text-[12.5px] text-ink-700">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   Not applied to these dates: {missed.map((p) => p.name).join(', ')}.
                 </p>

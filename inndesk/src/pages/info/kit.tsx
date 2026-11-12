@@ -9,7 +9,7 @@ export type Set = (fn: (l: Listing) => Listing) => void
 export type Commit = (fn: (l: Listing) => Listing) => Promise<void>
 export type InfoProps = { l: Listing; set: Set; commit: Commit; base: string }
 
-export const inputCls = 'h-11 w-full rounded-lg border border-ink-400 bg-white px-3 text-[15px] text-ink-900 outline-none transition-colors focus:border-pine-700 focus:ring-1 focus:ring-pine-700 disabled:cursor-not-allowed disabled:border-line disabled:bg-[#f1f3f2] disabled:text-ink-700'
+export const inputCls = 'h-11 w-full rounded-lg border border-ink-400 bg-white px-3 text-[15px] text-ink-900 outline-none transition-colors focus:border-pine-700 focus:ring-1 focus:ring-pine-700 disabled:cursor-not-allowed disabled:border-line disabled:bg-[#F4F8FC] disabled:text-ink-700'
 export const areaCls = 'w-full rounded-lg border border-ink-400 bg-white px-3 py-2.5 text-[15px] leading-relaxed text-ink-900 outline-none transition-colors focus:border-pine-700 focus:ring-1 focus:ring-pine-700'
 
 /** Page title with "See it live" on the right. */
@@ -43,7 +43,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, id }: { value: T
         <button key={t.id} type="button" role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)} className={`relative flex shrink-0 items-center gap-2 pb-3 text-[14px] font-medium tracking-wide whitespace-nowrap uppercase transition-colors ${value === t.id ? 'text-pine-800' : 'text-ink-900 hover:text-pine-800'}`}>
           {t.label}
           {t.count != null && <span>({t.count})</span>}
-          {t.isNew && <span className="rounded-full bg-brass-500 px-1.5 text-[11px] leading-[18px] font-bold text-white normal-case">new</span>}
+          {t.isNew && <span className="rounded-full bg-brass-500 px-1.5 text-[11px] leading-[18px] font-bold text-pine-950 normal-case">new</span>}
           {value === t.id && <motion.span layoutId={`tab-${id}`} className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-pine-800" />}
         </button>
       ))}
@@ -52,7 +52,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, id }: { value: T
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-lg border border-line-strong bg-white shadow-[0_2px_6px_-4px_rgba(18,55,42,0.25)] ${className}`}>{children}</section>
+  return <section className={`rounded-lg border border-line-strong bg-white shadow-[0_2px_6px_-4px_rgba(26, 44, 91,0.25)] ${className}`}>{children}</section>
 }
 
 export function Field({ label, required, hint, error, children, htmlFor }: { label: string; required?: boolean; hint?: ReactNode; error?: string; children: ReactNode; htmlFor?: string }) {
@@ -95,7 +95,7 @@ export function Faq({ items }: { items: [string, ReactNode][] }) {
       {shown &&
         items.map(([q, a], i) => (
           <div key={q} className="border-t border-line">
-            <button type="button" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-[14.5px] text-pine-800 ${open === i ? 'bg-pine-50' : 'hover:bg-[#f8faf9]'}`}>
+            <button type="button" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left text-[14.5px] text-pine-800 ${open === i ? 'bg-pine-50' : 'hover:bg-[#F4F8FC]'}`}>
               {q}
               <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-ink-700 transition-transform ${open === i ? 'rotate-180' : ''}`} aria-hidden="true" />
             </button>

@@ -86,7 +86,7 @@ export default function Landing() {
     <div className="bg-paper">
       <section className="relative isolate overflow-hidden text-white">
         <img src="/img/hero-hotel.webp" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(11,36,27,0.94)_0%,rgba(11,36,27,0.82)_45%,rgba(11,36,27,0.55)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(26, 44, 91,0.94)_0%,rgba(26, 44, 91,0.82)_45%,rgba(26, 44, 91,0.55)_100%)]" />
         <header className="container-page flex h-[76px] items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2.5 no-underline" aria-label={`${site.name} home`}>
             <Mark />
@@ -168,7 +168,7 @@ export default function Landing() {
               { t: 'Go live and take bookings', d: `Press Publish. Your hotel appears on ${site.marketplace} straight away and each booking lands in Reservations.` },
             ].map((s, i) => (
               <li key={s.t} className="flex flex-col gap-2">
-                <span className="font-display text-[44px] leading-none font-extrabold text-brass-500">{i + 1}</span>
+                <span className="font-display text-[44px] leading-none font-extrabold text-pine-700">{i + 1}</span>
                 <strong className="text-lg text-ink-900">{s.t}</strong>
                 <span className="text-[15px] text-ink-700">{s.d}</span>
               </li>

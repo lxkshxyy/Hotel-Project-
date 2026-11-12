@@ -118,7 +118,7 @@ function AmenityTab({ l, set }: InfoProps) {
               const n = g.items.filter((a) => l.amenities.includes(a.id)).length
               const on = !q && g.group === group
               return (
-                <button key={g.group} type="button" onClick={() => (setQ(''), setGroup(g.group))} aria-current={on} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-[15px] whitespace-nowrap transition-colors md:rounded-none md:border-l-[3px] md:px-4 md:py-3 md:whitespace-normal ${on ? 'bg-pine-50 font-semibold text-pine-800 md:border-pine-800' : 'text-ink-900 hover:bg-[#f6f8f7] md:border-transparent'}`}>
+                <button key={g.group} type="button" onClick={() => (setQ(''), setGroup(g.group))} aria-current={on} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-[15px] whitespace-nowrap transition-colors md:rounded-none md:border-l-[3px] md:px-4 md:py-3 md:whitespace-normal ${on ? 'bg-pine-50 font-semibold text-pine-800 md:border-pine-800' : 'text-ink-900 hover:bg-[#F4F8FC] md:border-transparent'}`}>
                   <span className={on ? '' : 'font-medium'}>{g.group}</span> <span className="font-normal text-ink-700">({n} of {g.items.length})</span>
                 </button>
               )
@@ -128,7 +128,7 @@ function AmenityTab({ l, set }: InfoProps) {
             {shown.length === 0 && <p className="px-5 py-12 text-center text-[14.5px] text-ink-700">No amenities match “{q}”.</p>}
             {shown.map((g) => (
               <div key={g.group}>
-                {q && <h3 className="bg-[#f4f6f5] px-5 py-2 text-[13px] font-semibold tracking-wide text-ink-700 uppercase">{g.group}</h3>}
+                {q && <h3 className="bg-[#F4F8FC] px-5 py-2 text-[13px] font-semibold tracking-wide text-ink-700 uppercase">{g.group}</h3>}
                 {g.items.map((a) => {
                   const on = l.amenities.includes(a.id)
                   return (
