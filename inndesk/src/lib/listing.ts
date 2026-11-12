@@ -155,9 +155,9 @@ export function basicsErrors(l: Listing): Partial<Record<'name' | 'stars' | 'yea
   if (b.channelManager == null) e.channel = 'Choose No or Yes.'
   else if (b.channelManager && !b.channelManagerName?.trim()) e.channelName = 'Choose your channel manager.'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())) e.email = 'Enter the email guests can write to.'
-  else if (b.emailVerified !== b.email.trim().toLowerCase()) e.email = 'Verify this email ID with the OTP.'
+  else if (site.contactOtp && b.emailVerified !== b.email.trim().toLowerCase()) e.email = 'Verify this email ID with the OTP.'
   if (!/^[6-9]\d{9}$/.test(b.phone)) e.phone = 'Enter a 10-digit mobile number.'
-  else if (b.phoneVerified !== b.phone) e.phone = 'Verify this mobile number with the OTP.'
+  else if (site.contactOtp && b.phoneVerified !== b.phone) e.phone = 'Verify this mobile number with the OTP.'
   if (b.whatsappSame === false && b.whatsapp && !/^[6-9]\d{9}$/.test(b.whatsapp)) e.whatsapp = 'Enter a 10-digit WhatsApp number.'
   if (b.landline && !/^0?\d{10,11}$/.test(b.landline.replace(/[\s-]/g, ''))) e.landline = 'Enter the landline with STD code, e.g. 011 2345 6789.'
   return e

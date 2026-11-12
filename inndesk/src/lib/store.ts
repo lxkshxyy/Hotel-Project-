@@ -358,6 +358,7 @@ const verifyKey = (id: string) => `inndesk.verify.${id}`
 
 /** Latest check results for a listing. Live: partner_verifications (written only by the server). */
 export async function listVerifications(listingId: string): Promise<Verification[]> {
+  if (!site.autoVerify) return []
   if (isDemoMode || !supabase) {
     try {
       return JSON.parse(localStorage.getItem(verifyKey(listingId)) ?? '[]') as Verification[]

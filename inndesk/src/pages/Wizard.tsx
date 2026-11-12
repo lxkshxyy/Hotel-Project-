@@ -237,7 +237,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
             <span className="absolute top-1/2 right-2 -translate-y-1/2">
               {emailVerified ? (
                 <VerifiedBadge />
-              ) : (
+              ) : !site.contactOtp ? null : (
                 <button type="button" onClick={() => setTarget({ channel: 'email', to: email })} disabled={!emailOk} className="rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
                   Verify
                 </button>
@@ -261,7 +261,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
             <span className="flex items-center pr-3">
               {phoneVerified ? (
                 <VerifiedBadge />
-              ) : (
+              ) : !site.contactOtp ? null : (
                 <button type="button" onClick={() => setTarget({ channel: 'phone', to: b.phone })} disabled={!phoneOk} className="rounded-md px-2 py-1 text-[14px] font-bold text-pine-800 hover:bg-pine-50 disabled:text-ink-400">
                   Verify
                 </button>
@@ -1559,7 +1559,7 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
             <input id="b-acct2" className="field" inputMode="numeric" autoComplete="off" placeholder={g.accountLast4 ? `Saved, ending ${g.accountLast4}` : '1234567890123456'} value={acct2} onPaste={(x) => x.preventDefault()} onChange={(x) => setAccount(acct, x.target.value.replace(/\D/g, '').slice(0, 18))} aria-invalid={mismatch} />,
             'b-acct2',
           )}
-          <p className="pb-1 text-[12.5px] text-ink-500">When you save, we confirm this account with your bank by sending ₹1. The full number is kept encrypted for payouts; InnDesk shows only the last 4 digits.</p>
+          <p className="pb-1 text-[12.5px] text-ink-500">{site.autoVerify ? 'When you save, we confirm this account with your bank by sending ₹1. The full number is kept encrypted for payouts; InnDesk shows only the last 4 digits.' : 'Our team confirms this account with your bank (₹1 check) before your first payout. InnDesk shows only the last 4 digits.'}</p>
         </div>
         <div className="border-b border-line">{row('Bank IFSC Code', 'You can find this on your cheque book or bank statement', e.ifsc ?? (g.ifsc.length === 11 && ifscError(g.ifsc) ? ifscError(g.ifsc) : undefined), <input id="b-ifsc" className="field uppercase" maxLength={11} placeholder="HDFC0001234" value={g.ifsc} onChange={(x) => setIfsc(x.target.value)} aria-invalid={!!e.ifsc} />, 'b-ifsc')}</div>
         {row('Bank Name', undefined, e.bankName, <SearchSelect id="b-bank" value={g.bankName} options={banks.map(([, n]) => n)} onChange={(v) => up({ bankName: v })} placeholder="Select your bank from the list" searchPlaceholder="Search banks" invalid={!!e.bankName} />, 'b-bank')}
@@ -1992,7 +1992,7 @@ export default function Wizard() {
   }
   const runChecks = async (x: Listing, secs: number[]) => {
     const kinds = pendingChecks(x, secs)
-    if (!kinds.length) return
+    if (!kinds.length || !site.autoVerify) return
     if (kinds.includes('pan')) lastTaxCheck.current = taxSig(x.legal)
     const account = acctRef.current
     setChecking(kinds)
@@ -2027,7 +2027,7 @@ export default function Wizard() {
   const next = () => {
     if (!l) return
     // Live listings: stay on Finance & Legal while new details are checked, so the owner sees the result.
-    if (isLive && step === 'legal' && pendingChecks(l, [1, 2]).length) return void runChecks(l, [1, 2])
+    if (isLive && step === 'legal' && site.autoVerify && pendingChecks(l, [1, 2]).length) return void runChecks(l, [1, 2])
     if (!isLive && !stepDone(l, step)) {
       setShowErrors(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })

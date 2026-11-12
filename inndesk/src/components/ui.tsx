@@ -6,12 +6,13 @@ import { site } from '../config/site'
 import type { ListingStatus } from '../lib/types'
 
 /** InnDesk mark: a brass room-key tag on pine. */
-export function Mark({ size = 34 }: { size?: number }) {
+/** InnDesk mark. `light` = white tile for dark backgrounds. */
+export function Mark({ size = 34, light = false }: { size?: number; light?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="14" fill="#1A2C5B" />
-      <path d="M22 14h20a6 6 0 0 1 6 6v18L32 52 16 38V20a6 6 0 0 1 6-6z" fill="#AFDBF5" />
-      <circle cx="32" cy="24" r="4.5" fill="#1A2C5B" />
+      <rect width="64" height="64" rx="14" fill={light ? '#FFFFFF' : '#1A2C5B'} />
+      <path d="M22 14h20a6 6 0 0 1 6 6v18L32 52 16 38V20a6 6 0 0 1 6-6z" fill={light ? '#0047AB' : '#AFDBF5'} />
+      <circle cx="32" cy="24" r="4.5" fill={light ? '#FFFFFF' : '#1A2C5B'} />
     </svg>
   )
 }

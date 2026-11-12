@@ -1,5 +1,6 @@
 import { ChevronDown, CircleAlert, CircleCheck, CircleDashed, CircleX, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { site } from '../config/site'
 import { useVerifications } from '../lib/store'
 import type { Verification, VerifyKind } from '../lib/types'
 
@@ -78,6 +79,8 @@ function Row({ kind, v, checking, action }: { kind: VerifyKind; v?: Verification
 /** The latest automatic checks for some of a listing's details, with an optional action per row. */
 export function VerificationList({ listingId, kinds, checking = [], action }: { listingId: string; kinds: VerifyKind[]; checking?: VerifyKind[]; action?: (k: VerifyKind, v?: Verification) => React.ReactNode }) {
   const { data } = useVerifications(listingId)
+  if (!site.autoVerify)
+    return <p className="py-3 text-[13.5px] text-ink-700">Our team checks your {kinds.map((k) => verifyLabel[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} before your first payout. Automatic checks will appear here once they’re switched on.</p>
   return (
     <ul className="divide-y divide-line">
       {kinds.map((k) => {

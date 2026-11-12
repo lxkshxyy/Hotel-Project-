@@ -47,7 +47,7 @@ function toTx(r: ResvRow, l: Listing, t: string): Tx {
 /** Payouts wait until the bank account passes the automatic ₹1 check. */
 function PayoutHold({ l, base }: { l: Listing; base: string }) {
   const { data } = useVerifications(l.id)
-  if (!data) return null
+  if (!site.autoVerify || !data) return null
   const bank = data.find((v) => v.kind === 'bank')
   if (bank?.status === 'verified') return null
   const text = !bank ? 'Your bank account hasn’t been verified yet.' : bank.status === 'review' ? 'Your bank account is in another name, so our team is checking it.' : `Your bank account failed verification: ${bank.message}`

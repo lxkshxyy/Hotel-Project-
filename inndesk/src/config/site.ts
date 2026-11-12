@@ -17,10 +17,19 @@ function guessMainSite() {
   return `${window.location.protocol}//${window.location.hostname.replace(/^(partners?|inndesk|hotels?)\./, '')}`
 }
 
+const demo = !env('VITE_SUPABASE_URL') || !env('VITE_SUPABASE_ANON_KEY')
+
 export const site = {
   name: 'InnDesk',
   tagline: 'The property panel for TRPOTELS partners',
   marketplace: 'TRPOTELS',
+  /**
+   * OTP for the guest contact email and mobile (Basic Info) and the Finance page lock. Live needs the
+   * contact-otp server function with an SMS and email service; until then set VITE_CONTACT_OTP off (default).
+   */
+  contactOtp: demo || env('VITE_CONTACT_OTP') === 'on',
+  /** Automatic GSTIN / PAN / bank checks (verify-partner function + Cashfree). Live: VITE_AUTO_VERIFY=on once set up. */
+  autoVerify: demo || env('VITE_AUTO_VERIFY') === 'on',
   /** The customer website that listings publish to. */
   mainSiteUrl: (env('VITE_MAIN_SITE_URL') || guessMainSite()).replace(/\/$/, ''),
   /** Partner support contacts (VITE_SUPPORT_PHONE / VITE_SUPPORT_EMAIL). Empty = hidden. */

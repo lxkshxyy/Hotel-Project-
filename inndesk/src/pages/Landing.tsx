@@ -86,10 +86,10 @@ export default function Landing() {
     <div className="bg-paper">
       <section className="relative isolate overflow-hidden text-white">
         <img src="/img/hero-hotel.webp" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(26, 44, 91,0.94)_0%,rgba(26, 44, 91,0.82)_45%,rgba(26, 44, 91,0.55)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(26,44,91,0.95)_0%,rgba(26,44,91,0.86)_45%,rgba(0,71,171,0.55)_100%)]" />
         <header className="container-page flex h-[76px] items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2.5 no-underline" aria-label={`${site.name} home`}>
-            <Mark />
+            <Mark light />
             <span className="leading-tight">
               <span className="block text-[22px] font-black text-white">{site.name}</span>
               <span className="block text-[12px] text-white/70">by {site.marketplace}</span>
@@ -104,7 +104,7 @@ export default function Landing() {
                 Open panel
               </Link>
             )}
-            <button type="button" onClick={listNew} className="btn-brass min-h-10 px-3 text-[14px] sm:px-4 sm:text-[15px]">
+            <button type="button" onClick={listNew} className="btn min-h-10 bg-white px-3 text-[14px] text-pine-800 hover:bg-pine-50 sm:px-4 sm:text-[15px]">
               List new property for free
             </button>
           </nav>
@@ -131,10 +131,10 @@ export default function Landing() {
           </div>
           <div className="flex justify-center lg:justify-end">
             {user && owner ? (
-              <div className="w-full max-w-[440px] rounded-2xl bg-white/12 p-8 text-center ring-1 ring-white/25 backdrop-blur-xl">
+              <div className="w-full max-w-[440px] rounded-2xl bg-pine-950/45 p-8 text-center shadow-[0_24px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/20 backdrop-blur-xl">
                 <h2 className="text-[22px] font-black">Welcome back, {owner.fullName.split(' ')[0]}</h2>
                 <p className="mt-1 text-white/80">Signed in as {user.email}</p>
-                <Link to="/app" className="btn-brass mt-6 min-h-12 w-full text-base">
+                <Link to="/app" className="btn mt-6 min-h-12 w-full bg-pine-800 text-base text-white hover:bg-pine-900">
                   Go to my properties
                 </Link>
               </div>
@@ -255,8 +255,11 @@ export default function Landing() {
       <footer className="border-t border-line bg-white">
         <div className="container-page flex flex-col gap-3 py-8 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            {site.name}, {site.tagline.toLowerCase()}.
+            © {new Date().getFullYear()} {site.company.legalName}. {site.name} is the property panel for {site.marketplace} partners.
           </span>
+          <a href={site.mainSiteUrl} className="font-semibold text-pine-800 no-underline hover:underline">
+            Go to {site.marketplace}
+          </a>
           {(site.supportPhone || site.supportEmail) && <span>{[site.supportPhone, site.supportEmail].filter(Boolean).join(', ')}</span>}
         </div>
       </footer>

@@ -16,8 +16,9 @@ const mask = (email: string) => email.replace(/^(.{2}).*(@.*)$/, (_, a, b) => `$
 const maskPhone = (p: string) => (p.length >= 4 ? `${p.slice(0, 4)}******` : p)
 
 export default function Finance({ l, base }: InfoProps) {
-  const [open, setOpen] = useState(!unlocked.has(l.id))
-  const [ok, setOk] = useState(unlocked.has(l.id))
+  // Without the OTP service (live, before contact-otp is set up) the page opens for the signed-in owner.
+  const [open, setOpen] = useState(site.contactOtp && !unlocked.has(l.id))
+  const [ok, setOk] = useState(!site.contactOtp || unlocked.has(l.id))
   const [code, setCode] = useState('')
   const [err, setErr] = useState('')
   const [sent, setSent] = useState('')
@@ -147,7 +148,7 @@ export default function Finance({ l, base }: InfoProps) {
             </Card>
             <Card className="p-4 text-[14px] leading-relaxed text-ink-700">
               <strong className="block text-[15px] font-semibold text-ink-900">Payouts</strong>
-              {bank?.status === 'verified' ? `Payouts are sent ${site.payoutCycle}.` : <span className="text-alert">Payouts are on hold until your bank account is verified.</span>} Changing the bank account needs the new account to pass the ₹1 check before the next payout.
+              {!site.autoVerify || bank?.status === 'verified' ? `Payouts are sent ${site.payoutCycle}.` : <span className="text-alert">Payouts are on hold until your bank account is verified.</span>} Changing the bank account needs the new account to pass the ₹1 check before the next payout.
             </Card>
           </div>
         </div>

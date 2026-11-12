@@ -236,7 +236,7 @@ export function CreateAccount({ open, onClose, onDone, presetEmail = '' }: { ope
             {(tried || (f.confirm.length >= f.password.length && f.confirm)) && problems.confirm && <Err msg={problems.confirm} />}
           </div>
           <Err msg={error} />
-          <button type="submit" className="btn-brass min-h-12" disabled={busy}>
+          <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60" disabled={busy}>
             {busy ? 'Sending code…' : 'Verify email address'}
           </button>
           <p className="text-center text-[12px] text-ink-500">By continuing you agree to the {site.marketplace} partner terms and privacy policy.</p>
@@ -268,7 +268,7 @@ export function CreateAccount({ open, onClose, onDone, presetEmail = '' }: { ope
           )}
           {isDemoMode && <span className="rounded-lg bg-pine-50 px-3 py-2 text-[13px] text-pine-900">Demo mode: any 6 digits work.</span>}
           <Err msg={error} />
-          <button type="submit" className="btn-brass min-h-12" disabled={busy || !/^\d{6}$/.test(code)}>
+          <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60" disabled={busy || !/^\d{6}$/.test(code)}>
             {busy ? 'Creating…' : 'Create an account'}
           </button>
           <button type="button" className="self-center text-[13px] font-bold text-ink-500 hover:text-ink-900" onClick={() => setStep('details')}>
@@ -335,7 +335,7 @@ export function ForgotPassword({ open, onClose, onDone, presetEmail = '' }: { op
             <input className="field" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
           <Err msg={error} />
-          <button type="submit" className="btn-brass min-h-12" disabled={busy}>
+          <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60" disabled={busy}>
             {busy ? 'Sending…' : 'Send code'}
           </button>
         </form>
@@ -351,7 +351,7 @@ export function ForgotPassword({ open, onClose, onDone, presetEmail = '' }: { op
             <PasswordRules value={pw} />
           </div>
           <Err msg={error} />
-          <button type="submit" className="btn-brass min-h-12" disabled={busy || !/^\d{6}$/.test(code) || !passwordOk(pw)}>
+          <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60" disabled={busy || !/^\d{6}$/.test(code) || !passwordOk(pw)}>
             {busy ? 'Saving…' : 'Save and sign in'}
           </button>
         </form>
@@ -410,7 +410,7 @@ export function ChangePassword({ open, onClose }: { open: boolean; onClose: () =
           </div>
           <PasswordField label="Confirm new password" value={f.confirm} onChange={(v) => setF({ ...f, confirm: v })} autoComplete="new-password" />
           <Err msg={error} />
-          <button type="submit" className="btn-brass min-h-12" disabled={busy || !passwordOk(f.next)}>
+          <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60" disabled={busy || !passwordOk(f.next)}>
             {busy ? 'Saving…' : 'Change password'}
           </button>
         </form>
@@ -442,7 +442,7 @@ export function SignInCard({ onSignedIn, onCreate, onForgot }: { onSignedIn: () 
     }
   }
   return (
-    <div className="w-full max-w-[440px] rounded-2xl bg-white/12 p-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/25 backdrop-blur-xl sm:p-8">
+    <div className="w-full max-w-[440px] rounded-2xl bg-pine-950/45 p-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/20 backdrop-blur-xl sm:p-8">
       <h2 className="text-center text-[22px] font-black sm:text-[24px]">Sign in to manage your property</h2>
       <p className="mt-1 text-center text-[15px] text-white/80">Welcome back! Please enter your details.</p>
       <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-4">
@@ -457,7 +457,7 @@ export function SignInCard({ onSignedIn, onCreate, onForgot }: { onSignedIn: () 
           </button>
         </div>
         <Err msg={error} dark />
-        <button type="submit" className="btn-brass min-h-12 text-base" disabled={busy}>
+        <button type="submit" className="btn min-h-12 bg-pine-800 text-white hover:bg-pine-900 disabled:opacity-60 text-base" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
         <p className="text-center text-[15px] text-white/85">
