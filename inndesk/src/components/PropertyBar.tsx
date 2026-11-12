@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { site } from '../config/site'
 import { contentScore } from '../lib/score'
+import { listReviews, useData } from '../lib/store'
 import type { Listing } from '../lib/types'
 
 /**
@@ -36,6 +37,8 @@ export function PropertyBar({ l, all }: { l: Listing; all: Listing[] }) {
   // Same page for the other property (e.g. Bookings → Bookings).
   const go = (x: Listing) => navigate(pathname.replace(`/app/properties/${l.id}`, `/app/properties/${x.id}`) + search)
   const score = contentScore(l)
+  const reviews = useData(() => listReviews(l.slug).catch(() => []), [l.slug]).data ?? []
+  const avg = reviews.length ? reviews.reduce((n, r) => n + r.rating, 0) / reviews.length : 0
   const base = `/app/properties/${l.id}`
 
   return (
@@ -85,15 +88,22 @@ export function PropertyBar({ l, all }: { l: Listing; all: Listing[] }) {
         </AnimatePresence>
       </div>
       <span aria-hidden="true" className="hidden h-10 w-px bg-line lg:block" />
-      <Link to={`${base}/section/ratings-reviews`} className="group hidden flex-col no-underline lg:flex">
+      <Link to={`${base}/reviews`} className="group hidden flex-col no-underline lg:flex">
         <span className="flex items-center gap-1 text-[12.5px] text-ink-500 group-hover:text-pine-800">
           <Star className="h-3.5 w-3.5 fill-brass-500 text-brass-500" aria-hidden="true" /> Ratings <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
-        <span className="text-[17px] font-bold text-ink-900">
-          New <span className="text-[13px] font-medium text-ink-500">· no ratings yet</span>
-        </span>
+        {reviews.length ? (
+          <span className="text-[17px] font-bold text-ink-900">
+            {avg.toFixed(1)}
+            <span className="text-[13px] font-medium text-ink-500">/5 · {reviews.length} review{reviews.length === 1 ? '' : 's'}</span>
+          </span>
+        ) : (
+          <span className="text-[17px] font-bold text-ink-900">
+            New <span className="text-[13px] font-medium text-ink-500">· no ratings yet</span>
+          </span>
+        )}
       </Link>
-      <Link to={`${base}/section/content-score`} className="group hidden flex-col no-underline lg:flex">
+      <Link to={`${base}/info/content-score`} className="group hidden flex-col no-underline lg:flex">
         <span className="flex items-center gap-1 text-[12.5px] text-ink-500 group-hover:text-pine-800">
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
             <circle cx="8" cy="8" r="6.5" fill="none" stroke="#cfe3d7" strokeWidth="3" />

@@ -14,10 +14,6 @@ export const sections: Record<string, string> = {
   'plb-vdi': 'PLB & VDI',
   'daily-deals': 'Daily Steal Deals',
   payments: 'Payments',
-  inclusions: 'Inclusion & Packages',
-  'content-score': 'Content Score',
-  settings: 'Settings',
-  'ratings-reviews': 'Ratings & Reviews',
   'margin-offers': 'Margin Offers',
   reports: 'Reports',
   'action-center': 'Action Center',
@@ -26,7 +22,7 @@ export const sections: Record<string, string> = {
 export function propertyMenu(id: string): MenuItem[] {
   const base = `/app/properties/${id}`
   const sec = (slug: string) => `${base}/section/${slug}`
-  const edit = (step: string) => `${base}/edit?step=${step}`
+  const info = (page: string) => `${base}/info/${page}`
   return [
     { key: 'home', label: 'Home', icon: 'home', to: base, end: true },
     { key: 'bookings', label: 'Bookings', icon: 'bookings', to: `${base}/reservations` },
@@ -59,18 +55,18 @@ export function propertyMenu(id: string): MenuItem[] {
       label: 'Property Information',
       icon: 'property',
       links: [
-        { label: 'Basic Information', to: edit('basics') },
-        { label: 'Rooms & Rateplans', to: edit('rooms') },
-        { label: 'Amenities & Restaurant', to: edit('amenities') },
-        { label: 'Inclusion & Packages', to: sec('inclusions') },
-        { label: 'Photos & Videos', to: edit('photos') },
-        { label: 'Rules & Policies', to: edit('policies') },
-        { label: 'Content Score', to: sec('content-score') },
-        { label: 'Financial & Bank Details', to: edit('legal') },
-        { label: 'Settings', to: sec('settings') },
+        { label: 'Basic Information', to: info('basics') },
+        { label: 'Rooms & Rateplans', to: info('rooms') },
+        { label: 'Amenities & Restaurant', to: info('amenities') },
+        { label: 'Inclusion & Packages', to: info('inclusions') },
+        { label: 'Photos & Videos', to: info('photos') },
+        { label: 'Rules & Policies', to: info('policies') },
+        { label: 'Content Score', to: info('content-score') },
+        { label: 'Financial & Bank Details', to: info('finance') },
+        { label: 'Settings', to: info('settings') },
       ],
     },
-    { key: 'ratings', label: 'Ratings & Reviews', icon: 'ratings', to: sec('ratings-reviews') },
+    { key: 'ratings', label: 'Ratings & Reviews', icon: 'ratings', to: `${base}/reviews` },
     { key: 'analytics', label: 'Analytics', icon: 'analytics', to: `${base}/analytics` },
     {
       key: 'more',

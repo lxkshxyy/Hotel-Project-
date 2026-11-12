@@ -3,7 +3,7 @@ import { onLocalMachine, site } from '../config/site'
 import { dataUrlToBlob } from './images'
 import { blockers, makeSlug, toHotel } from './listing'
 import { isDemoMode, supabase } from './supabase'
-import type { Listing, Owner, Reservation } from './types'
+import type { GuestReview, Listing, Owner, Reservation } from './types'
 
 /*
  * Where InnDesk keeps its data.
@@ -283,4 +283,40 @@ export function useData<T>(load: () => Promise<T>, deps: unknown[]): { data: T |
     return () => window.removeEventListener(EVT, reload)
   }, [reload])
   return { data, error, reload }
+}
+
+/* ---------------- guest reviews ---------------- */
+
+/** Reviews guests posted on the customer site for one property, newest first. */
+export async function listReviews(slug: string): Promise<GuestReview[]> {
+  if (!slug) return []
+  if (isDemoMode || !supabase) {
+    if (import.meta.env.VITE_SINGLE) return ((globalThis as { __demoReviews?: GuestReview[] }).__demoReviews ?? []).filter((r) => r.hotel_slug === slug)
+    return []
+  }
+  const { data, error } = await supabase.from('reviews').select('*').eq('hotel_slug', slug).order('created_at', { ascending: false })
+  if (error) throw new Error('Couldn’t load reviews.')
+  return (data ?? []) as GuestReview[]
+}
+
+/** Owner replies to reviews. [LIVE] move to a `review_replies` table so guests see them on the property page. */
+const REPLIES = 'inndesk.review.replies'
+export type ReviewReply = { text: string; at: string }
+export const getReplies = (): Record<string, ReviewReply> => {
+  try {
+    return JSON.parse(localStorage.getItem(REPLIES) || '{}')
+  } catch {
+    return {}
+  }
+}
+export const setReply = (id: string, reply: ReviewReply | null) => {
+  const all = getReplies()
+  if (reply) all[id] = reply
+  else delete all[id]
+  try {
+    localStorage.setItem(REPLIES, JSON.stringify(all))
+  } catch {
+    /* storage unavailable */
+  }
+  changed()
 }

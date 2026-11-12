@@ -1228,7 +1228,7 @@ function YesNo({ q, hint, value, onChange, name }: { q: string; hint?: string; v
 }
 
 /** The refund timeline shown under the chosen cancellation policy. */
-function CancelTimeline({ id }: { id: string }) {
+export function CancelTimeline({ id }: { id: string }) {
   const hours = { freeCheckin: 0, free24: 24, free48: 48, free72: 72 }[id]
   const refund = id === 'nonref' ? 0 : hours === 0 ? 100 : 68
   return (
@@ -1307,7 +1307,7 @@ function RuleRow({ rule, h, put, nested }: { rule: PolicyRule; h: HouseAnswers; 
 }
 
 /** A collapsible group of property rules with its "x/y RULES ADDED" badge. */
-function RuleGroup({ g, h, put, open, onToggle }: { g: PolicyGroup; h: HouseAnswers; put: (id: string, v: string | string[]) => void; open: boolean; onToggle: () => void }) {
+export function RuleGroup({ g, h, put, open, onToggle }: { g: PolicyGroup; h: HouseAnswers; put: (id: string, v: string | string[]) => void; open: boolean; onToggle: () => void }) {
   const Icon = groupIcon[g.icon]
   const done = g.rules.filter((r) => answered(h[r.id])).length
   const all = done === g.rules.length
