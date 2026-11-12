@@ -328,6 +328,42 @@ create policy "Owners manage their listings"
   using (auth.uid() = owner_id)
   with check (auth.uid() = owner_id);
 
+-- Results of the automatic GSTIN / PAN / bank checks (functions/verify-partner). Owners can read
+-- their own; only the server writes, so an owner can't mark themselves verified.
+create table if not exists public.partner_verifications (
+  listing_id  text not null references public.partner_listings (id) on delete cascade,
+  kind        text not null check (kind in ('gstin', 'pan', 'bank')),
+  status      text not null check (status in ('verified', 'review', 'failed')),
+  message     text not null,
+  notes       jsonb not null default '[]',
+  details     jsonb not null default '{}',
+  checked_at  timestamptz not null default now(),
+  tries       int not null default 0,
+  tries_on    date,
+  reviewed_by text,              -- set by the admin team after a manual review
+  primary key (listing_id, kind)
+);
+alter table public.partner_verifications enable row level security;
+drop policy if exists "Owners read their verifications" on public.partner_verifications;
+create policy "Owners read their verifications"
+  on public.partner_verifications for select
+  using (exists (select 1 from public.partner_listings p where p.id = partner_verifications.listing_id and p.owner_id = auth.uid()));
+
+-- Full payout account numbers, encrypted by the server (PAYOUT_ACCOUNT_KEY). No policies: only the
+-- server (service role) can read or write this table. Owners only ever see the last 4 digits.
+create table if not exists public.partner_payout_accounts (
+  listing_id     text primary key references public.partner_listings (id) on delete cascade,
+  owner_id       uuid not null references auth.users (id) on delete cascade,
+  account_cipher text not null,
+  account_last4  text not null,
+  ifsc           text not null,
+  name_at_bank   text,
+  bank_name      text,
+  status         text not null check (status in ('verified', 'review', 'failed')),
+  checked_at     timestamptz not null default now()
+);
+alter table public.partner_payout_accounts enable row level security;
+
 -- Owners see the bookings made at their hotels (guest name, dates, amount) — nothing else.
 drop policy if exists "Owners read bookings at their hotels" on public.bookings;
 create policy "Owners read bookings at their hotels"

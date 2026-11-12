@@ -18,9 +18,10 @@ import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mea
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
 import { attachOptions, autoOccupancy, basicsErrors, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
-import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode } from '../lib/store'
+import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode, verifyPartner } from '../lib/store'
+import { verifyLabel, VerificationList } from '../components/Verification'
 import { isDemoMode } from '../lib/supabase'
-import type { BedLine, Listing, ListingRoom } from '../lib/types'
+import type { BedLine, Listing, ListingRoom, VerifyKind } from '../lib/types'
 
 type Set = (fn: (l: Listing) => Listing) => void
 
@@ -1502,7 +1503,7 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
   )
 }
 
-function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: number; openSec: (n: number) => void; tried: boolean }) {
+function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing; set: Set; sec: number; openSec: (n: number) => void; tried: boolean; acctRef: { current: string }; checking: VerifyKind[] }) {
   const g = l.legal
   const up = (x: Partial<Listing['legal']>) => set((y) => ({ ...y, legal: { ...y.legal, ...x } }))
   const [acct, setAcct] = useState('')
@@ -1514,6 +1515,7 @@ function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: num
   const setAccount = (a: string, b: string) => {
     setAcct(a)
     setAcct2(b)
+    acctRef.current = a.length >= 9 && a === b ? a : ''
     up({ accountLast4: a.length >= 9 && a === b ? a.slice(-4) : a || b ? '' : g.accountLast4 })
   }
   const setIfsc = (v: string) => {
@@ -1557,7 +1559,7 @@ function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: num
             <input id="b-acct2" className="field" inputMode="numeric" autoComplete="off" placeholder={g.accountLast4 ? `Saved, ending ${g.accountLast4}` : '1234567890123456'} value={acct2} onPaste={(x) => x.preventDefault()} onChange={(x) => setAccount(acct, x.target.value.replace(/\D/g, '').slice(0, 18))} aria-invalid={mismatch} />,
             'b-acct2',
           )}
-          <p className="pb-1 text-[12.5px] text-ink-500">Only the last 4 digits are stored in InnDesk. The full number is checked by our payments partner when payouts start.</p>
+          <p className="pb-1 text-[12.5px] text-ink-500">When you save, we confirm this account with your bank by sending ₹1. The full number is kept encrypted for payouts; InnDesk shows only the last 4 digits.</p>
         </div>
         <div className="border-b border-line">{row('Bank IFSC Code', 'You can find this on your cheque book or bank statement', e.ifsc ?? (g.ifsc.length === 11 && ifscError(g.ifsc) ? ifscError(g.ifsc) : undefined), <input id="b-ifsc" className="field uppercase" maxLength={11} placeholder="HDFC0001234" value={g.ifsc} onChange={(x) => setIfsc(x.target.value)} aria-invalid={!!e.ifsc} />, 'b-ifsc')}</div>
         {row('Bank Name', undefined, e.bankName, <SearchSelect id="b-bank" value={g.bankName} options={banks.map(([, n]) => n)} onChange={(v) => up({ bankName: v })} placeholder="Select your bank from the list" searchPlaceholder="Search banks" invalid={!!e.bankName} />, 'b-bank')}
@@ -1569,6 +1571,10 @@ function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: num
             {e.consent}
           </span>
         )}
+        <div className="mt-4 rounded-lg border border-line px-4">
+          <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
+          <VerificationList listingId={l.id} kinds={['bank']} checking={checking} />
+        </div>
       </div>
     ),
     2: (
@@ -1599,6 +1605,10 @@ function Legal({ l, set, sec, openSec, tried }: { l: Listing; set: Set; sec: num
         </div>
         {row('Is your business registered as an MSME (Udyam)?', 'Micro, small and medium enterprises registered on the Udyam portal', e.msme, <Pills name="msme" value={g.msme == null ? undefined : g.msme ? 'yes' : 'no'} options={ynOpts} onChange={(v) => up({ msme: v === 'yes', ...(v === 'no' ? { udyam: '' } : {}) })} />)}
         {g.msme && row('Udyam Registration Number', undefined, e.udyam, <input id="t-udyam" className="field uppercase" maxLength={19} placeholder="UDYAM-DL-01-0001234" value={g.udyam ?? ''} onChange={(x) => up({ udyam: x.target.value.toUpperCase() })} aria-invalid={!!e.udyam} />, 't-udyam')}
+        <div className="mt-4 rounded-lg border border-line px-4">
+          <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
+          <VerificationList listingId={l.id} kinds={hasGstin ? ['pan', 'gstin'] : ['pan']} checking={checking} />
+        </div>
       </div>
     ),
     3: (
@@ -1911,6 +1921,12 @@ export default function Wizard() {
     setParams({ step: 'legal', lsec: String(legalSections.find((x) => !legalSectionDone(l, x.id))?.id ?? 1) }, { replace: true })
   }, [step, legalPinned, l, setParams])
 
+  // Full bank account number typed in Finance & Legal, kept only until it has been checked.
+  const acctRef = useRef('')
+  const [checking, setChecking] = useState<VerifyKind[]>([])
+  // PAN / GSTIN details last sent for checking, so saving again without changes doesn't pay for a second check.
+  const lastTaxCheck = useRef('')
+
   if (id === 'new') return <Navigate to="/app/properties?new=1" replace />
 
   const isLive = !!l && l.status !== 'draft'
@@ -1962,12 +1978,45 @@ export default function Wizard() {
     setParams({ step: 'legal', lsec: String(n) })
     window.scrollTo({ top: 0 })
   }
+  // Bank account (section 1) and PAN / GSTIN (section 2) are checked automatically once saved.
+  const taxSig = (g: Listing['legal']) => JSON.stringify([g.legalName.trim(), g.pan, g.hasGstin, g.gstin])
+  const pendingChecks = (x: Listing, secs: number[]) => {
+    const g = x.legal
+    const kinds: VerifyKind[] = []
+    if (secs.includes(1) && acctRef.current && g.bankConsent && !ifscError(g.ifsc)) kinds.push('bank')
+    if (secs.includes(2) && taxSig(g) !== lastTaxCheck.current) {
+      if (g.legalName.trim() && !panError(g.pan)) kinds.push('pan')
+      if (g.hasGstin && !gstinError(g.gstin)) kinds.push('gstin')
+    }
+    return kinds
+  }
+  const runChecks = async (x: Listing, secs: number[]) => {
+    const kinds = pendingChecks(x, secs)
+    if (!kinds.length) return
+    if (kinds.includes('pan')) lastTaxCheck.current = taxSig(x.legal)
+    const account = acctRef.current
+    setChecking(kinds)
+    try {
+      if (!(await save(x))) return
+      const res = await verifyPartner(x, kinds, kinds.includes('bank') ? account : undefined)
+      if (kinds.includes('bank')) acctRef.current = ''
+      const bad = res.filter((r) => r.status !== 'verified').map((r) => verifyLabel[r.kind])
+      setToast({ text: bad.length ? `${bad.join(' and ')} need${bad.length === 1 ? 's' : ''} a look` : `${res.map((r) => verifyLabel[r.kind]).join(' and ')} verified`, n: 4 })
+    } catch (e) {
+      lastTaxCheck.current = ''
+      setToast({ text: e instanceof Error ? e.message : 'Couldn’t run the checks.', n: 5 })
+    } finally {
+      setChecking([])
+    }
+  }
+
   const legalNext = () => {
     if (!l) return
     if (!legalSectionDone(l, lsec)) {
       setLegalTried(true)
       return
     }
+    void runChecks(l, [lsec])
     if (saveState === 'dirty' && l.status === 'draft') save(l)
     const title = legalSections[lsec - 1].title
     setToast({ text: `${title} has been saved`, n: 3 })
@@ -1977,6 +2026,8 @@ export default function Wizard() {
 
   const next = () => {
     if (!l) return
+    // Live listings: stay on Finance & Legal while new details are checked, so the owner sees the result.
+    if (isLive && step === 'legal' && pendingChecks(l, [1, 2]).length) return void runChecks(l, [1, 2])
     if (!isLive && !stepDone(l, step)) {
       setShowErrors(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -2024,7 +2075,7 @@ export default function Wizard() {
     ),
     photos: <Photos l={l} set={set} />,
     policies: <Policies l={l} set={set} />,
-    legal: <Legal l={l} set={set} sec={lsec} openSec={openLegal} tried={legalTried} />,
+    legal: <Legal l={l} set={set} sec={lsec} openSec={openLegal} tried={legalTried} acctRef={acctRef} checking={checking} />,
     review: <Review l={l} go={go} onPublish={publish} busy={publishing} result={result} onRetry={async () => setL(await retrySync(l))} />,
   }[step]
 

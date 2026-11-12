@@ -9,7 +9,7 @@ import { site } from '../config/site'
 import { inr, parseISODate, todayISO } from '../lib/format'
 import { useListings, useReservations, type ResvRow } from '../lib/hooks'
 import { payoutDate, settle } from '../lib/money'
-import { answerDispute, getDisputeAnswers, listDisputes, saveListing, useData } from '../lib/store'
+import { answerDispute, getDisputeAnswers, listDisputes, saveListing, useData, useVerifications } from '../lib/store'
 import type { Dispute, Listing } from '../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, Faq, Field, inputCls, PageTitle } from './info/kit'
 
@@ -44,6 +44,28 @@ function toTx(r: ResvRow, l: Listing, t: string): Tx {
   return { r, s, pay, status }
 }
 
+/** Payouts wait until the bank account passes the automatic ₹1 check. */
+function PayoutHold({ l, base }: { l: Listing; base: string }) {
+  const { data } = useVerifications(l.id)
+  if (!data) return null
+  const bank = data.find((v) => v.kind === 'bank')
+  if (bank?.status === 'verified') return null
+  const text = !bank ? 'Your bank account hasn’t been verified yet.' : bank.status === 'review' ? 'Your bank account is in another name, so our team is checking it.' : `Your bank account failed verification: ${bank.message}`
+  return (
+    <div role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#f3c5c2] bg-alert-50 px-4 py-3 text-[14px] text-ink-900">
+      <span className="flex items-center gap-2">
+        <ShieldAlert className="h-5 w-5 shrink-0 text-alert" aria-hidden="true" />
+        <span>
+          <strong className="font-semibold">Payouts on hold.</strong> {text}
+        </span>
+      </span>
+      <Link to={`${base}/info/finance`} className="text-[14px] font-semibold text-pine-800">
+        View verification
+      </Link>
+    </div>
+  )
+}
+
 /** Payments for one property: payouts, transactions, settings, invoices and disputes. */
 export default function Payments() {
   const { id = '', page = '' } = useParams()
@@ -62,6 +84,7 @@ export default function Payments() {
   return (
     <div className="min-h-[calc(100dvh-68px)] bg-white">
       <div className="mx-auto max-w-[1280px] px-4 pt-6 pb-16 sm:px-8">
+        {(page === 'payouts' || page === 'past-payouts' || page === 'settings') && <PayoutHold l={l} base={base} />}
         {page === 'payouts' ? <Upcoming {...props} /> : page === 'transactions' ? <Transactions {...props} /> : page === 'past-payouts' ? <Past {...props} /> : page === 'settings' ? <Settings {...props} /> : page === 'advance' ? <Advance {...props} /> : page === 'compensation' ? <Compensation {...props} /> : page === 'invoices' ? <Invoices {...props} /> : <Disputes {...props} />}
       </div>
     </div>

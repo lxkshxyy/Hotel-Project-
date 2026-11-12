@@ -322,3 +322,14 @@ export interface Dispute {
   respond_by: string
   status: 'open' | 'responded' | 'won' | 'lost'
 }
+
+export type VerifyKind = 'gstin' | 'pan' | 'bank'
+/** Outcome of an automatic GSTIN / PAN / bank check (server: functions/verify-partner). */
+export interface Verification {
+  kind: VerifyKind
+  status: 'verified' | 'review' | 'failed'
+  message: string
+  notes: string[]
+  details: Record<string, string>
+  checked_at: string
+}

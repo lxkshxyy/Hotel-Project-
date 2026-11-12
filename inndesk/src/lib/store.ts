@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { onLocalMachine, site } from '../config/site'
 import { dataUrlToBlob } from './images'
+import { gstinState as gstState } from './gstin'
 import { blockers, makeSlug, toHotel } from './listing'
 import { isDemoMode, supabase } from './supabase'
-import type { Dispute, GuestReview, Listing, Owner, Reservation } from './types'
+import type { Dispute, GuestReview, Listing, Owner, Reservation, Verification, VerifyKind } from './types'
 
 /*
  * Where InnDesk keeps its data.
@@ -348,4 +349,78 @@ export const answerDispute = (id: string, a: DisputeAnswer) => {
     /* storage unavailable */
   }
   changed()
+}
+
+/* ---------------- GSTIN / PAN / bank verification ---------------- */
+
+const VERIFY_EVT = 'inndesk-verify'
+const verifyKey = (id: string) => `inndesk.verify.${id}`
+
+/** Latest check results for a listing. Live: partner_verifications (written only by the server). */
+export async function listVerifications(listingId: string): Promise<Verification[]> {
+  if (isDemoMode || !supabase) {
+    try {
+      return JSON.parse(localStorage.getItem(verifyKey(listingId)) ?? '[]') as Verification[]
+    } catch {
+      return []
+    }
+  }
+  const { data, error } = await supabase.from('partner_verifications').select('kind, status, message, notes, details, checked_at').eq('listing_id', listingId)
+  if (error) throw new Error('Couldn’t load verification results.')
+  return (data ?? []) as Verification[]
+}
+
+/** Demo mode: plausible results without calling anyone (account numbers ending 0000 fail). */
+function demoCheck(l: Listing, k: VerifyKind, account = ''): Verification {
+  const g = l.legal
+  const at = new Date().toISOString()
+  const name = (g.payoutName || g.legalName).toUpperCase()
+  if (k === 'pan') return { kind: k, status: 'verified', message: 'PAN is valid and the name matches.', notes: [], details: { 'Name on PAN records': g.legalName.toUpperCase(), 'PAN status': 'Existing and Valid', 'Name match': '100%' }, checked_at: at }
+  if (k === 'bank') {
+    if (account.endsWith('0000')) return { kind: k, status: 'failed', message: 'This account number doesn’t exist at that bank.', notes: [], details: { 'Account ending': account.slice(-4) }, checked_at: at }
+    return { kind: k, status: 'verified', message: 'Bank account confirmed in your name.', notes: [], details: { 'Name at bank': name, Bank: g.bankName.toUpperCase(), 'Name match': '100%', 'Account ending': account.slice(-4) }, checked_at: at }
+  }
+  const stateOk = !l.location.state || l.location.state === gstState(g.gstin)
+  return {
+    kind: k,
+    status: stateOk ? 'verified' : 'review',
+    message: stateOk ? 'GSTIN is active and matches your details.' : 'GSTIN is active, but some details need a look.',
+    notes: stateOk ? [] : [`This GSTIN is registered in ${gstState(g.gstin)}, but the property is in ${l.location.state}. A hotel needs a GSTIN for the state it is in.`],
+    details: { 'Legal name on GST': g.legalName.toUpperCase(), 'GST status': 'Active', 'Name match': '100%' },
+    checked_at: at,
+  }
+}
+
+/**
+ * Checks the GSTIN, PAN and/or bank account on a saved listing. The full account number is sent to
+ * the server once for the ₹1 penny drop and stored there encrypted, never in the listing.
+ */
+export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount?: string): Promise<Verification[]> {
+  let results: Verification[]
+  if (isDemoMode || !supabase) {
+    await new Promise((r) => setTimeout(r, 700))
+    results = kinds.filter((k) => k !== 'gstin' || l.legal.gstin).map((k) => demoCheck(l, k, bankAccount))
+    const kept = (await listVerifications(l.id)).filter((v) => !kinds.includes(v.kind))
+    localStorage.setItem(verifyKey(l.id), JSON.stringify([...kept, ...results]))
+  } else {
+    const { data, error } = await supabase.functions.invoke('verify-partner', { body: { listing_id: l.id, kinds, bank_account: bankAccount } })
+    if (error) {
+      const msg = await (error as { context?: Response }).context?.json?.().then((b: { error?: string }) => b.error).catch(() => '')
+      throw new Error(msg || 'Couldn’t run the checks. Please try again in a few minutes.')
+    }
+    results = ((data as { results?: Verification[] } | null)?.results ?? []).map((v) => ({ ...v, checked_at: v.checked_at ?? new Date().toISOString() }))
+  }
+  window.dispatchEvent(new Event(VERIFY_EVT))
+  return results
+}
+
+/** Verification results for a listing, refreshed after every check. */
+export function useVerifications(listingId: string) {
+  const r = useData(() => listVerifications(listingId), [listingId])
+  const { reload } = r
+  useEffect(() => {
+    window.addEventListener(VERIFY_EVT, reload)
+    return () => window.removeEventListener(VERIFY_EVT, reload)
+  }, [reload])
+  return r
 }

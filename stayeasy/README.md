@@ -54,7 +54,7 @@ checked on the server. Deploy them once (and again after changing pricing or Clu
 npm run sync:functions               # copies the website's price rules into the functions
 npx supabase login
 npx supabase link --project-ref <your-project-ref>
-npx supabase functions deploy create-booking verify-payment cancel-booking agent-create-booking agent-cancel-booking agent-wallet-topup agent-wallet-verify
+npx supabase functions deploy create-booking verify-payment cancel-booking agent-create-booking agent-cancel-booking agent-wallet-topup agent-wallet-verify verify-partner
 npx supabase functions deploy razorpay-webhook --no-verify-jwt
 npx supabase secrets set SITE_URL=https://<your-site> EMAIL_FROM="StayEasy <bookings@yourdomain.com>" RESEND_API_KEY=<key>
 ```
@@ -66,6 +66,21 @@ npx supabase secrets set RAZORPAY_KEY_ID=rzp_live_xxx RAZORPAY_KEY_SECRET=xxx RA
 Then set `VITE_RAZORPAY_KEY_ID` on Vercel and redeploy. In Razorpay → Webhooks, add
 `https://<project-ref>.supabase.co/functions/v1/razorpay-webhook` with the events `payment.captured`,
 `order.paid` and `refund.processed`. "Pay at hotel" stays the default; "Pay now" gives 5% off.
+
+### 3b. Hotel owner verification (GSTIN, PAN, bank account)
+InnDesk checks each owner's GSTIN, PAN and bank account (₹1 penny drop) through Cashfree Secure ID
+when they save the Finance & Legal step. Open a Cashfree Secure ID account with TRP Hotels' company
+KYC, then in its dashboard choose **Two-factor authentication → Public key** (Supabase functions have
+no fixed IP to whitelist) and download the key.
+
+```bash
+npx supabase secrets set CASHFREE_VRS_CLIENT_ID=xxx CASHFREE_VRS_CLIENT_SECRET=xxx CASHFREE_VRS_ENV=production \
+  CASHFREE_VRS_PUBLIC_KEY="$(cat cashfree_public_key.pem)" PAYOUT_ACCOUNT_KEY=<32+ random characters, keep a copy safe>
+```
+Test first with `CASHFREE_VRS_ENV=sandbox` and the sandbox keys. Results land in
+`partner_verifications`; anything marked `review` needs a person to look at it before payouts.
+Full account numbers are stored encrypted in `partner_payout_accounts` — losing `PAYOUT_ACCOUNT_KEY`
+means owners must re-enter their accounts.
 
 ### 4. Vercel
 Import the GitHub repository, set **Root Directory** to `stayeasy`, and add the variables from

@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CodeBoxes } from '../../components/Auth'
 import { site } from '../../config/site'
-import { checkContactCode, CONTACT_CODE_LENGTH, sendContactCode } from '../../lib/store'
+import { VerificationList } from '../../components/Verification'
+import { checkContactCode, CONTACT_CODE_LENGTH, sendContactCode, useVerifications, verifyPartner } from '../../lib/store'
+import type { VerifyKind } from '../../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, PageTitle, type InfoProps } from './kit'
 
 // Unlocked for the rest of this visit (until the page is reloaded).
@@ -21,6 +23,21 @@ export default function Finance({ l, base }: InfoProps) {
   const [sent, setSent] = useState('')
   const [busy, setBusy] = useState(false)
   const g = l.legal
+  const checks = useVerifications(l.id).data ?? []
+  const bank = checks.find((v) => v.kind === 'bank')
+  const [checking, setChecking] = useState<VerifyKind[]>([])
+  const [checkErr, setCheckErr] = useState('')
+  const recheck = async (k: VerifyKind) => {
+    setChecking([k])
+    setCheckErr('')
+    try {
+      await verifyPartner(l, [k])
+    } catch (e) {
+      setCheckErr(e instanceof Error ? e.message : 'Couldn’t run the check.')
+    } finally {
+      setChecking([])
+    }
+  }
 
   useEffect(() => {
     if (ok) return
@@ -73,7 +90,7 @@ export default function Finance({ l, base }: InfoProps) {
                 <h2 className="flex items-center gap-2 text-[18px] font-semibold text-ink-900">
                   <ShieldCheck className="h-5 w-5 text-pine-800" aria-hidden="true" /> Tax details
                 </h2>
-                <Link to={`${base}/edit?step=legal&lsec=1`} className="text-[14px] font-semibold text-pine-800">
+                <Link to={`${base}/edit?step=legal&lsec=2`} className="text-[14px] font-semibold text-pine-800">
                   Edit
                 </Link>
               </div>
@@ -89,12 +106,12 @@ export default function Finance({ l, base }: InfoProps) {
                 <h2 className="flex items-center gap-2 text-[18px] font-semibold text-ink-900">
                   <Landmark className="h-5 w-5 text-pine-800" aria-hidden="true" /> Bank account for payouts
                 </h2>
-                <Link to={`${base}/edit?step=legal&lsec=2`} className="text-[14px] font-semibold text-pine-800">
+                <Link to={`${base}/edit?step=legal&lsec=1`} className="text-[14px] font-semibold text-pine-800">
                   Edit
                 </Link>
               </div>
               <dl className="mt-2">
-                <Row k="Account holder" v={g.payoutName} />
+                <Row k="Account holder" v={g.payoutName || g.legalName} />
                 <Row k="Bank" v={g.bankName} />
                 <Row k="Account number" v={g.accountLast4 ? `•••• •••• ${g.accountLast4}` : ''} />
                 <Row k="IFSC" v={g.ifsc} />
@@ -106,10 +123,33 @@ export default function Finance({ l, base }: InfoProps) {
               )}
             </Card>
           </div>
-          <Card className="p-4 text-[14px] leading-relaxed text-ink-700">
-            <strong className="block text-[15px] font-semibold text-ink-900">Payouts</strong>
-            Payouts are sent {site.payoutCycle}. Changing the bank account needs the new account to pass the ₹1 check before the next payout.
-          </Card>
+          <div className="flex flex-col gap-5">
+            <Card className="p-4">
+              <strong className="block text-[15px] font-semibold text-ink-900">Verification</strong>
+              <p className="mt-0.5 text-[13px] text-ink-500">Checked automatically with the GST department, Income Tax records and your bank.</p>
+              <VerificationList
+                listingId={l.id}
+                kinds={g.hasGstin === false ? ['pan', 'bank'] : ['gstin', 'pan', 'bank']}
+                checking={checking}
+                action={(k) =>
+                  k === 'bank' ? (
+                    <Link to={`${base}/edit?step=legal&lsec=1`} className="text-[13px] font-semibold text-pine-800">
+                      Re-enter account
+                    </Link>
+                  ) : (
+                    <button type="button" disabled={!!checking.length || (k === 'gstin' && !g.gstin)} onClick={() => recheck(k)} className="text-[13px] font-semibold text-pine-800 disabled:text-ink-400">
+                      Check again
+                    </button>
+                  )
+                }
+              />
+              {checkErr && <p className="mt-2 text-[13px] text-alert">{checkErr}</p>}
+            </Card>
+            <Card className="p-4 text-[14px] leading-relaxed text-ink-700">
+              <strong className="block text-[15px] font-semibold text-ink-900">Payouts</strong>
+              {bank?.status === 'verified' ? `Payouts are sent ${site.payoutCycle}.` : <span className="text-alert">Payouts are on hold until your bank account is verified.</span>} Changing the bank account needs the new account to pass the ₹1 check before the next payout.
+            </Card>
+          </div>
         </div>
       )}
 
