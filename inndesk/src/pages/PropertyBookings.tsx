@@ -1,20 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, CalendarX, ChevronDown, ChevronRight, CirclePlay, FileSpreadsheet, Search, Ticket } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { CalendarX, ChevronDown, ChevronRight, FileSpreadsheet, Search, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { HotelierVoucher } from '../components/HotelierVoucher'
 import { RangeCalendar, type DateFilter } from '../components/RangeCalendar'
-import { ReviewQrCard } from '../components/ReviewQr'
 import { Notice, Spinner } from '../components/ui'
 import { addDays, inr, parseISODate, todayISO } from '../lib/format'
 import { useListings, useReservations, type ResvRow } from '../lib/hooks'
 import { settle } from '../lib/money'
-import { acknowledge, getAcks, useData } from '../lib/store'
 
 type DateField = 'checkin' | 'checkout' | 'booked' | 'staying' | 'stay'
-type Status = 'active' | 'cancelled' | 'pending' | 'modified' | 'denied'
+type Status = 'active' | 'cancelled' | 'modified' | 'denied'
 type Pay = 'pending' | 'processed' | null
-type BType = 'free' | 'hotel' | 'online' | null
 type Range = { kind: 'past30' | 'next90' | 'custom'; from: string; to: string }
 
 const dm = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -40,31 +37,40 @@ function Radio({ name, label, on, onPick }: { name: string; label: string; on: b
   )
 }
 
-/** Bookings for one property: list or hourly view, filters, acknowledgements, vouchers. */
+/** Monday of the week a date falls in. */
+const weekStart = (iso: string) => addDays(iso, -((parseISODate(iso).getDay() + 6) % 7))
+
+/** Bookings for one property: list or hourly view, daily or weekly grouping, sliding filters, vouchers. */
 export default function PropertyBookings() {
   const { id = '' } = useParams()
   const { data } = useListings()
   const l = data?.find((x) => x.id === id)
   const { list, offline, loading } = useReservations(l ? [l] : [])
-  const acks = useData(async () => getAcks(), [])
   const t = todayISO()
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
   const [view, setView] = useState<'list' | 'hourly'>('list')
+  const [group, setGroup] = useState<'daily' | 'weekly'>('daily')
   const [range, setRange] = useState<Range>({ kind: 'next90', from: t, to: addDays(t, 90) })
   const [cal, setCal] = useState<DateFilter>(null)
   const [field, setField] = useState<DateField>('checkin')
   const [status, setStatus] = useState<Status>('active')
   const [pay, setPay] = useState<Pay>(null)
-  const [btype, setBtype] = useState<BType>(null)
-  const [ackMode, setAckMode] = useState(false)
-  const [picked, setPicked] = useState<string[]>([])
   const [voucher, setVoucher] = useState<ResvRow | null>(null)
   const [openPay, setOpenPay] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const isPending = (r: ResvRow) => r.status !== 'cancelled' && (r.desk === 'upcoming' || r.desk === 'in-house') && !acks.data?.[r.id]
-  const pending = useMemo(() => list.filter(isPending).sort((a, b) => a.check_in.localeCompare(b.check_in)), [list, acks.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!filtersOpen) return
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setFiltersOpen(false)
+    document.addEventListener('keydown', esc)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', esc)
+      document.body.style.overflow = prev
+    }
+  }, [filtersOpen])
 
   const shown = useMemo(() => {
     const n = q.trim().toLowerCase()
@@ -78,27 +84,25 @@ export default function PropertyBookings() {
         } else if (k < range.from || k > range.to) return false
         if (status === 'active' && (r.status === 'cancelled' || r.desk === 'no-show')) return false
         if (status === 'cancelled' && r.status !== 'cancelled') return false
-        if (status === 'pending' && !isPending(r)) return false
         if (status === 'modified') return false // modifications aren't tracked yet
         if (status === 'denied' && r.desk !== 'no-show') return false
         if (pay === 'pending' && !(r.pay_mode === 'hotel' && r.desk !== 'departed')) return false
         if (pay === 'processed' && !(r.pay_mode === 'now' || r.desk === 'departed')) return false
-        if (btype === 'free' && r.amount !== 0) return false
-        if (btype === 'hotel' && r.pay_mode !== 'hotel') return false
-        if (btype === 'online' && r.pay_mode !== 'now') return false
         return !n || [r.id, r.guest_name, r.guest_phone].some((v) => v.toLowerCase().includes(n))
       })
       .sort((a, b) => dayKey(a, field).localeCompare(dayKey(b, field)) || a.id.localeCompare(b.id))
-  }, [list, q, field, range, status, pay, btype, acks.data, t]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [list, q, field, range, status, pay, t])
 
+  // Each group is one day (Daily) or one Monday–Sunday week (Weekly): [first day, last day, bookings].
   const groups = useMemo(() => {
     const m = new Map<string, ResvRow[]>()
     for (const r of shown) {
-      const k = field === 'staying' ? t : dayKey(r, field)
+      const d = field === 'staying' ? t : dayKey(r, field)
+      const k = group === 'weekly' ? weekStart(d) : d
       m.set(k, [...(m.get(k) ?? []), r])
     }
-    return [...m]
-  }, [shown, field, t])
+    return [...m].map(([k, rows]) => [k, group === 'weekly' ? addDays(k, 6) : k, rows] as const)
+  }, [shown, field, t, group])
 
   if (!data || loading) return <Spinner />
   if (!l) return <div className="p-8">Property not found.</div>
@@ -115,7 +119,7 @@ export default function PropertyBookings() {
     setRange({ kind: 'custom', from: v.from, to: v.to })
     setField(v.mode === 'checkin' ? 'checkin' : v.mode === 'booking' ? 'booked' : 'stay')
   }
-  const statusText = (r: ResvRow) => (r.status === 'cancelled' ? 'Cancelled' : r.desk === 'no-show' ? 'Check-in denied' : isPending(r) ? 'Pending acknowledgement' : r.desk === 'in-house' ? 'Checked in' : r.desk === 'departed' ? 'Checked out' : 'Confirmed')
+  const statusText = (r: ResvRow) => (r.status === 'cancelled' ? 'Cancelled' : r.desk === 'no-show' ? 'Check-in denied' : r.desk === 'in-house' ? 'Checked in' : r.desk === 'departed' ? 'Checked out' : 'Confirmed')
   const csv = (rows: ResvRow[], name: string) => {
     const head = ['Booking ID', 'Guest name', 'Phone', 'Email', 'Check-in', 'Check-out', 'Nights', 'Rooms', 'Room', 'Guests', 'Payment', 'Amount', 'Net amount', 'Status']
     const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
@@ -124,18 +128,20 @@ export default function PropertyBookings() {
     Object.assign(document.createElement('a'), { href: url, download: `${name}-${t}.csv` }).click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-  const ack = (ids: string[]) => {
-    acknowledge(ids)
-    setPicked((p) => p.filter((x) => !ids.includes(x)))
-    acks.reload?.()
+  const active = (field !== 'checkin' && field !== 'stay' ? 1 : 0) + (status !== 'active' ? 1 : 0) + (pay ? 1 : 0) + (group !== 'daily' ? 1 : 0) + (view !== 'list' ? 1 : 0)
+  const clearAll = () => {
+    if (field !== 'stay') setField('checkin')
+    setStatus('active')
+    setPay(null)
+    setGroup('daily')
+    setView('list')
   }
-  const pendingWorth = pending.reduce((n, r) => n + settle(r, l).earned, 0)
   const promoTo = `/app/properties/${l.id}/section/promotions`
 
   // Gaps of a week or more with no future check-ins between groups → promotion nudge.
   const gapAfter = (i: number) => {
     if (field !== 'checkin' || status !== 'active') return null
-    const cur = groups[i][0]
+    const cur = groups[i][1]
     const next = groups[i + 1]?.[0] ?? (range.to > t ? addDays(range.to, 1) : null)
     if (!next) return null
     const from = addDays(cur < t ? t : cur, 1)
@@ -161,15 +167,13 @@ export default function PropertyBookings() {
     )
   }
 
-  const card = (r: ResvRow, selectable = false) => {
+  const card = (r: ResvRow) => {
     const s = settle(r, l)
-    const pend = isPending(r)
     const st = statusText(r)
     return (
       <div key={r.id} className="rounded-xl border border-line bg-white transition-shadow hover:shadow-[0_10px_24px_-16px_rgba(18,55,42,0.35)]">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-3 md:grid-cols-[1.4fr_1.3fr_1.4fr_1.2fr_1.1fr_0.9fr] md:items-center">
           <div className="col-span-2 flex items-start gap-3 md:col-span-1">
-            {selectable && <input type="checkbox" checked={picked.includes(r.id)} onChange={() => setPicked((p) => (p.includes(r.id) ? p.filter((x) => x !== r.id) : [...p, r.id]))} aria-label={`Select ${r.guest_name}`} className="mt-1 h-[18px] w-[18px] accent-pine-800" />}
             <div className="min-w-0">
               <button type="button" onClick={() => setVoucher(r)} className="block max-w-full truncate text-left text-[15px] font-bold text-pine-800 uppercase hover:underline">
                 {r.guest_name}
@@ -206,18 +210,11 @@ export default function PropertyBookings() {
             <button type="button" onClick={() => setOpenPay(openPay === r.id ? null : r.id)} aria-expanded={openPay === r.id} className="flex items-center gap-1 text-[14px] font-semibold text-pine-800 hover:underline">
               Payment Details <ChevronDown className={`h-4 w-4 transition-transform ${openPay === r.id ? 'rotate-180' : ''}`} aria-hidden="true" />
             </button>
-            {st !== 'Confirmed' && !pend && <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${r.status === 'cancelled' || r.desk === 'no-show' ? 'bg-alert-50 text-alert' : 'bg-pine-50 text-pine-900'}`}>{st}</span>}
+            {st !== 'Confirmed' && <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${r.status === 'cancelled' || r.desk === 'no-show' ? 'bg-alert-50 text-alert' : 'bg-pine-50 text-pine-900'}`}>{st}</span>}
           </div>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setVoucher(r)} className="text-[14px] font-semibold text-pine-800 hover:underline">
-              Voucher
-            </button>
-            {pend && (
-              <button type="button" onClick={() => ack([r.id])} className="h-8 rounded-md border border-pine-800 px-3 text-[14px] font-semibold text-pine-800 hover:bg-pine-50">
-                Acknowledge
-              </button>
-            )}
-          </div>
+          <button type="button" onClick={() => setVoucher(r)} className="h-8 rounded-md border border-pine-800 px-4 text-[14px] font-semibold text-pine-800 hover:bg-pine-50">
+            View
+          </button>
         </div>
         <AnimatePresence initial={false}>
           {openPay === r.id && (
@@ -252,7 +249,8 @@ export default function PropertyBookings() {
   }
 
   const filters = (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 [&>div]:border-t [&>div]:border-line [&>div]:pt-4">
+      <div>
       <fieldset>
         <legend className="mb-1 text-[15px] font-semibold text-ink-900">Date Filters</legend>
         {(
@@ -266,13 +264,14 @@ export default function PropertyBookings() {
           <Radio key={k} name="df" label={lbl} on={field === k} onPick={() => setField(k)} />
         ))}
       </fieldset>
+      </div>
+      <div>
       <fieldset>
         <legend className="mb-1 text-[15px] font-semibold text-ink-900">Booking Status</legend>
         {(
           [
             ['active', 'Active'],
             ['cancelled', 'Cancelled'],
-            ['pending', 'Pending Acknowledgement'],
             ['modified', 'Modified'],
             ['denied', 'Check-in-denied'],
           ] as [Status, string][]
@@ -280,6 +279,8 @@ export default function PropertyBookings() {
           <Radio key={k} name="bs" label={lbl} on={status === k} onPick={() => setStatus(k)} />
         ))}
       </fieldset>
+      </div>
+      <div>
       <fieldset>
         <legend className="mb-1 text-[15px] font-semibold text-ink-900">Payment Status</legend>
         {(
@@ -291,18 +292,7 @@ export default function PropertyBookings() {
           <Radio key={k} name="ps" label={lbl} on={pay === k} onPick={() => setPay(pay === k ? null : k)} />
         ))}
       </fieldset>
-      <fieldset>
-        <legend className="mb-1 text-[15px] font-semibold text-ink-900">Booking Type</legend>
-        {(
-          [
-            ['free', 'Free Room Night'],
-            ['hotel', 'Pay at Hotel'],
-            ['online', 'Prepaid Online'],
-          ] as [Exclude<BType, null>, string][]
-        ).map(([k, lbl]) => (
-          <Radio key={k} name="bt" label={lbl} on={btype === k} onPick={() => setBtype(btype === k ? null : k)} />
-        ))}
-      </fieldset>
+      </div>
     </div>
   )
 
@@ -336,9 +326,6 @@ export default function PropertyBookings() {
                 Search
               </button>
             </form>
-            <Link to={`/app/properties/${l.id}/help/manage-reservations`} className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[13.5px] font-semibold text-ink-900 no-underline hover:border-pine-700">
-              <CirclePlay className="h-4 w-4 text-pine-800" aria-hidden="true" /> Help
-            </Link>
           </div>
         </div>
 
@@ -348,75 +335,13 @@ export default function PropertyBookings() {
           </div>
         )}
 
-        {ackMode ? (
-          <section className="mt-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-4">
-                <button type="button" onClick={() => (setAckMode(false), setPicked([]))} className="flex items-center gap-2 text-[15.5px] font-semibold text-pine-800 hover:underline">
-                  <ArrowLeft className="h-5 w-5" aria-hidden="true" /> Back
-                </button>
-                <h2 className="text-[21px] font-semibold text-ink-900">
-                  {pending.length} Acknowledge Pending Booking{pending.length === 1 ? '' : 's'}
-                </h2>
-              </div>
-              <div className="flex items-center gap-4">
-                {picked.length > 0 && (
-                  <button type="button" onClick={() => ack(picked)} className="h-10 rounded-lg bg-pine-800 px-4 text-[14px] font-semibold text-white hover:bg-pine-900">
-                    Acknowledge selected ({picked.length})
-                  </button>
-                )}
-                <button type="button" onClick={() => csv(pending, 'pending-acknowledgement')} disabled={!pending.length} className="flex items-center gap-1.5 text-[14.5px] font-semibold text-pine-800 hover:underline disabled:opacity-50">
-                  <FileSpreadsheet className="h-4 w-4" aria-hidden="true" /> Download Excel
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 hidden items-center gap-3 rounded-lg border-l-4 border-pine-800 bg-[#eef4f0] px-4 py-3 text-[14px] font-semibold text-ink-900 md:flex">
-              <input type="checkbox" aria-label="Select all" checked={pending.length > 0 && picked.length === pending.length} onChange={() => setPicked(picked.length === pending.length ? [] : pending.map((r) => r.id))} className="h-[18px] w-[18px] accent-pine-800" />
-              Select all
-            </div>
-            <div className="mt-3 flex flex-col gap-3">
-              {pending.map((r) => card(r, true))}
-              {pending.length === 0 && <p className="rounded-xl border border-line px-4 py-10 text-center text-[15px] text-ink-700">All bookings are acknowledged. 🎉</p>}
-            </div>
-          </section>
-        ) : (
-          <>
-            {pending.length > 0 && (
-              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-pine-700/40 bg-[#eef4f0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-pine-800" aria-hidden="true" />
-                  <div>
-                    <strong className="block text-[15px] font-semibold text-ink-900">Acknowledge Pending Bookings</strong>
-                    <span className="text-[13.5px] text-ink-700">
-                      {pending.length} booking{pending.length === 1 ? '' : 's'} worth {inr(pendingWorth)} {pending.length === 1 ? 'is' : 'are'} awaiting confirmation.
-                    </span>
-                  </div>
-                </div>
-                <motion.button type="button" onClick={() => setAckMode(true)} animate={{ boxShadow: ['0 0 0 0 rgba(200,150,46,0.6)', '0 0 0 9px rgba(200,150,46,0)'] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }} className="h-10 shrink-0 rounded-lg bg-brass-500 px-5 text-[14px] font-bold text-pine-950 hover:bg-brass-600">
-                  Review Bookings
-                </motion.button>
-              </div>
-            )}
-
-            <div className="mt-5 grid gap-6 lg:grid-cols-[230px_1fr]">
-              <aside>
-                <ReviewQrCard l={l} />
-                <div className="mb-4 inline-flex overflow-hidden rounded-lg border border-pine-800 text-[13px] font-bold">
-                  {(['list', 'hourly'] as const).map((v) => (
-                    <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`px-4 py-2 uppercase ${view === v ? 'bg-pine-800 text-white' : 'bg-white text-ink-700 hover:bg-pine-50'}`}>
-                      {v} view
-                    </button>
-                  ))}
-                </div>
-                <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} className="flex w-full items-center justify-between text-[19px] font-semibold text-ink-900 lg:pointer-events-none">
-                  Filters <ChevronDown className={`h-5 w-5 transition-transform lg:hidden ${filtersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                </button>
-                <div className={`mt-3 ${filtersOpen ? 'block' : 'hidden'} lg:block`}>{filters}</div>
-              </aside>
-
-              <section className="min-w-0">
+        <section className="mt-5 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2.5">
+                    <button type="button" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-expanded={filtersOpen} className="flex h-11 items-center gap-2 rounded-lg border border-pine-800 bg-white px-4 text-[14.5px] font-semibold text-pine-800 hover:bg-pine-50">
+                      <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Filters
+                      {active > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-pine-800 px-1 text-[12px] font-bold text-white">{active}</span>}
+                    </button>
                     <button type="button" onClick={() => setQuick('past30')} className={`h-11 rounded-lg border px-5 text-[14.5px] font-semibold transition-colors ${range.kind === 'past30' ? 'border-pine-800 bg-pine-800 text-white' : 'border-line-strong bg-white text-pine-800 hover:border-pine-700'}`}>
                       Past 30 Days
                     </button>
@@ -432,19 +357,19 @@ export default function PropertyBookings() {
 
                 <div className="mt-4 flex flex-col gap-3">
                   {view === 'list' && headRow}
-                  {groups.map(([day, rows], i) => (
+                  {groups.map(([day, end, rows], i) => (
                     <div key={day} className="flex flex-col gap-3">
                       {view === 'list' ? (
                         <>
                           <div className="flex items-center gap-3 rounded-lg bg-[#eef4f0] px-4 py-2.5 text-[14px] font-semibold text-ink-900">
-                            {dm(day)}
+                            {day === end ? dm(day) : `${dm(day)} – ${dm(end)}`}
                             <span className="h-4 w-px bg-ink-400" />
                             {rows.length} {unit[field][rows.length === 1 ? 0 : 1]}
                           </div>
                           {rows.map((r) => card(r))}
                         </>
                       ) : (
-                        <Hourly day={day} count={rows.length} label={unit[field][rows.length === 1 ? 0 : 1]} start={field === 'checkout' ? hourOf(l.policies.checkOut) : hourOf(l.policies.checkIn)} />
+                        <Hourly title={day === end ? longDay(day) : `${longDay(day)} – ${longDay(end)}`} count={rows.length} label={unit[field][rows.length === 1 ? 0 : 1]} start={field === 'checkout' ? hourOf(l.policies.checkOut) : hourOf(l.policies.checkIn)} />
                       )}
                       {gapAfter(i)}
                     </div>
@@ -462,19 +387,62 @@ export default function PropertyBookings() {
                     </div>
                   )}
                 </div>
-              </section>
-            </div>
-          </>
-        )}
+        </section>
       </div>
 
-      <HotelierVoucher r={voucher} l={l} status={voucher ? statusText(voucher) : ''} pending={!!voucher && isPending(voucher)} onAcknowledge={() => voucher && ack([voucher.id])} onClose={() => setVoucher(null)} />
+      <AnimatePresence>
+        {filtersOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(e) => e.target === e.currentTarget && setFiltersOpen(false)} className="fixed inset-0 z-[80] bg-ink-900/40">
+            <motion.aside role="dialog" aria-modal="true" aria-label="Filters" initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'tween', duration: 0.26, ease: 'easeOut' }} className="flex h-full w-[340px] max-w-[88vw] flex-col bg-white shadow-2xl">
+              <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-4">
+                <h2 className="text-[20px] font-semibold text-ink-900">Filters</h2>
+                <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Close filters" className="flex h-9 w-9 items-center justify-center rounded-full text-ink-900 hover:bg-paper">
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+                <Seg label="Group bookings" value={group} onChange={setGroup} options={[['daily', 'Daily'], ['weekly', 'Weekly']]} />
+                <div className="mt-4">
+                  <Seg label="View" value={view} onChange={setView} options={[['list', 'List view'], ['hourly', 'Hourly view']]} />
+                </div>
+                <div className="mt-5">{filters}</div>
+              </div>
+              <div className="flex shrink-0 items-center gap-3 border-t border-line px-5 py-4">
+                <button type="button" onClick={clearAll} className="h-11 rounded-lg border border-line-strong px-4 text-[14.5px] font-semibold text-pine-800 hover:border-pine-700">
+                  Clear all
+                </button>
+                <button type="button" onClick={() => setFiltersOpen(false)} className="h-11 flex-1 rounded-lg bg-pine-800 px-4 text-[14.5px] font-semibold text-white hover:bg-pine-900">
+                  Show {shown.length} booking{shown.length === 1 ? '' : 's'}
+                </button>
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <HotelierVoucher r={voucher} l={l} status={voucher ? statusText(voucher) : ''} onClose={() => setVoucher(null)} />
     </div>
   )
 }
 
-/** One day on a 24-hour line, with the arrivals band from the property's check-in time. */
-function Hourly({ day, count, label, start }: { day: string; count: number; label: string; start: number }) {
+/** Two-option switch used at the top of the filter panel. */
+function Seg<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: [T, string][] }) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink-500">{label}</span>
+      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-pine-800 text-[13.5px] font-bold">
+        {options.map(([k, text]) => (
+          <button key={k} type="button" onClick={() => onChange(k)} aria-pressed={value === k} className={`h-10 transition-colors ${value === k ? 'bg-pine-800 text-white' : 'bg-white text-ink-700 hover:bg-pine-50'}`}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** One day (or week) on a 24-hour line, with the arrivals band from the property's check-in time. */
+function Hourly({ title, count, label, start }: { title: string; count: number; label: string; start: number }) {
   const ticks = [0, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
   const pos = (h: number) => (h <= 9 ? (h / 9) * 16 : 16 + ((h - 9) / 15) * 84)
   const lbl = (h: number) => (h === 0 || h === 24 ? '12 AM' : h === 12 ? '12 PM' : String(h > 12 ? h - 12 : h))
@@ -482,7 +450,7 @@ function Hourly({ day, count, label, start }: { day: string; count: number; labe
     <div className="rounded-xl border border-line px-4 pt-3 pb-5">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-3 text-[14px] font-bold text-pine-800">
-          {longDay(day)} <span className="h-4 w-px bg-ink-400" /> <span className="font-semibold">{count} {label}</span>
+          {title} <span className="h-4 w-px bg-ink-400" /> <span className="font-semibold">{count} {label}</span>
         </span>
         <span className="flex items-center gap-2 text-[13px] text-ink-700">
           <span className="h-3.5 w-3.5 rounded-full bg-brass-200" /> Regular bookings

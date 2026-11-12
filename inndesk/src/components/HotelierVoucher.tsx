@@ -54,7 +54,7 @@ function printVoucher() {
   setTimeout(done, 1000)
 }
 
-export function HotelierVoucher({ r, l, status, pending, onAcknowledge, onClose }: { r: ResvRow | null; l?: Listing; status: string; pending: boolean; onAcknowledge: () => void; onClose: () => void }) {
+export function HotelierVoucher({ r, l, status, onClose }: { r: ResvRow | null; l?: Listing; status: string; onClose: () => void }) {
   useEffect(() => {
     if (!r) return
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -85,7 +85,7 @@ export function HotelierVoucher({ r, l, status, pending, onAcknowledge, onClose 
             </div>
             {/* Only the voucher scrolls; the top bar stays fixed above it, so nothing can show through above the bar. */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              <Body r={r} l={l} status={status} pending={pending} onAcknowledge={onAcknowledge} />
+              <Body r={r} l={l} status={status} />
             </div>
           </motion.div>
         </motion.div>
@@ -94,7 +94,7 @@ export function HotelierVoucher({ r, l, status, pending, onAcknowledge, onClose 
   )
 }
 
-function Body({ r, l, status, pending, onAcknowledge }: { r: ResvRow; l?: Listing; status: string; pending: boolean; onAcknowledge: () => void }) {
+function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
   const s = settle(r, l)
   const nights = Array.from({ length: r.nights }, (_, i) => addDays(r.check_in, i))
   const rooms = Math.max(1, r.rooms)
@@ -210,11 +210,6 @@ function Body({ r, l, status, pending, onAcknowledge }: { r: ResvRow; l?: Listin
             <span className={label}>Booking type</span>
             <span className={val}>{r.amount === 0 ? 'Free Room Night' : r.pay_mode === 'now' ? 'Prepaid Online' : 'Pay at Hotel'}</span>
           </div>
-          {pending && (
-            <button type="button" onClick={onAcknowledge} className="col-span-2 mt-1 h-11 rounded-lg bg-pine-800 font-[Roboto,sans-serif] text-[14.5px] font-[700] tracking-wide text-white uppercase hover:bg-pine-900 print:hidden">
-              Acknowledge booking
-            </button>
-          )}
         </div>
       </div>
 
