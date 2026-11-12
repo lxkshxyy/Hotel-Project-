@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../components/DiscardDialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CalendarClock, ChevronDown, Download, FileText, Handshake, Landmark, Search, ShieldAlert, Wallet } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
@@ -715,14 +716,17 @@ function Respond({ d, onClose }: { d: Dispute; onClose: () => void }) {
   const [text, setText] = useState('')
   const [ev, setEv] = useState<string[]>([])
   const ok = text.trim().length >= 30 && ev.length > 0
+  const [close, discard] = useCloseGuard(!!text.trim() || ev.length > 0, onClose)
   return (
+    <>
+    {discard}
     <Dialog
       wide
       title={`Respond to dispute · ${d.booking_id}`}
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className={btnOutline}>
+          <button type="button" onClick={close} className={btnOutline}>
             Cancel
           </button>
           <button
@@ -760,5 +764,6 @@ function Respond({ d, onClose }: { d: Dispute; onClose: () => void }) {
       </fieldset>
       <p className="mt-4 text-[12.5px] text-ink-500">Our team will ask you for copies of the documents you tick.</p>
     </Dialog>
+    </>
   )
 }

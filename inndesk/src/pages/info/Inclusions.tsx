@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../../components/DiscardDialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CircleHelp, Gift, Minus, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -141,14 +142,17 @@ function InclusionDialog({ inc: start, rooms, isNew, onClose, onSave }: { inc: I
   const [inc, setInc] = useState(start)
   const put = (p: Partial<Inclusion>) => setInc((x) => ({ ...x, ...p }))
   const needDetail = inc.kind === 'Other' && inc.detail.trim().length < 3
+  const [close, discard] = useCloseGuard(JSON.stringify(inc) !== JSON.stringify(start), onClose)
   return (
+    <>
+    {discard}
     <Dialog
       wide
       title={isNew ? 'Offer an Inclusion' : 'Modify Inclusion'}
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className={btnOutline}>
+          <button type="button" onClick={close} className={btnOutline}>
             Cancel
           </button>
           <button type="button" disabled={needDetail} onClick={() => onSave({ ...inc, detail: inc.detail.trim() })} className={btnSolid}>
@@ -192,5 +196,6 @@ function InclusionDialog({ inc: start, rooms, isNew, onClose, onSave }: { inc: I
         </div>
       </div>
     </Dialog>
+    </>
   )
 }

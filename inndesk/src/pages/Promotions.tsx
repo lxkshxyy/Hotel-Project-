@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../components/DiscardDialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BadgePercent, Bird, BookOpen, CalendarRange, ChevronDown, ChevronsUpDown, Crown, Filter, Hourglass, Info, MoreVertical, Smartphone, TicketPercent, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -669,14 +670,17 @@ function Editor({ l, p: start, others, onClose, onSaved }: { l: Listing; p: Prom
   const preview = room ? postPromotionPrice(room.price, [{ ...p, paused: false }], { bookedOn: p.bookFrom > t ? p.bookFrom : t, checkIn: p.kind === 'early-bird' ? addDays(p.stayFrom > t ? p.stayFrom : t, p.advanceDays ?? 0) : p.stayFrom > t ? p.stayFrom : t, checkOut: addDays(p.stayFrom > t ? p.stayFrom : t, Math.max(1, p.minNights ?? 1)), roomId: room.id, audience: p.audience, coupon: true }) : null
   const err = (k: string) => (tried ? errors[k] : undefined)
 
+  const [close, discard] = useCloseGuard(JSON.stringify(p) !== JSON.stringify(start), onClose)
   return (
+    <>
+    {discard}
     <Dialog
       wide
       title={`${isNew ? 'Create' : 'Modify'} ${kindInfo[p.kind].title}`}
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className="h-11 rounded-lg border border-line-strong px-5 text-[14.5px] font-semibold text-pine-800 hover:border-pine-700">
+          <button type="button" onClick={close} className="h-11 rounded-lg border border-line-strong px-5 text-[14.5px] font-semibold text-pine-800 hover:border-pine-700">
             Cancel
           </button>
           <button type="button" onClick={save} className="h-11 rounded-lg bg-pine-800 px-6 text-[14.5px] font-semibold text-white hover:bg-pine-900">
@@ -776,6 +780,7 @@ function Editor({ l, p: start, others, onClose, onSaved }: { l: Listing; p: Prom
         </p>
       )}
     </Dialog>
+    </>
   )
 }
 
@@ -797,13 +802,16 @@ function ExtraDialog({ targets, onClose }: { targets: Promotion[]; onClose: () =
     for (const p of targets) await savePromotion({ ...p, extraWeekend: we, extraWeekday: wd })
     onClose()
   }
+  const [close, discard] = useCloseGuard(we !== (targets.length === 1 ? targets[0].extraWeekend ?? 0 : 0) || wd !== (targets.length === 1 ? targets[0].extraWeekday ?? 0 : 0), onClose)
   return (
+    <>
+    {discard}
     <Dialog
       title="Additional discount for Weekend/Weekday stays"
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className="h-11 rounded-lg border border-line-strong px-5 text-[14.5px] font-semibold text-pine-800">
+          <button type="button" onClick={close} className="h-11 rounded-lg border border-line-strong px-5 text-[14.5px] font-semibold text-pine-800">
             Cancel
           </button>
           <button type="button" onClick={save} disabled={bad(we) || bad(wd)} className="h-11 rounded-lg bg-pine-800 px-6 text-[14.5px] font-semibold text-white hover:bg-pine-900 disabled:opacity-50">
@@ -831,6 +839,7 @@ function ExtraDialog({ targets, onClose }: { targets: Promotion[]; onClose: () =
         ))}
       </div>
     </Dialog>
+    </>
   )
 }
 

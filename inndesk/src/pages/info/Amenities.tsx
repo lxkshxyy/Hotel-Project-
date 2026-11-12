@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../../components/DiscardDialog'
 import { AnimatePresence } from 'framer-motion'
 import { Pencil, Plus, Search, Trash2, UtensilsCrossed } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -258,14 +259,17 @@ function RestaurantDialog({ r: start, isNew, onClose, onSave }: { r: Restaurant;
   const put = (p: Partial<Restaurant>) => setR((x) => ({ ...x, ...p }))
   const errs = { name: r.name.trim().length < 2 ? 'Enter the restaurant name.' : '', cuisines: r.cuisines.length ? '' : 'Pick at least one cuisine.', meals: r.meals.length ? '' : 'Pick at least one meal.' }
   const ok = !errs.name && !errs.cuisines && !errs.meals
+  const [close, discard] = useCloseGuard(JSON.stringify(r) !== JSON.stringify(start), onClose)
   return (
+    <>
+    {discard}
     <Dialog
       wide
       title={isNew ? 'Add Restaurant' : 'Edit Restaurant'}
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className={btnOutline}>
+          <button type="button" onClick={close} className={btnOutline}>
             Cancel
           </button>
           <button type="button" onClick={() => (setTried(true), ok && onSave({ ...r, name: r.name.trim() }))} className={btnSolid}>
@@ -333,5 +337,6 @@ function RestaurantDialog({ r: start, isNew, onClose, onSave }: { r: Restaurant;
         </div>
       </div>
     </Dialog>
+    </>
   )
 }

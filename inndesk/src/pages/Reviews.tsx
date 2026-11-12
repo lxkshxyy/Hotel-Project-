@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { BadgeCheck, ChevronDown, ExternalLink, MessageSquareReply, Star, TrendingUp, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useCloseGuard, useLeaveGuard } from '../components/DiscardDialog'
 import { Spinner } from '../components/ui'
 import { useListings } from '../lib/hooks'
 import { getReplies, listReviews, setReply, useData } from '../lib/store'
@@ -46,6 +47,10 @@ export default function Reviews() {
   const [f, setF] = useState({ period: 'all', rating: 'all', guest: 'all', room: 'all', reply: 'all' })
   const [topic, setTopic] = useState('')
   const [shown, setShown] = useState(10)
+  // Replies being typed but not posted: leaving the page asks first.
+  const [drafts, setDrafts] = useState<string[]>([])
+  const onDraft = useCallback((rid: string, on: boolean) => setDrafts((d) => (on ? (d.includes(rid) ? d : [...d, rid]) : d.filter((x) => x !== rid))), [])
+  const leaveGuard = useLeaveGuard(drafts.length > 0)
 
   const all = reviews.data ?? []
   const avg = all.length ? all.reduce((n, r) => n + r.rating, 0) / all.length : 0
@@ -75,6 +80,7 @@ export default function Reviews() {
 
   return (
     <div className="min-h-[calc(100dvh-68px)] bg-white">
+      {leaveGuard}
       <div className="mx-auto max-w-[1080px] px-4 py-6 sm:px-8">
         <h1 className="text-[28px] font-bold text-ink-900 sm:text-[32px]">Guest reviews</h1>
         <p className="mt-1 text-[14.5px] text-ink-700">
@@ -200,7 +206,7 @@ export default function Reviews() {
           ) : list.length === 0 ? (
             <p className="py-10 text-center text-[14.5px] text-ink-700">No reviews match these filters.</p>
           ) : (
-            list.slice(0, shown).map((r) => <ReviewRow key={r.id} r={r} reply={replies.data?.[r.id]} />)
+            list.slice(0, shown).map((r) => <ReviewRow key={r.id} r={r} reply={replies.data?.[r.id]} onDraft={onDraft} />)
           )}
           {list.length > shown && (
             <button type="button" onClick={() => setShown((n) => n + 10)} className="mx-auto mt-4 block h-10 rounded-lg border border-pine-800 px-5 text-[14.5px] font-semibold text-pine-800 hover:bg-pine-50">
@@ -213,14 +219,21 @@ export default function Reviews() {
   )
 }
 
-function ReviewRow({ r, reply }: { r: GuestReview; reply?: { text: string; at: string } }) {
+function ReviewRow({ r, reply, onDraft }: { r: GuestReview; reply?: { text: string; at: string }; onDraft: (id: string, on: boolean) => void }) {
   const [more, setMore] = useState(false)
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(reply?.text ?? '')
+  const typed = editing && text.trim() !== (reply?.text ?? '').trim()
+  useEffect(() => {
+    onDraft(r.id, typed)
+    return () => onDraft(r.id, false)
+  }, [typed, r.id, onDraft])
+  const [cancel, discard] = useCloseGuard(typed, () => (setEditing(false), setText(reply?.text ?? '')))
   const long = r.text.length > 180
   const ok = text.trim().length >= 20
   return (
     <article className="border-b border-line py-5">
+      {discard}
       <div className="flex flex-wrap items-center gap-2">
         {r.title && <strong className="text-[16.5px] font-semibold text-ink-900">{r.title}</strong>}
       </div>
@@ -271,7 +284,7 @@ function ReviewRow({ r, reply }: { r: GuestReview; reply?: { text: string; at: s
           <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <span className={`text-[12.5px] ${text.trim().length && !ok ? 'text-alert' : 'text-ink-500'}`}>{text.trim().length} / 1000 · at least 20 characters</span>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setEditing(false)} className="h-10 rounded-lg border border-line-strong px-4 text-[14.5px] font-semibold text-pine-800">
+              <button type="button" onClick={cancel} className="h-10 rounded-lg border border-line-strong px-4 text-[14.5px] font-semibold text-pine-800">
                 Cancel
               </button>
               <button

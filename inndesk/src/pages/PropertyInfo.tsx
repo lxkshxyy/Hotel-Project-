@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { CircleCheck } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import { useLeaveGuard } from '../components/DiscardDialog'
 import { Spinner } from '../components/ui'
 import { useSession } from '../context/Session'
 import { getListing, saveListing } from '../lib/store'
@@ -52,12 +53,10 @@ export default function PropertyInfo() {
     return () => clearTimeout(t)
   }, [toast])
 
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  const leaveGuard = useLeaveGuard(dirty, () => {
+    setL(saved.current)
+    setDirty(false)
+  })
 
   const store = useCallback(async (x: Listing) => {
     setBusy(true)
@@ -135,6 +134,7 @@ export default function PropertyInfo() {
         )}
       </AnimatePresence>
 
+      {leaveGuard}
       <AnimatePresence>
         {toast > 0 && (
           <motion.div key={toast} role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className="fixed bottom-24 left-1/2 z-[110] flex -translate-x-1/2 items-center gap-2 rounded-lg bg-pine-900 px-4 py-2.5 text-[14px] font-medium text-white shadow-xl">

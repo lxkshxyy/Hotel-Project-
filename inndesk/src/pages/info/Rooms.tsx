@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../../components/DiscardDialog'
 import { AnimatePresence } from 'framer-motion'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -112,13 +113,16 @@ function PlanDialog({ room, onClose, onSave }: { room: ListingRoom; onClose: () 
   const [price, setPrice] = useState(room.price ? Math.round(room.price * 1.15) : 0)
   const [name, setName] = useState('')
   const ok = price >= 100
+  const [close, discard] = useCloseGuard(!!name.trim() || price !== (room.price ? Math.round(room.price * 1.15) : 0) || meal !== (mealPlans.find((m) => !used.has(m)) ?? mealPlans[1]), onClose)
   return (
+    <>
+    {discard}
     <Dialog
       title={`Add Rateplan · ${room.name || 'Room'}`}
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className={btnOutline}>
+          <button type="button" onClick={close} className={btnOutline}>
             Cancel
           </button>
           <button type="button" disabled={!ok} onClick={() => onSave({ id: uid(6), name: name.trim() || planName(meal), mealPlan: meal, price, active: true })} className={btnSolid}>
@@ -148,6 +152,7 @@ function PlanDialog({ room, onClose, onSave }: { room: ListingRoom; onClose: () 
         </Field>
       </div>
     </Dialog>
+    </>
   )
 }
 

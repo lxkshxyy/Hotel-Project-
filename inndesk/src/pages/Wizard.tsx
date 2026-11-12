@@ -3,6 +3,7 @@ import { ArrowLeft, Baby, Ban, BedDouble, BedSingle, CalendarDays, Check, Chevro
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
+import { useLeaveGuard } from '../components/DiscardDialog'
 import { AmenityExtrasBox, hasExtras, MultiSelect } from '../components/AmenityExtras'
 import { answered, policyGroups, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
 import { BathPicker, BedPicker } from '../components/BedPicker'
@@ -1881,6 +1882,9 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [l, saveState, save])
 
+  // Live listings save on the button: leaving with unsaved edits asks first.
+  const leaveGuard = useLeaveGuard(!!l && l.status !== 'draft' && saveState === 'dirty', () => setSaveState('saved'))
+
   // A Fix button can point at one field: scroll to it, focus it, then drop the hint from the address.
   const focusField = params.get('focus')
   useEffect(() => {
@@ -2026,6 +2030,7 @@ export default function Wizard() {
 
   return (
     <div ref={top} className="flex min-h-[calc(100dvh-68px)] flex-col">
+      {leaveGuard}
       <div className="sticky top-[68px] z-30 border-b border-line bg-white">
         <div className="flex items-center gap-3 px-3 pt-2 sm:px-6">
           <Link to={isLive ? `/app/properties/${l.id}` : '/app/properties'} aria-label="Back to my properties" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-paper">

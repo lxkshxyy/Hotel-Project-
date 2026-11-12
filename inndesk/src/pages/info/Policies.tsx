@@ -1,3 +1,4 @@
+import { useCloseGuard } from '../../components/DiscardDialog'
 import { AnimatePresence } from 'framer-motion'
 import { Check, CircleAlert, MoreVertical, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -152,14 +153,17 @@ function Cancellation({ l, set, commit }: InfoProps) {
 
 function PolicyDialog({ cur, onClose, onSave }: { cur: CancellationId; onClose: () => void; onSave: (id: CancellationId) => void }) {
   const [v, setV] = useState(cur)
+  const [close, discard] = useCloseGuard(v !== cur, onClose)
   return (
+    <>
+    {discard}
     <Dialog
       wide
       title="Cancellation policy"
-      onClose={onClose}
+      onClose={close}
       footer={
         <>
-          <button type="button" onClick={onClose} className={btnOutline}>
+          <button type="button" onClick={close} className={btnOutline}>
             Cancel
           </button>
           <button type="button" onClick={() => onSave(v)} className={btnSolid}>
@@ -180,6 +184,7 @@ function PolicyDialog({ cur, onClose, onSave }: { cur: CancellationId; onClose: 
         ))}
       </div>
     </Dialog>
+    </>
   )
 }
 
