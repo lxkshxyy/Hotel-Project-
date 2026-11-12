@@ -3,7 +3,7 @@ import { onLocalMachine, site } from '../config/site'
 import { dataUrlToBlob } from './images'
 import { blockers, makeSlug, toHotel } from './listing'
 import { isDemoMode, supabase } from './supabase'
-import type { GuestReview, Listing, Owner, Reservation } from './types'
+import type { Dispute, GuestReview, Listing, Owner, Reservation } from './types'
 
 /*
  * Where InnDesk keeps its data.
@@ -315,6 +315,35 @@ export const setReply = (id: string, reply: ReviewReply | null) => {
   else delete all[id]
   try {
     localStorage.setItem(REPLIES, JSON.stringify(all))
+  } catch {
+    /* storage unavailable */
+  }
+  changed()
+}
+
+/* ---------------- chargeback disputes ---------------- */
+
+/** Chargebacks on a property's prepaid bookings. [LIVE] needs a `disputes` table fed by the payment gateway. */
+export function listDisputes(slug: string): Dispute[] {
+  if (!slug) return []
+  const all = import.meta.env.VITE_SINGLE ? ((globalThis as { __demoDisputes?: Dispute[] }).__demoDisputes ?? []) : []
+  const answers = getDisputeAnswers()
+  return all.filter((d) => d.hotel_slug === slug).map((d) => (answers[d.id] && d.status === 'open' ? { ...d, status: 'responded' as const } : d))
+}
+const ANSWERS = 'inndesk.dispute.answers'
+export type DisputeAnswer = { text: string; evidence: string[]; at: string }
+export const getDisputeAnswers = (): Record<string, DisputeAnswer> => {
+  try {
+    return JSON.parse(localStorage.getItem(ANSWERS) || '{}')
+  } catch {
+    return {}
+  }
+}
+export const answerDispute = (id: string, a: DisputeAnswer) => {
+  const all = getDisputeAnswers()
+  all[id] = a
+  try {
+    localStorage.setItem(ANSWERS, JSON.stringify(all))
   } catch {
     /* storage unavailable */
   }

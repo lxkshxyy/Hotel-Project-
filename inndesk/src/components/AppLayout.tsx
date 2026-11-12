@@ -6,6 +6,7 @@ import { site } from '../config/site'
 import { useSession } from '../context/Session'
 import { useListings } from '../lib/hooks'
 import { propertyMenu, type MenuItem } from '../lib/propertyMenu'
+import { listDisputes } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import { ChangePassword } from './Auth'
 import { NavIcon } from './navIcons'
@@ -159,6 +160,7 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
                   {x.sub && <span className="block text-[13px] text-ink-500">{x.sub}</span>}
                 </span>
                 {x.isNew && <span className="mt-0.5 rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[9.5px] leading-4 font-bold text-white">new</span>}
+                {x.dot && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-alert" aria-label="needs attention" />}
               </Link>
             ))}
           </motion.div>
@@ -215,6 +217,7 @@ function PropertyBottomBar({ items }: { items: MenuItem[] }) {
                             {x.label}
                             {x.sub && <span className="text-ink-500">· {x.sub}</span>}
                             {x.isNew && <span className="rounded-full bg-gradient-to-r from-brass-500 to-[#e0794a] px-1.5 text-[10px] leading-4 font-bold text-white">new</span>}
+                            {x.dot && <span className="h-2 w-2 rounded-full bg-alert" aria-label="needs attention" />}
                           </Link>
                         ))}
                       </div>
@@ -237,10 +240,10 @@ export default function AppLayout() {
   }, [pathname])
   const wizard = /\/app\/properties\/[^/]+\/edit/.test(pathname)
   // Inside one property: the full property menu (Home, Bookings, … Help Centre).
-  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|reviews|section\/[^/]+|info\/[^/]+|help(?:\/[^/]+)?))?\/?$/)?.[1]
-  const pmenu = prop ? propertyMenu(prop) : null
+  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|reviews|section\/[^/]+|info\/[^/]+|payments\/[^/]+|help(?:\/[^/]+)?))?\/?$/)?.[1]
   const { data } = useListings()
   const pl = prop ? data?.find((x) => x.id === prop) : undefined
+  const pmenu = prop ? propertyMenu(prop, { openDisputes: pl ? listDisputes(pl.slug).filter((d) => d.status === 'open').length : 0 }) : null
 
   return (
     <RequireOwner>

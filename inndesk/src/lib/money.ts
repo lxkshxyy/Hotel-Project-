@@ -1,3 +1,4 @@
+import { addDays, parseISODate } from './format'
 import { site } from '../config/site'
 import type { Listing, Reservation } from './types'
 
@@ -18,4 +19,10 @@ export function settle(r: Reservation, l?: Pick<Listing, 'legal'>) {
   const earned = r.amount - commission - gst - tds - tcs
   const payout = collectedByHotel ? -(commission + gst + tds + tcs) : earned
   return { roomAmount, roomGst: r.tax, commission, gst, tds, tcs, gstRegistered, collectedByHotel, payout, earned }
+}
+
+/** Payout date for a stay: the Tuesday of the week after check-out (see site.payoutCycle). */
+export function payoutDate(checkOut: string) {
+  const mon = (parseISODate(checkOut).getDay() + 6) % 7
+  return addDays(checkOut, 7 - mon + 1)
 }

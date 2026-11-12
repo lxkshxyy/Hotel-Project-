@@ -6,7 +6,7 @@ import { site } from '../config/site'
 import { cancellationOptions } from '../data/options'
 import { addDays, inr, parseISODate } from '../lib/format'
 import type { ResvRow } from '../lib/hooks'
-import { settle } from '../lib/money'
+import { payoutDate, settle } from '../lib/money'
 import type { Listing } from '../lib/types'
 
 const d = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ (\d\d)$/, " '$1")
@@ -15,12 +15,6 @@ const n2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, 
 const rs = (n: number) => `₹ ${n2(n)}`
 const pct = (r: number) => `${+(r * 100).toFixed(2)}%`
 
-/** Payout release date: the Tuesday of the week after check-out (see site.payoutCycle). */
-function releaseDate(checkOut: string) {
-  const co = parseISODate(checkOut)
-  const mon = (co.getDay() + 6) % 7
-  return addDays(checkOut, 7 - mon + 1)
-}
 
 const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/ (\d\d),/, " '$1,")
 
@@ -233,7 +227,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
           <p className="mt-2 text-[14px] text-ink-700">Payable to Property</p>
           <strong className="text-[19px] text-ink-900">{rs(payable)}</strong>
           <p className="mt-1 text-[13px] text-ink-700">
-            {site.marketplace} will release payment by {d(releaseDate(r.check_out))}. Payment generally takes 2–3 working days to get credited to your account after release.
+            {site.marketplace} will release payment by {d(payoutDate(r.check_out))}. Payment generally takes 2–3 working days to get credited to your account after release.
           </p>
         </div>
       ) : (

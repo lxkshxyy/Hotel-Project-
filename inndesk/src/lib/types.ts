@@ -226,6 +226,8 @@ export interface Listing {
     udyam?: string
     hasGstin?: boolean | null
     agreed: boolean
+    /** Email a statement after each payout. */
+    payoutEmails?: boolean
   }
   restaurants?: Restaurant[]
   inclusions?: Inclusion[]
@@ -286,4 +288,17 @@ export interface GuestReview {
   topics: string[]
   verified: boolean
   created_at: string
+}
+
+/** A card chargeback a guest raised on a prepaid booking. */
+export interface Dispute {
+  id: string
+  booking_id: string
+  hotel_slug: string
+  guest_name: string
+  amount: number
+  reason: string
+  raised_at: string
+  respond_by: string
+  status: 'open' | 'responded' | 'won' | 'lost'
 }

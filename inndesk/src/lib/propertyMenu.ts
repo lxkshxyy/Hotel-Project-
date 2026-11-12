@@ -1,5 +1,5 @@
 /** The left menu shown inside one property (modelled on the hotel extranet layout). */
-export type MenuLink = { label: string; to: string; sub?: string; isNew?: boolean }
+export type MenuLink = { label: string; to: string; sub?: string; isNew?: boolean; dot?: boolean }
 export type MenuItem = { key: string; label: string; icon: string; to?: string; end?: boolean; isNew?: boolean; links?: MenuLink[]; divider?: boolean }
 
 /** Sections that don't have a page yet: slug → title. */
@@ -13,16 +13,16 @@ export const sections: Record<string, string> = {
   packages: 'Packages',
   'plb-vdi': 'PLB & VDI',
   'daily-deals': 'Daily Steal Deals',
-  payments: 'Payments',
   'margin-offers': 'Margin Offers',
   reports: 'Reports',
   'action-center': 'Action Center',
 }
 
-export function propertyMenu(id: string): MenuItem[] {
+export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): MenuItem[] {
   const base = `/app/properties/${id}`
   const sec = (slug: string) => `${base}/section/${slug}`
   const info = (page: string) => `${base}/info/${page}`
+  const pay = (page: string) => `${base}/payments/${page}`
   return [
     { key: 'home', label: 'Home', icon: 'home', to: base, end: true },
     { key: 'bookings', label: 'Bookings', icon: 'bookings', to: `${base}/reservations` },
@@ -49,7 +49,22 @@ export function propertyMenu(id: string): MenuItem[] {
         { label: 'Daily Steal Deals', to: sec('daily-deals'), isNew: true },
       ],
     },
-    { key: 'payments', label: 'Payments', icon: 'payments', to: sec('payments'), isNew: true },
+    {
+      key: 'payments',
+      label: 'Payments',
+      icon: 'payments',
+      isNew: true,
+      links: [
+        { label: 'Payouts', to: pay('payouts') },
+        { label: 'Transactions', to: pay('transactions') },
+        { label: 'Past payouts', to: pay('past-payouts') },
+        { label: 'Payout and tax settings', to: pay('settings') },
+        { label: 'Advance transactions', to: pay('advance') },
+        { label: 'Contracted compensation', to: pay('compensation') },
+        { label: 'Commission invoices', to: pay('invoices') },
+        { label: 'Chargeback disputes', to: pay('disputes'), dot: !!opts.openDisputes },
+      ],
+    },
     {
       key: 'property',
       label: 'Property Information',
