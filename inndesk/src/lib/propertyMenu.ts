@@ -4,8 +4,6 @@ export type MenuItem = { key: string; label: string; icon: string; to?: string; 
 
 /** Sections that don't have a page yet: slug → title. */
 export const sections: Record<string, string> = {
-  'early-checkin': 'Paid Early Check-in / Late Checkout',
-  'default-rates': 'Default Rates & Inventory',
   promotions: 'Promotions & Coupons',
   loyalty: 'TRPOTELS Club Loyalty Programme',
 }
@@ -24,8 +22,6 @@ export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): 
       icon: 'rates',
       links: [
         { label: 'Manage Rates & Inventory', to: `${base}/rates`, end: true },
-        { label: 'Paid Early Check-in/ Late Checkout', to: sec('early-checkin'), isNew: true },
-        { label: 'Default Rates & Inventory', to: sec('default-rates') },
         { label: 'Hourly Stays', to: `${base}/rates/hourly` },
       ],
     },
