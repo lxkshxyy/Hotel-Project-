@@ -17,7 +17,7 @@ const monthName = (y: number, m: number) => new Date(y, m, 1).toLocaleDateString
 const fmt = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 const iso = (y: number, m: number, d: number) => toISODate(new Date(y, m, d))
 
-function Month({ y, m, start, end, hover, onPick, onHover }: { y: number; m: number; start: string; end: string; hover: string; onPick: (d: string) => void; onHover: (d: string) => void }) {
+function Month({ y, m, start, end, hover, onPick, onHover, min }: { y: number; m: number; start: string; end: string; hover: string; onPick: (d: string) => void; onHover: (d: string) => void; min?: string }) {
   const first = new Date(y, m, 1).getDay()
   const days = new Date(y, m + 1, 0).getDate()
   const t = todayISO()
@@ -39,15 +39,17 @@ function Month({ y, m, start, end, hover, onPick, onHover }: { y: number; m: num
           const isEnd = d === last && !!last
           const inside = !!start && !!last && d > start && d < last
           const edge = isStart || isEnd
+          const off = !!min && d < min
           return (
             <span key={d} className={`flex h-11 items-center justify-center ${inside ? 'bg-pine-50' : ''} ${isStart && last && last !== start ? 'rounded-l-lg bg-gradient-to-r from-transparent from-50% to-pine-50 to-50%' : ''} ${isEnd && start !== last ? 'bg-gradient-to-r from-pine-50 from-50% to-transparent to-50%' : ''}`}>
               <button
                 type="button"
                 onClick={() => onPick(d)}
+                disabled={off}
                 onMouseEnter={() => onHover(d)}
                 aria-pressed={edge}
                 aria-label={fmt(d)}
-                className={`relative flex h-10 w-10 items-center justify-center rounded-lg text-[15px] transition-colors ${edge ? 'bg-pine-800 font-semibold text-white' : inside ? 'text-pine-900' : 'text-ink-900 hover:bg-pine-50'}`}
+                className={`relative flex h-10 w-10 items-center justify-center rounded-lg text-[15px] transition-colors ${edge ? 'bg-pine-800 font-semibold text-white' : inside ? 'text-pine-900' : off ? 'cursor-not-allowed text-ink-400 line-through decoration-ink-400/40' : 'text-ink-900 hover:bg-pine-50'}`}
               >
                 {i + 1}
                 {d === t && <span aria-hidden="true" className={`absolute bottom-1.5 h-0.5 w-3.5 rounded-full ${edge ? 'bg-white' : 'bg-pine-800'}`} />}
@@ -61,7 +63,34 @@ function Month({ y, m, start, end, hover, onPick, onHover }: { y: number; m: num
 }
 
 /** Date field + two-month range calendar with Check-in / Stay / Booking date tabs. */
-export function RangeCalendar({ value, onChange, button = false }: { value: DateFilter; onChange: (v: DateFilter) => void; button?: boolean }) {
+export function RangeCalendar({
+  value,
+  onChange,
+  button = false,
+  tabs = true,
+  single = false,
+  label,
+  placeholder = 'Select check-in / stay / booking date',
+  centered = false,
+  clearable = true,
+  min,
+}: {
+  value: DateFilter
+  onChange: (v: DateFilter) => void
+  button?: boolean
+  /** Show the Check-in / Stay / Booking date tabs. */
+  tabs?: boolean
+  /** Pick one date instead of a range. */
+  single?: boolean
+  /** Floating label on the field (defaults to the date mode). */
+  label?: string
+  placeholder?: string
+  /** Open in the middle of the screen, above other pop-ups (for use inside a modal). */
+  centered?: boolean
+  clearable?: boolean
+  /** Earliest date that can be picked. */
+  min?: string
+}) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<DateMode>('checkin')
   const [start, setStart] = useState('')
@@ -92,6 +121,12 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (d: string) => {
+    if (min && d < min) return
+    if (single) {
+      setStart(d)
+      setEnd(d)
+      return
+    }
     if (!start || end) {
       setStart(d)
       setEnd('')
@@ -121,12 +156,12 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
         </button>
       ) : (
       <div className={`relative flex h-[52px] items-center gap-2 rounded-lg border bg-white px-3.5 transition-colors ${open ? 'border-pine-700 ring-1 ring-pine-700' : 'border-ink-400'}`}>
-        {value && <span className="pointer-events-none absolute -top-2.5 left-2.5 bg-white px-1 text-[12px] leading-5 text-ink-500">{modeLabel(value.mode)}</span>}
+        {(value || label) && <span className="pointer-events-none absolute -top-2.5 left-2.5 bg-white px-1 text-[12px] leading-5 text-ink-500">{label ?? (value ? modeLabel(value.mode) : '')}</span>}
         <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[15.5px]">
           <CalendarDays className="h-4 w-4 shrink-0 text-ink-700" aria-hidden="true" />
-          <span className={`truncate ${value ? 'text-ink-900' : 'text-ink-500'}`}>{value ? (value.from === value.to ? fmt(value.from) : `${fmt(value.from)} - ${fmt(value.to)}`) : 'Select check-in / stay / booking date'}</span>
+          <span className={`truncate ${value ? 'text-ink-900' : 'text-ink-500'}`}>{value ? (value.from === value.to ? fmt(value.from) : `${fmt(value.from)} - ${fmt(value.to)}`) : placeholder}</span>
         </button>
-        {value ? (
+        {value && clearable ? (
           <button type="button" aria-label="Clear dates" onClick={() => onChange(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-500 hover:bg-paper">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -139,7 +174,8 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
       <AnimatePresence>
         {open && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-ink-900/35" onMouseDown={() => setOpen(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`fixed inset-0 bg-ink-900/35 ${centered ? 'z-[120]' : 'z-[70]'}`} onMouseDown={() => setOpen(false)} />
+            <div className={centered ? 'pointer-events-none fixed inset-0 z-[121] flex items-center justify-center p-3' : 'contents'}>
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -148,9 +184,14 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16 }}
-              className={`fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 ${button ? 'sm:left-0' : 'sm:right-0'} sm:w-[min(700px,calc(100vw-48px))] sm:p-6`}
+              className={
+                centered
+                  ? 'pointer-events-auto max-h-[calc(100dvh-24px)] w-[min(700px,100%)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6'
+                  : `fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 ${button ? 'sm:left-0' : 'sm:right-0'} sm:w-[min(700px,calc(100vw-48px))] sm:p-6`
+              }
               onMouseLeave={() => setHover('')}
             >
+              {tabs && (
               <div role="tablist" className="grid grid-cols-3 border-b border-line">
                 {modes.map((x) => (
                   <button key={x.id} type="button" role="tab" aria-selected={mode === x.id} onClick={() => setMode(x.id)} className={`relative pb-3 text-[14.5px] font-semibold transition-colors ${mode === x.id ? 'text-pine-800' : 'text-ink-500 hover:text-ink-900'}`}>
@@ -159,8 +200,9 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
                   </button>
                 ))}
               </div>
+              )}
 
-              <div className="mt-5 flex items-start gap-8">
+              <div className={`flex items-start gap-8 ${tabs ? 'mt-5' : ''}`}>
                 {[view, ...(two ? [next] : [])].map((v, i, arr) => (
                   <div key={`${v.y}-${v.m}`} className="min-w-0 flex-1">
                     <div className="mb-3 flex h-9 items-center justify-between">
@@ -180,7 +222,7 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
                         <span className="w-9" />
                       )}
                     </div>
-                    <Month y={v.y} m={v.m} start={start} end={end} hover={hover} onPick={pick} onHover={setHover} />
+                    <Month y={v.y} m={v.m} start={start} end={end} hover={single ? '' : hover} onPick={pick} onHover={setHover} min={min} />
                   </div>
                 ))}
               </div>
@@ -199,6 +241,7 @@ export function RangeCalendar({ value, onChange, button = false }: { value: Date
                 </div>
               </div>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

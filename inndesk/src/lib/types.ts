@@ -194,6 +194,8 @@ export interface Reservation {
   pay_mode: 'now' | 'hotel'
   room_total: number
   discount_total: number
+  /** The promotion or coupon the guest booked with, if any. */
+  promo_id?: string
   tax: number
   amount: number
   status: 'confirmed' | 'cancelled'

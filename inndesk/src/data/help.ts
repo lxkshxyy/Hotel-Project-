@@ -124,7 +124,9 @@ export const articles: Article[] = [
     body: [
       'Promotions are discounts you offer to win more bookings, for example a last-minute deal, an early-bird discount or a long-stay offer.',
       'Promotions show a sale label on your hotel card, which helps you stand out in search results.',
-      { tip: 'Setting up promotions will be available under Grow your Business → Promotions & Coupons.' },
+      'There are three tiers. Promotions (Tier 1): Basic, Last Minute, Early Bird and Long Stay; only the best one applies. Special Audience Promotions (Tier 2): extra discounts for one group, such as mobile app users. Coupons (Tier 3): a code guests enter at checkout.',
+      { steps: ['Go to Grow your Business → Promotions & Coupons.', 'Pick a promotion and click Create.', 'Set the discount, booking dates, stay dates and rooms, then save.', 'See every promotion, with its room nights and revenue, under My Promotions.'] },
+      { tip: 'Use Check Post Promotion Price to see exactly what a guest pays after all three tiers.' },
     ],
   },
   {

@@ -1,12 +1,14 @@
 import { useParams } from 'react-router-dom'
 import { useListings } from '../lib/hooks'
 import { sections } from '../lib/propertyMenu'
+import Promotions from './Promotions'
 
 /** Placeholder page for property-menu sections that aren't built yet. */
 export default function Section() {
   const { id = '', slug = '' } = useParams()
   const { data } = useListings()
   const l = data?.find((x) => x.id === id)
+  if (slug === 'promotions' && l) return <Promotions l={l} />
   return (
     <div className="min-h-[calc(100dvh-68px)] bg-white">
       <div className="mx-auto max-w-[1280px] px-4 pt-7 sm:px-8">
