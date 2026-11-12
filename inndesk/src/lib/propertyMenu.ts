@@ -10,9 +10,6 @@ export const sections: Record<string, string> = {
   'hourly-stays': 'Hourly Stays',
   promotions: 'Promotions & Coupons',
   loyalty: 'TRPOTELS Club Loyalty Programme',
-  'margin-offers': 'Margin Offers',
-  reports: 'Reports',
-  'action-center': 'Action Center',
 }
 
 export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): MenuItem[] {
@@ -77,16 +74,6 @@ export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): 
     },
     { key: 'ratings', label: 'Ratings & Reviews', icon: 'ratings', to: `${base}/reviews` },
     { key: 'analytics', label: 'Analytics', icon: 'analytics', to: `${base}/analytics` },
-    {
-      key: 'more',
-      label: 'More',
-      icon: 'more',
-      links: [
-        { label: 'Margin Offers', to: sec('margin-offers') },
-        { label: 'Reports', to: sec('reports') },
-        { label: 'Action Center', to: sec('action-center') },
-      ],
-    },
     { key: 'help', label: 'Help Centre', icon: 'help', to: `${base}/help`, divider: true },
   ]
 }

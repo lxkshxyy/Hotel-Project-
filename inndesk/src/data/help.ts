@@ -81,7 +81,7 @@ export const articles: Article[] = [
     body: [
       `When a guest pays online, ${m} holds the money and pays it to your bank account after the stay.`,
       { list: [`Payouts are sent ${site.payoutCycle}.`, `We keep our commission (${pct(site.commissionRate)} of the room amount) plus ${pct(site.gstOnCommission)} GST on that commission.`, 'Your bank account must be added and verified first (Property Information → Financial & Bank Details).'] },
-      { tip: 'Payout reports will appear under More → Reports.' },
+      { tip: 'See each payout under Payments → Payouts.' },
     ],
   },
   // Working together
