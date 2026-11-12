@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CircleHelp, Gift, Minus, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { RangeCalendar } from '../../components/RangeCalendar'
 import { addDays, parseISODate, todayISO, uid } from '../../lib/format'
 import type { Inclusion } from '../../lib/types'
@@ -12,7 +11,7 @@ export const inclusionKinds = ['Welcome drink', 'Complimentary breakfast', 'Earl
 const nice = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 const expired = (i: Inclusion) => !i.active || (!!i.to && i.to < todayISO())
 
-export default function Inclusions({ l, commit, base }: InfoProps) {
+export default function Inclusions({ l, commit }: InfoProps) {
   const [tab, setTab] = useState<'active' | 'old'>('active')
   const [open, setOpen] = useState<string[]>(l.rooms[0] ? [l.rooms[0].id] : [])
   const [edit, setEdit] = useState<Inclusion | null>(null)
@@ -25,11 +24,7 @@ export default function Inclusions({ l, commit, base }: InfoProps) {
 
   return (
     <>
-      <PageTitle title="Inclusions and Packages" l={l}>
-        <Link to={`${base}/section/packages`} className={`${btnOutline} h-9 no-underline`}>
-          Create A Package
-        </Link>
-      </PageTitle>
+      <PageTitle title="Inclusions" l={l} />
       <Card className="mt-6 p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div role="tablist" className="flex gap-6">

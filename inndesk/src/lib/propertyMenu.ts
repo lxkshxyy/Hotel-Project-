@@ -10,9 +10,6 @@ export const sections: Record<string, string> = {
   'hourly-stays': 'Hourly Stays',
   promotions: 'Promotions & Coupons',
   loyalty: 'TRPOTELS Club Loyalty Programme',
-  packages: 'Packages',
-  'plb-vdi': 'PLB & VDI',
-  'daily-deals': 'Daily Steal Deals',
   'margin-offers': 'Margin Offers',
   reports: 'Reports',
   'action-center': 'Action Center',
@@ -44,9 +41,6 @@ export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): 
       links: [
         { label: 'Promotions & Coupons', to: sec('promotions') },
         { label: 'TRPOTELS Club', sub: 'Loyalty Programme', to: sec('loyalty') },
-        { label: 'Packages', to: sec('packages') },
-        { label: 'PLB & VDI', to: sec('plb-vdi') },
-        { label: 'Daily Steal Deals', to: sec('daily-deals'), isNew: true },
       ],
     },
     {
@@ -73,7 +67,7 @@ export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): 
         { label: 'Basic Information', to: info('basics') },
         { label: 'Rooms & Rateplans', to: info('rooms') },
         { label: 'Amenities & Restaurant', to: info('amenities') },
-        { label: 'Inclusion & Packages', to: info('inclusions') },
+        { label: 'Inclusions', to: info('inclusions') },
         { label: 'Photos & Videos', to: info('photos') },
         { label: 'Rules & Policies', to: info('policies') },
         { label: 'Content Score', to: info('content-score') },
