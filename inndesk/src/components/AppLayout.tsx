@@ -9,6 +9,7 @@ import { propertyMenu, type MenuItem } from '../lib/propertyMenu'
 import { listDisputes } from '../lib/store'
 import { isDemoMode } from '../lib/supabase'
 import { ChangePassword } from './Auth'
+import { UnsavedGuard } from './DiscardDialog'
 import { NavIcon } from './navIcons'
 import { PropertyBar } from './PropertyBar'
 import { Mark, Spinner } from './ui'
@@ -284,6 +285,7 @@ export default function AppLayout() {
             </nav>
           )}
           <main id="main" className="min-w-0 flex-1">
+            <UnsavedGuard />
             <Outlet />
           </main>
         </div>
