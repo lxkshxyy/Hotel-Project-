@@ -173,3 +173,8 @@
   }
 }
 
+
+/* Closed dates on Rates & Inventory: light diagonal lines. */
+@utility closed-hatch {
+  background: repeating-linear-gradient(135deg, #ffffff 0 7px, #e3e9f1 7px 8px);
+}

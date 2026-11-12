@@ -1,13 +1,11 @@
 /** The left menu shown inside one property (modelled on the hotel extranet layout). */
-export type MenuLink = { label: string; to: string; sub?: string; isNew?: boolean; dot?: boolean }
+export type MenuLink = { label: string; to: string; sub?: string; isNew?: boolean; dot?: boolean; end?: boolean }
 export type MenuItem = { key: string; label: string; icon: string; to?: string; end?: boolean; isNew?: boolean; links?: MenuLink[]; divider?: boolean }
 
 /** Sections that don't have a page yet: slug → title. */
 export const sections: Record<string, string> = {
-  'manage-rates': 'Manage Rates & Inventory',
   'early-checkin': 'Paid Early Check-in / Late Checkout',
   'default-rates': 'Default Rates & Inventory',
-  'hourly-stays': 'Hourly Stays',
   promotions: 'Promotions & Coupons',
   loyalty: 'TRPOTELS Club Loyalty Programme',
 }
@@ -25,10 +23,10 @@ export function propertyMenu(id: string, opts: { openDisputes?: number } = {}): 
       label: 'Rates & Inventory',
       icon: 'rates',
       links: [
-        { label: 'Manage Rates & Inventory', to: sec('manage-rates') },
+        { label: 'Manage Rates & Inventory', to: `${base}/rates`, end: true },
         { label: 'Paid Early Check-in/ Late Checkout', to: sec('early-checkin'), isNew: true },
         { label: 'Default Rates & Inventory', to: sec('default-rates') },
-        { label: 'Hourly Stays', to: sec('hourly-stays') },
+        { label: 'Hourly Stays', to: `${base}/rates/hourly` },
       ],
     },
     {

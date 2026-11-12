@@ -155,7 +155,7 @@ function PropertySidebar({ items }: { items: MenuItem[] }) {
         {current?.links && fly && (
           <motion.div role="menu" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.13 }} onMouseEnter={() => window.clearTimeout(timer.current)} onMouseLeave={later} style={{ top: fly.top }} className="fixed left-[100px] z-50 w-[250px] rounded-xl bg-white py-2 shadow-[0_14px_36px_-10px_rgba(26, 44, 91,0.3)] ring-1 ring-line">
             {current.links.map((x) => (
-              <Link key={x.label} role="menuitem" to={x.to} className={`flex items-start gap-2 px-4 py-2.5 text-[14.5px] no-underline hover:bg-pine-50 ${isOn(x.to) ? 'font-semibold text-pine-900' : 'text-ink-900'}`}>
+              <Link key={x.label} role="menuitem" to={x.to} className={`flex items-start gap-2 px-4 py-2.5 text-[14.5px] no-underline hover:bg-pine-50 ${isOn(x.to, x.end) ? 'font-semibold text-pine-900' : 'text-ink-900'}`}>
                 <span className="min-w-0 flex-1">
                   {x.label}
                   {x.sub && <span className="block text-[13px] text-ink-500">{x.sub}</span>}
@@ -241,7 +241,7 @@ export default function AppLayout() {
   }, [pathname])
   const wizard = /\/app\/properties\/[^/]+\/edit/.test(pathname)
   // Inside one property: the full property menu (Home, Bookings, … Help Centre).
-  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|reviews|section\/[^/]+|info\/[^/]+|payments\/[^/]+|help(?:\/[^/]+)?))?\/?$/)?.[1]
+  const prop = pathname.match(/^\/app\/properties\/([^/]+)(?:\/(?:analytics|reservations|reviews|rates(?:\/hourly)?|section\/[^/]+|info\/[^/]+|payments\/[^/]+|help(?:\/[^/]+)?))?\/?$/)?.[1]
   const { data } = useListings()
   const pl = prop ? data?.find((x) => x.id === prop) : undefined
   const pmenu = prop ? propertyMenu(prop, { openDisputes: pl ? listDisputes(pl.slug).filter((d) => d.status === 'open').length : 0 }) : null

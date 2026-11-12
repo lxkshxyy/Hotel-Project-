@@ -17,6 +17,7 @@ const PropertyBookings = lazy(() => import('./pages/PropertyBookings'))
 const PropertyInfo = lazy(() => import('./pages/PropertyInfo'))
 const Reviews = lazy(() => import('./pages/Reviews'))
 const Payments = lazy(() => import('./pages/Payments'))
+const RatesInventory = lazy(() => import('./pages/RatesInventory'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
@@ -54,6 +55,8 @@ const router = makeRouter([
       { path: 'properties/:id/section/:slug', element: s(<Section />) },
       { path: 'properties/:id/info/:page', element: s(<PropertyInfo />) },
       { path: 'properties/:id/reviews', element: s(<Reviews />) },
+      { path: 'properties/:id/rates', element: s(<RatesInventory />) },
+      { path: 'properties/:id/rates/hourly', element: s(<RatesInventory />) },
       { path: 'properties/:id/payments/:page', element: s(<Payments />) },
       { path: 'properties/:id/help', element: s(<PartnerHelp />) },
       { path: 'properties/:id/help/:slug', element: s(<PartnerHelp />) },

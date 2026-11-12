@@ -150,7 +150,7 @@ export default function PropertyOverview() {
           <h2 id="up-h" className="text-xl font-bold text-pine-950">
             Upcoming and in-house
           </h2>
-          <Link to={`/app/calendar?property=${l.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-pine-800">
+          <Link to={`/app/properties/${l.id}/rates`} className="inline-flex items-center gap-1 text-sm font-semibold text-pine-800">
             <CalendarRange className="h-4 w-4" aria-hidden="true" /> Rates and availability
           </Link>
         </div>

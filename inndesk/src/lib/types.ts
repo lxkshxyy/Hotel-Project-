@@ -112,6 +112,25 @@ export interface CalendarCell {
   /** Rooms open to sell that night. */
   open?: number
   closed?: boolean
+  /** Date-wise prices of the extra rate plans: rate plan id → price. The base plan uses `price`. */
+  plans?: Record<string, number>
+}
+
+/** Rates & Inventory → Hourly Stays: one room type sold in 3/6/9-hour slots. */
+export interface HourlySetup {
+  roomId: string
+  /** How many rooms of that type are set aside for hourly stays. */
+  rooms: number
+  firstCheckIn: string
+  lastCheckOut: string
+  /** Minutes the room is held for cleaning after each slot. */
+  housekeeping: number
+  /** Slot length in hours and its price as a % of the full-day (EP) price. */
+  slots: { hours: number; pct: number }[]
+  /** Date → rooms open for hourly stays that day (default: all set-aside rooms). */
+  open?: Record<string, number>
+  /** Date → room numbers (1-based) marked non-sellable that day. */
+  blocked?: Record<string, number[]>
 }
 
 export interface Listing {
@@ -233,6 +252,7 @@ export interface Listing {
   inclusions?: Inclusion[]
   /** Channel manager connection from Settings. */
   channel?: { token: string; status: 'active' | 'inactive'; createdBy: string; createdAt: string }
+  hourly?: HourlySetup
   /** Room type id → date (yyyy-mm-dd) → price / rooms open / closed. */
   calendar: Record<string, Record<string, CalendarCell>>
 }
