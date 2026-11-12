@@ -101,8 +101,8 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
   const cells = rooms * Math.max(1, r.nights)
   const perRoomGuests = Math.max(1, Math.round(r.guests / rooms))
   const addr = l ? [l.location.address, l.location.area, l.location.city, [l.location.state, l.location.pincode].filter(Boolean).join(' ')].filter((x) => x && x.trim()).join(', ') : ''
-  const label = 'text-[11.5px] font-[600] tracking-wide text-ink-500 uppercase'
-  const val = 'mt-0.5 block text-[15.5px] font-[700] text-ink-900'
+  const label = 'text-[11.5px] font-medium tracking-wide text-ink-500 uppercase'
+  const val = 'mt-0.5 block text-[15.5px] font-medium text-ink-900'
   const cancelLabel = cancellationOptions.find((c) => c.id === (l?.policies.cancellation ?? 'free24'))?.label
   const B = s.commission + s.gst
   const C = s.tds + s.tcs
@@ -136,17 +136,17 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
     'Under no circumstances should you charge guests for services listed in this voucher. Only payments for extra services are to be collected from guests.',
     'Guests must carry a valid ID proof like Aadhaar, Driving Licence, Voter ID or Passport. PAN card is not a valid ID proof.',
   ]
-  const th = 'px-1 py-2 font-[700]'
+  const th = 'px-1 py-2 font-medium'
   const td = 'px-1 py-1.5'
   return (
-    <div className="voucher-print p-5 font-[Georgia,serif] sm:p-8">
+    <div className="voucher-print p-5 font-sans tabular-nums sm:p-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row">
         <div>
           <span className="flex items-center gap-2.5" aria-label={site.marketplace}>
             <img src={emblem} alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
             <span className="font-[Lato,sans-serif] text-[26px] leading-none font-[900] tracking-[0.1em] whitespace-nowrap text-[#14306b]">{site.marketplace}</span>
           </span>
-          <h2 className="font-[Georgia,serif] mt-3 text-[28px] font-[700] text-ink-900">Hotelier Voucher</h2>
+          <h2 className="mt-3 text-[28px] font-medium text-ink-900">Hotelier Voucher</h2>
         </div>
         <div className="max-w-[380px] sm:text-right">
           <strong className="block text-[16px] text-ink-900">{r.hotel_name}</strong>
@@ -157,7 +157,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
       <div className="mt-6 grid gap-0 overflow-hidden rounded-lg bg-[#f6f7f6] sm:grid-cols-2">
         <div className="p-5 sm:border-r-2 sm:border-ink-700">
           <span className={label}>Primary guest details</span>
-          <span className="mt-1 flex items-center gap-2 text-[18px] font-[700] text-ink-900">
+          <span className="mt-1 flex items-center gap-2 text-[18px] font-medium text-ink-900">
             <Briefcase className="h-4 w-4 text-pine-700" aria-hidden="true" /> {r.guest_name}
           </span>
           <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line pt-4">
@@ -213,7 +213,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         </div>
       </div>
 
-      <h3 className="font-[Georgia,serif] mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-[700] text-ink-900">{r.rooms} Room(s)</h3>
+      <h3 className="mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-medium text-ink-900">{r.rooms} Room(s)</h3>
       {Array.from({ length: r.rooms }, (_, i) => (
         <div key={i} className="mt-4 pl-2">
           <strong className="text-[16px] text-ink-900">1 x {r.room_name}</strong>
@@ -221,13 +221,13 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
             <p className="text-[13.5px] text-ink-700">
               {perRoomGuests} {perRoomGuests === 1 ? 'Guest' : 'Guests'} <span className="mx-2">•</span> Room Only
             </p>
-            <p className="mt-3 text-[13.5px] font-[700] text-ink-900">Cancellation Policy{cancelLabel ? ` · ${cancelLabel}` : ''}</p>
+            <p className="mt-3 text-[13.5px] font-medium text-ink-900">Cancellation Policy{cancelLabel ? ` · ${cancelLabel}` : ''}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-700">• {cancelText(l, r)}</p>
           </div>
         </div>
       ))}
 
-      <h3 className="font-[Georgia,serif] mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-[700] text-ink-900">Payment</h3>
+      <h3 className="mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-medium text-ink-900">Payment</h3>
       {r.pay_mode === 'now' ? (
         <div className="pl-2">
           <p className="mt-2 text-[14px] text-ink-700">Payable to Property</p>
@@ -246,7 +246,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         </div>
       )}
 
-      <h3 className="font-[Georgia,serif] mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-[700] text-ink-900">
+      <h3 className="mt-7 border-t-2 border-ink-700 pt-5 text-[19px] font-medium text-ink-900">
         Room wise Payment Breakup <span className="text-[13px] font-normal">(in ₹)</span>
       </h3>
       <div className="relative mt-3 overflow-x-auto">
@@ -285,7 +285,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
                 ))}
               </Fragment>
             ))}
-            <tr className="border-b-2 border-ink-700 text-right font-[700] text-ink-900">
+            <tr className="border-b-2 border-ink-700 text-right font-medium text-ink-900">
               <td className="px-1 py-3 pl-3 text-left whitespace-nowrap">GRAND TOTAL</td>
               <td className="px-1 py-3">{n2(s.roomAmount)}</td>
               <td className="px-1 py-3">0.00</td>
@@ -299,17 +299,17 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         </table>
       </div>
 
-      <h3 className="font-[Georgia,serif] mt-6 text-[19px] font-[700] text-ink-900">Final Calculation</h3>
+      <h3 className="mt-6 text-[19px] font-medium text-ink-900">Final Calculation</h3>
       <div className="mt-2 text-[13.5px] text-ink-900">
         {calc.map((x) => (
-          <div key={x.k} className={`flex justify-between gap-4 border-b border-line py-2 ${x.strong ? 'font-[700]' : 'pl-2 text-ink-700'}`}>
+          <div key={x.k} className={`flex justify-between gap-4 border-b border-line py-2 ${x.strong ? 'font-medium' : 'pl-2 text-ink-700'}`}>
             <span>
               <span className="inline-block min-w-[30px]">{x.k}</span> {x.t}
             </span>
             <span className="shrink-0">{rs(x.v)}</span>
           </div>
         ))}
-        <div className="flex justify-between gap-4 border-b-2 border-ink-700 py-3 text-[17px] font-[700]">
+        <div className="flex justify-between gap-4 border-b-2 border-ink-700 py-3 text-[17px] font-medium">
           <span>Payable to Property (A-B-C)</span>
           <span className="shrink-0">{rs(payable)}</span>
         </div>
@@ -319,7 +319,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
               <span>Less: collected by property from the guest at check-in (A)</span>
               <span className="shrink-0">− {rs(r.amount)}</span>
             </div>
-            <div className="flex justify-between gap-4 border-b-2 border-ink-700 py-3 font-[700]">
+            <div className="flex justify-between gap-4 border-b-2 border-ink-700 py-3 font-medium">
               <span>Payable by Property (B+C) · adjusted in your next payout</span>
               <span className="shrink-0">{rs(B + C)}</span>
             </div>
@@ -327,7 +327,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         )}
       </div>
 
-      <h4 className="font-[Georgia,serif] mt-5 text-[15px] font-[700] text-ink-900">Note :</h4>
+      <h4 className="mt-5 text-[15px] font-medium text-ink-900">Note :</h4>
       <ul className="mt-1 list-disc pl-6 text-[12.5px] leading-relaxed text-ink-900">
         {notes.map((n) => (
           <li key={n} className="py-0.5">
@@ -336,7 +336,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         ))}
       </ul>
 
-      <h4 className="font-[Georgia,serif] mt-5 text-[15px] font-[700] text-ink-900">{site.marketplace} Details</h4>
+      <h4 className="mt-5 text-[15px] font-medium text-ink-900">{site.marketplace} Details</h4>
       <ul className="mt-1 grid list-disc gap-x-8 gap-y-1 pl-6 text-[12.5px] text-ink-900 sm:grid-cols-2">
         <li>PAN No : {c.pan || '—'}</li>
         <li>CIN No : {c.cin || '—'}</li>
@@ -344,7 +344,7 @@ function Body({ r, l, status }: { r: ResvRow; l?: Listing; status: string }) {
         <li>Service Category : {c.serviceCategory}</li>
       </ul>
 
-      <h4 className="font-[Georgia,serif] mt-5 border-b-2 border-pine-800 pb-2 text-[15px] font-[700] text-pine-800">{site.marketplace} Contact Info</h4>
+      <h4 className="mt-5 border-b-2 border-pine-800 pb-2 text-[15px] font-medium text-pine-800">{site.marketplace} Contact Info</h4>
       <div className="mt-3 flex flex-col justify-between gap-3 text-[13.5px] text-ink-900 sm:flex-row">
         <div>
           <strong className="block text-[15px]">{c.legalName}</strong>
