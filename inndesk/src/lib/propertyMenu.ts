@@ -14,8 +14,6 @@ export const sections: Record<string, string> = {
   'plb-vdi': 'PLB & VDI',
   'daily-deals': 'Daily Steal Deals',
   payments: 'Payments',
-  'sponsored-listing': 'Sponsored Listing',
-  'city-banners': 'City Listing Banners',
   inclusions: 'Inclusion & Packages',
   'content-score': 'Content Score',
   settings: 'Settings',
@@ -56,15 +54,6 @@ export function propertyMenu(id: string): MenuItem[] {
       ],
     },
     { key: 'payments', label: 'Payments', icon: 'payments', to: sec('payments'), isNew: true },
-    {
-      key: 'ads',
-      label: 'Advertising Solutions',
-      icon: 'advertising',
-      links: [
-        { label: 'Sponsored Listing', to: sec('sponsored-listing') },
-        { label: 'City Listing Banners', to: sec('city-banners'), isNew: true },
-      ],
-    },
     {
       key: 'property',
       label: 'Property Information',
