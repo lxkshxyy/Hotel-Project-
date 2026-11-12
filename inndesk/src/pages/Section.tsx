@@ -1,3 +1,4 @@
+import { Hourglass } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { useListings } from '../lib/hooks'
 import { sections } from '../lib/propertyMenu'
@@ -15,7 +16,12 @@ export default function Section() {
         <h1 className="text-[30px] font-bold text-ink-900 sm:text-[34px]">{sections[slug] ?? 'Section'}</h1>
         {l && <p className="text-[15px] text-ink-500">{l.basics.name.trim() || 'Unnamed property'}</p>}
       </div>
-      <p className="flex flex-1 items-center justify-center pb-24 text-[12px] font-medium tracking-[0.12em] text-ink-400 uppercase">Coming soon</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 pb-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-pine-50 text-pine-800 sm:h-20 sm:w-20">
+          <Hourglass className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={1.6} aria-hidden="true" />
+        </span>
+        <p className="text-[24px] font-medium tracking-[0.06em] text-ink-700 uppercase sm:text-[30px]">Coming soon</p>
+      </div>
     </div>
   )
 }
