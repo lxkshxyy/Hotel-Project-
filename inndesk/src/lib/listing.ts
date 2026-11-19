@@ -1,7 +1,7 @@
 import { site } from '../config/site'
 import { amenityDetails, amenityForms } from '../data/amenityDetails'
 import { allAmenities, bedCatalog, cancellationOptions, cities, multiRoomTypes, SHARED_BATH } from '../data/options'
-import { houseRuleLines } from '../data/policyRules'
+import { houseRuleLines, ruleGaps } from '../data/policyRules'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
 import type { BedLine, Listing, ListingRoom } from './types'
@@ -467,6 +467,7 @@ export function blockers(l: Listing): Check[] {
   const need = minAmenities(l)
   if (l.amenities.length < need) out.push({ step: 'amenities', message: `A ${l.basics.stars}-star property needs at least ${need} amenities ticked (${l.amenities.length} ticked so far).` })
   for (const g of amenityGaps(l)) out.push({ step: 'amenities', message: g.message })
+  for (const g of ruleGaps(l.policies.house)) out.push({ step: 'policies', message: `Property Rules → ${g.group.title}: answer ${g.missing.length} more question${g.missing.length === 1 ? '' : 's'}.` })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`

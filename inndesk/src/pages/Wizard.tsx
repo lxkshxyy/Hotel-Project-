@@ -5,7 +5,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { useLeaveGuard } from '../components/DiscardDialog'
 import { AmenityExtrasBox, hasExtras, MultiSelect, showAmenityErrors } from '../components/AmenityExtras'
-import { answered, policyGroups, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
+import { answered, policyGroups, ruleGaps, ruleMissing, RULES_CHECK, showRuleErrors, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
 import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
 import MapPicker, { placeAt, searchPlaces, type Place } from '../components/MapPicker'
@@ -1333,8 +1333,15 @@ const ynOpts: [string, string][] = [
 const ynsOpts: [string, string][] = [...ynOpts, ['subject', 'Subject to availability']]
 
 /** One property rule: Yes/No pills, a multi-select, a choice or a price box, plus its follow-up. */
-function RuleRow({ rule, h, put, nested }: { rule: PolicyRule; h: HouseAnswers; put: (id: string, v: string | string[]) => void; nested?: boolean }) {
+function RuleRow({ rule, h, put, nested, missing }: { rule: PolicyRule; h: HouseAnswers; put: (id: string, v: string | string[]) => void; nested?: boolean; missing?: Set<string> }) {
   const v = h[rule.id]
+  const bad = !!missing?.has(rule.id)
+  const q = (
+    <span className={`text-[15px] ${bad ? 'font-medium text-alert' : 'text-ink-900'}`}>
+      {rule.q}
+      {bad && <span className="mt-0.5 block text-[12.5px] font-semibold">Choose an answer to continue.</span>}
+    </span>
+  )
   const control =
     rule.kind === 'multi' ? (
       <div className="w-full max-w-[420px]">
@@ -1355,18 +1362,18 @@ function RuleRow({ rule, h, put, nested }: { rule: PolicyRule; h: HouseAnswers; 
     <div className={nested ? 'rounded-md bg-paper px-4 py-3' : 'py-3'}>
       {rule.kind === 'multi' ? (
         <label className="flex flex-col gap-1.5 text-[15px] text-ink-900">
-          {rule.q}
+          {q}
           {control}
         </label>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <span className="text-[15px] text-ink-900">{rule.q}</span>
+          {q}
           {control}
         </div>
       )}
       {showFollow && (
         <div className="mt-3">
-          <RuleRow rule={rule.follow!.rule} h={h} put={put} nested />
+          <RuleRow rule={rule.follow!.rule} h={h} put={put} nested missing={missing} />
         </div>
       )}
     </div>
@@ -1374,21 +1381,29 @@ function RuleRow({ rule, h, put, nested }: { rule: PolicyRule; h: HouseAnswers; 
 }
 
 /** A collapsible group of property rules with its "x/y RULES ADDED" badge. */
-export function RuleGroup({ g, h, put, open, onToggle }: { g: PolicyGroup; h: HouseAnswers; put: (id: string, v: string | string[]) => void; open: boolean; onToggle: () => void }) {
+export function RuleGroup({ g, h, put, open, onToggle, show = false }: { g: PolicyGroup; h: HouseAnswers; put: (id: string, v: string | string[]) => void; open: boolean; onToggle: () => void; show?: boolean }) {
   const Icon = groupIcon[g.icon]
-  const done = g.rules.filter((r) => answered(h[r.id])).length
-  const all = done === g.rules.length
+  // Meal prices are optional; every other question needs an answer.
+  const required = g.rules.filter((r) => r.kind !== 'price')
+  const done = required.filter((r) => answered(h[r.id])).length
+  const gaps = ruleMissing(h, g)
+  const all = gaps.length === 0
+  const missing = show ? new Set(gaps.map((r) => r.id)) : undefined
   return (
-    <div className="border-t border-line first:border-t-0">
+    <div id={`rules-${g.id}`} className="scroll-mt-52 border-t border-line first:border-t-0">
       <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 py-4 text-left">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pine-50 text-pine-800">
           <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
         </span>
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <strong className="text-[16px] font-medium text-ink-900">{g.title}</strong>
-          <span className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium tracking-wide ${all ? 'bg-pine-50 text-live' : 'bg-alert-50 text-alert'}`}>
-            {done}/{g.rules.length} RULES ADDED
-          </span>
+          {required.length ? (
+            <span className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium tracking-wide ${all ? 'bg-pine-50 text-live' : 'bg-alert-50 text-alert'}`}>
+              {done}/{required.length} RULES ADDED
+            </span>
+          ) : (
+            <span className="rounded bg-paper px-1.5 py-0.5 text-[11.5px] font-medium tracking-wide text-ink-500">OPTIONAL</span>
+          )}
         </span>
         <ChevronDown className={`h-5 w-5 shrink-0 text-ink-900 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
@@ -1396,7 +1411,7 @@ export function RuleGroup({ g, h, put, open, onToggle }: { g: PolicyGroup; h: Ho
         <div className="pb-3">
           {g.intro && <p className="mb-1 text-[14px] text-ink-700">{g.intro}</p>}
           {g.rules.map((r) => (
-            <RuleRow key={r.id} rule={r} h={h} put={put} />
+            <RuleRow key={r.id} rule={r} h={h} put={put} missing={missing} />
           ))}
         </div>
       )}
@@ -1446,6 +1461,15 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
   const n = l.rooms.length
   const h = p.house ?? {}
   const [openGroups, setOpenGroups] = useState<string[]>([policyGroups[0].id])
+  const [showRules, setShowRules] = useState(false)
+  useEffect(() => {
+    const on = () => {
+      setShowRules(true)
+      setOpenGroups((o) => [...new Set([...o, ...ruleGaps(h).map((x) => x.group.id)])])
+    }
+    window.addEventListener(RULES_CHECK, on)
+    return () => window.removeEventListener(RULES_CHECK, on)
+  }, [h])
   /** Saves one rule answer, clears follow-ups that no longer apply, and keeps the older on/off fields in step. */
   const put = (id: string, v: string | string[]) =>
     set((y) => {
@@ -1511,9 +1535,9 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
           </p>
         </PolicyCard>
 
-        <PolicyCard title="Property Rules" optional intro="Add property rules based on the requirements of your property listing">
+        <PolicyCard title="Property Rules" intro="Answer every question so guests know your rules before they book. Meal prices are optional.">
           {policyGroups.map((g) => (
-            <RuleGroup key={g.id} g={g} h={h} put={put} open={openGroups.includes(g.id)} onToggle={() => setOpenGroups((o) => (o.includes(g.id) ? o.filter((x) => x !== g.id) : [...o, g.id]))} />
+            <RuleGroup key={g.id} g={g} h={h} put={put} show={showRules} open={openGroups.includes(g.id)} onToggle={() => setOpenGroups((o) => (o.includes(g.id) ? o.filter((x) => x !== g.id) : [...o, g.id]))} />
           ))}
           <label className="label mt-2 border-t border-line pt-4">
             Other rules (one per line)
@@ -2007,6 +2031,12 @@ export default function Wizard() {
       showAmenityErrors(gaps[0].id)
       return
     }
+    const rgaps = l && step === 'policies' && ahead ? ruleGaps(l.policies.house) : []
+    if (rgaps.length) {
+      setShowErrors(true)
+      showRuleErrors(rgaps[0].group.id)
+      return
+    }
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
     setShowErrors(false)
     setParams({ step: s, ...(field ? { focus: field } : {}) }, { replace: false })
@@ -2106,6 +2136,13 @@ export default function Wizard() {
     if (gaps.length) {
       setShowErrors(true)
       showAmenityErrors(gaps[0].id)
+      return
+    }
+    // Every Property Rules question needs an answer, for live listings too.
+    const rgaps = step === 'policies' ? ruleGaps(l.policies.house) : []
+    if (rgaps.length) {
+      setShowErrors(true)
+      showRuleErrors(rgaps[0].group.id)
       return
     }
     if (!isLive && !stepDone(l, step)) {

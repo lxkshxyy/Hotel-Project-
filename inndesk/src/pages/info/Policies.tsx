@@ -1,11 +1,11 @@
 import { useCloseGuard } from '../../components/DiscardDialog'
 import { AnimatePresence } from 'framer-motion'
 import { Check, CircleAlert, MoreVertical, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RangeCalendar } from '../../components/RangeCalendar'
 import { Toggle } from '../../components/ui'
 import { cancellationOptions, checkTimes, timeLabel, type CancellationId } from '../../data/options'
-import { policyGroups, type HouseAnswers } from '../../data/policyRules'
+import { policyGroups, ruleGaps, RULES_CHECK, type HouseAnswers } from '../../data/policyRules'
 import { addDays, parseISODate, todayISO, uid } from '../../lib/format'
 import type { Listing } from '../../lib/types'
 import { CancelTimeline, RuleGroup } from '../Wizard'
@@ -192,6 +192,15 @@ function PolicyDialog({ cur, onClose, onSave }: { cur: CancellationId; onClose: 
 function Rules({ l, set }: InfoProps) {
   const h = l.policies.house ?? {}
   const [open, setOpen] = useState<string[]>([policyGroups[0].id])
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const on = () => {
+      setShow(true)
+      setOpen((o) => [...new Set([...o, ...ruleGaps(h).map((x) => x.group.id)])])
+    }
+    window.addEventListener(RULES_CHECK, on)
+    return () => window.removeEventListener(RULES_CHECK, on)
+  }, [h])
   const put = (id: string, v: string | string[]) =>
     set((y) => {
       const house: HouseAnswers = { ...(y.policies.house ?? {}), [id]: v }
@@ -231,7 +240,7 @@ function Rules({ l, set }: InfoProps) {
         </Card>
         <Card className="px-4 sm:px-5">
           {policyGroups.map((g) => (
-            <RuleGroup key={g.id} g={g} h={h} put={put} open={open.includes(g.id)} onToggle={() => setOpen((o) => (o.includes(g.id) ? o.filter((x) => x !== g.id) : [...o, g.id]))} />
+            <RuleGroup key={g.id} g={g} h={h} put={put} show={show} open={open.includes(g.id)} onToggle={() => setOpen((o) => (o.includes(g.id) ? o.filter((x) => x !== g.id) : [...o, g.id]))} />
           ))}
         </Card>
       </div>

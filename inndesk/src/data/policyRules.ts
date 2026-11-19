@@ -125,6 +125,26 @@ export type HouseAnswers = Record<string, string | string[]>
 
 export const answered = (v: string | string[] | undefined) => (Array.isArray(v) ? v.length > 0 : !!v)
 
+/** Rules that must be answered: every question except meal prices (left empty when not offered), plus any follow-up that is showing. */
+export function ruleMissing(h: HouseAnswers, g: PolicyGroup) {
+  const out: PolicyRule[] = []
+  for (const r of g.rules) {
+    if (r.kind === 'price') continue
+    if (!answered(h[r.id])) out.push(r)
+    else if (r.follow && typeof h[r.id] === 'string' && r.follow.when.includes(h[r.id] as string) && !answered(h[r.follow.rule.id])) out.push(r.follow.rule)
+  }
+  return out
+}
+/** Groups with unanswered questions. */
+export const ruleGaps = (h: HouseAnswers = {}) => policyGroups.map((g) => ({ group: g, missing: ruleMissing(h, g) })).filter((x) => x.missing.length)
+
+/** Fired when the owner tries to move on with Property Rules unanswered: open those groups and mark the questions. */
+export const RULES_CHECK = 'inndesk:rules-check'
+export function showRuleErrors(firstGroup?: string) {
+  window.dispatchEvent(new Event(RULES_CHECK))
+  if (firstGroup) setTimeout(() => document.getElementById(`rules-${firstGroup}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+}
+
 /** Sentences guests read under Property Rules, from the answers above. */
 export function houseRuleLines(h: HouseAnswers = {}): string[] {
   const out: string[] = []

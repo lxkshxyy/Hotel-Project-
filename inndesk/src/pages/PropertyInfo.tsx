@@ -6,6 +6,7 @@ import { useLeaveGuard } from '../components/DiscardDialog'
 import { Spinner } from '../components/ui'
 import { useSession } from '../context/Session'
 import { showAmenityErrors } from '../components/AmenityExtras'
+import { ruleGaps, showRuleErrors } from '../data/policyRules'
 import { amenityGaps } from '../lib/listing'
 import { getListing, saveListing } from '../lib/store'
 import type { Listing } from '../lib/types'
@@ -138,6 +139,14 @@ export default function PropertyInfo() {
                     if (gaps.length) {
                       setError(gaps.length === 1 ? gaps[0].message : `${gaps.length} amenities need their details filled in, or untick them.`)
                       showAmenityErrors(gaps[0].id)
+                      return
+                    }
+                    // Every Property Rules question needs an answer.
+                    const rgaps = page === 'policies' ? ruleGaps(l.policies.house) : []
+                    if (rgaps.length) {
+                      const n = rgaps.reduce((s, x) => s + x.missing.length, 0)
+                      setError(`Answer ${n} more Property Rules question${n === 1 ? '' : 's'} before saving.`)
+                      showRuleErrors(rgaps[0].group.id)
                       return
                     }
                     void store(l)

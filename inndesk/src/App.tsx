@@ -35,8 +35,9 @@ function NotFound() {
   )
 }
 
-// The single-file review demo (VITE_SINGLE) has no real address, so it routes in memory and opens on My Properties.
-const makeRouter: typeof createBrowserRouter = import.meta.env.VITE_SINGLE ? (r) => createMemoryRouter(r, { initialEntries: ['/app/properties'] }) : createBrowserRouter
+// The single-file review demo (VITE_SINGLE) has no real address, so it routes in memory. It opens on the page
+// being reviewed (VITE_DEMO_START, set when the demo is built) or else on My Properties.
+const makeRouter: typeof createBrowserRouter = import.meta.env.VITE_SINGLE ? (r) => createMemoryRouter(r, { initialEntries: [(import.meta.env.VITE_DEMO_START as string | undefined) || '/app/properties'] }) : createBrowserRouter
 const router = makeRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Landing /> },
