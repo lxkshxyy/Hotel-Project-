@@ -1333,7 +1333,7 @@ const ynOpts: [string, string][] = [
 const ynsOpts: [string, string][] = [...ynOpts, ['subject', 'Subject to availability']]
 
 /** One property rule: Yes/No pills, a multi-select, a choice or a price box, plus its follow-up. */
-function RuleRow({ rule, h, put, nested, missing }: { rule: PolicyRule; h: HouseAnswers; put: (id: string, v: string | string[]) => void; nested?: boolean; missing?: Set<string> }) {
+function RuleRow({ rule, h, put, nested, missing }: { rule: PolicyRule; h: HouseAnswers; put: (id: string, v: string | string[]) => void; nested?: boolean; missing?: ReadonlySet<string> }) {
   const v = h[rule.id]
   const bad = !!missing?.has(rule.id)
   const q = (
