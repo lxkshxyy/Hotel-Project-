@@ -8,7 +8,52 @@
 //
 // Every result carries details._sig: a fingerprint of the details it checked. InnDesk lets the owner
 // continue only while the fingerprint matches the current details (InnDesk lib/listing.ts → checkSig).
-import { admin, caller, Fail, json, serve } from '../_shared/server.ts'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+
+/* ---------------- helpers (kept in this file so it can be pasted into the Supabase dashboard editor) ---------------- */
+
+const cors = {
+  'Access-Control-Allow-Origin': Deno.env.get('SITE_ORIGIN') ?? '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
+/** A mistake the owner can fix. Sent back as { error } with this status. */
+class Fail extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+  }
+}
+
+/** Service-role client: bypasses row security, so this function checks ownership itself. */
+function admin(): SupabaseClient {
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+}
+
+/** The signed-in owner who called the function, from their access token. */
+async function caller(req: Request) {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) throw new Fail(401, 'Please sign in again.')
+  const { data, error } = await admin().auth.getUser(token)
+  if (error || !data.user) throw new Fail(401, 'Please sign in again.')
+  return data.user
+}
+
+/** Runs the handler with CORS, JSON errors and no stack traces leaking to the browser. */
+function serve(handler: (req: Request) => Promise<Response>) {
+  Deno.serve(async (req) => {
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+    try {
+      return await handler(req)
+    } catch (e) {
+      if (e instanceof Fail) return json(e.status, { error: e.message })
+      console.error(e)
+      return json(500, { error: 'Something went wrong on our side. Please try again in a minute.' })
+    }
+  })
+}
 
 type Kind = 'gstin' | 'pan' | 'bank'
 type Status = 'verified' | 'review' | 'failed'
