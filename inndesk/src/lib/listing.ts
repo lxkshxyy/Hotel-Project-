@@ -212,6 +212,37 @@ export function bedsOf(r: ListingRoom) {
 
 const sleeps = (type: string) => bedCatalog.find((b) => b.name === type)?.sleeps ?? 0
 
+/* ---------- beds must fit on the floor ---------- */
+
+/** Beds may cover at most about a third of the indoor area; the rest is walking space, furniture and the bathroom. */
+export const BED_FLOOR_SHARE = 0.35
+export const MAX_BEDS_PER_BEDROOM = 4
+export const MAX_BEDS_PER_LIVING = 2
+/** A roll-away extra bed is about the size of a single bed. */
+export const EXTRA_BED_FLOOR = 18
+export const bedFloor = (type: string) => bedCatalog.find((b) => b.name === type)?.floor ?? 18
+/** Floor the beds may use in this unit, and how much the chosen beds (and extra beds) use. */
+export function bedSpace(r: ListingRoom) {
+  const b = bedsOf(r)
+  const beds = [...b.bedrooms, ...b.living].flat().reduce((n, x) => n + (x.type ? bedFloor(x.type) * (x.count || 0) : 0), 0)
+  const extra = r.extraBed ? (r.extraBedMax ?? 0) * EXTRA_BED_FLOOR : 0
+  return { allowance: Math.floor(areaSqft(r) * BED_FLOOR_SHARE), beds, extra, used: beds + extra }
+}
+/** Guests the beds sleep, and how many more extra beds add. */
+export function bedCapacity(r: ListingRoom) {
+  const b = bedsOf(r)
+  const cap = [...b.bedrooms, ...b.living].flat().reduce((n, x) => n + sleeps(x.type) * (x.count || 0), 0)
+  return { cap, extra: r.extraBed ? r.extraBedMax ?? 0 : 0 }
+}
+/** Highest each occupancy number may go with these beds (children can share beds with adults). */
+export function occupancyLimits(r: ListingRoom) {
+  const { cap, extra } = bedCapacity(r)
+  const b = bedsOf(r)
+  const rooms = [...b.bedrooms, ...b.living].filter((lines) => lines.some((x) => x.type && x.count)).length
+  // One child can share a bed with adults in each room that has beds, or one per two bed places, whichever is more.
+  return { baseAdults: cap, maxAdults: cap + extra, baseChildren: cap + extra, maxChildren: cap + extra, maxOccupancy: cap + extra + Math.max(rooms, Math.ceil(cap / 2)) }
+}
+
 /** Occupancy worked out from the beds, the way the reference pre-fills it. The owner can change every number. */
 export function autoOccupancy(r: ListingRoom): NonNullable<ListingRoom['occupancy']> {
   const b = bedsOf(r)
@@ -247,6 +278,7 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
     if (!r.view) e.view = 'Choose the room view.'
     if (!r.sizeUnit) e.size = 'Choose square feet or square meter, then enter the size.'
     else if (!r.size || r.size < (r.sizeUnit === 'sqm' ? 5 : 50)) e.size = `Enter the indoor area in ${r.sizeUnit === 'sqm' ? 'square meters' : 'square feet'}.`
+    else if (areaSqft(r) > 10000) e.size = `${r.size} ${r.sizeUnit === 'sqm' ? 'sq m' : 'sq ft'} is bigger than a large house. Check the size of one room/unit.`
     if (r.name.trim().length < 3) e.name = 'Enter the room name guests will see.'
     if (!(r.count >= 1)) e.count = 'Enter how many rooms of this type you have.'
     if (isMultiRoom(r)) {
@@ -268,10 +300,27 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
     b.living.forEach((lines, i) => {
       if (lines.some((x) => (x.type && !x.count) || (!x.type && x.count))) e[`living${i}`] = 'Each bed type needs a number of beds.'
     })
+    const per = (lines: BedLine[]) => lines.reduce((n, x) => n + (x.type ? x.count || 0 : 0), 0)
+    b.bedrooms.forEach((lines, i) => {
+      if (!e[`bedroom${i}`] && per(lines) > MAX_BEDS_PER_BEDROOM) e[`bedroom${i}`] = `One bedroom can have at most ${MAX_BEDS_PER_BEDROOM} beds.`
+    })
+    b.living.forEach((lines, i) => {
+      if (!e[`living${i}`] && per(lines) > MAX_BEDS_PER_LIVING) e[`living${i}`] = `A living room can have at most ${MAX_BEDS_PER_LIVING} beds.`
+    })
+    const sp = bedSpace(r)
+    if (sp.allowance && sp.used > sp.allowance) e.beds = `These beds${sp.extra ? ' and extra beds' : ''} cover about ${sp.used} sq ft of floor, but a ${Math.round(areaSqft(r))} sq ft room has space for about ${sp.allowance} sq ft of beds (about a third of the floor; the rest is walking space, furniture and the bathroom). Use fewer or smaller beds.`
     if (r.extraBed == null) e.extraBed = 'Choose No or Yes.'
     else if (r.extraBed && !(r.extraBedMax && r.extraBedMax >= 1)) e.extraBed = 'Enter how many extra beds fit.'
     const o = r.occupancy
+    const lim = occupancyLimits(r)
+    const { cap, extra } = bedCapacity(r)
+    const sleepsText = `The beds sleep ${cap}${extra ? ` (${cap + extra} with extra beds)` : ''}`
     if (!o || o.baseAdults < 1) e.baseAdults = 'At least 1 adult.'
+    else if (o.baseAdults > lim.baseAdults) e.baseAdults = `${sleepsText}, so base adults can’t be more than ${lim.baseAdults}.`
+    else if (o.maxAdults > lim.maxAdults) e.maxAdults = `${sleepsText}, so maximum adults can’t be more than ${lim.maxAdults}.`
+    else if (o.maxChildren > lim.maxChildren) e.maxChildren = `${sleepsText}, so maximum children can’t be more than ${lim.maxChildren}.`
+    else if (o.baseChildren > lim.baseChildren) e.baseChildren = `Base children can’t be more than ${lim.baseChildren}.`
+    else if (o.maxOccupancy > lim.maxOccupancy) e.maxOccupancy = `${sleepsText}, so the room can hold at most ${lim.maxOccupancy} guests (children sharing beds included).`
     else {
       if (o.maxAdults < o.baseAdults) e.maxAdults = 'Can’t be less than base adults.'
       if (o.maxChildren < o.baseChildren) e.maxChildren = 'Can’t be less than base children.'

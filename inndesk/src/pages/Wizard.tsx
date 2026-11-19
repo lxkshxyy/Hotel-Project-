@@ -17,7 +17,7 @@ import { useSession } from '../context/Session'
 import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { amenityGaps, attachOptions, autoOccupancy, basicsErrors, isMultiRoom, layoutLimits, layoutOf, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, SQFT_PER_SQM, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { amenityGaps, areaSqft, bedFloor, bedSpace, EXTRA_BED_FLOOR, MAX_BEDS_PER_BEDROOM, MAX_BEDS_PER_LIVING, occupancyLimits, attachOptions, autoOccupancy, basicsErrors, isMultiRoom, layoutLimits, layoutOf, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, SQFT_PER_SQM, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode, verifyPartner } from '../lib/store'
 import { verifyLabel, VerificationList } from '../components/Verification'
 import { isDemoMode } from '../lib/supabase'
@@ -761,6 +761,18 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
       <input id={id} className="min-h-11 w-full px-3 text-[15px] outline-none" inputMode="numeric" placeholder={placeholder} aria-invalid={invalid} value={value ?? ''} onChange={(x) => { const d = x.target.value.replace(/\D/g, '').slice(0, 7); onChange(d === '' ? undefined : Number(d)) }} />
     </span>
   )
+  const space = bedSpace(r)
+  const occLim = occupancyLimits(r)
+  /** Most beds of this line that still fit: the per-room limit and the floor space left. */
+  const bedMax = (kind: 'bedrooms' | 'living', idx: number, li: number) => {
+    const lines = b[kind][idx]
+    const x = lines[li]
+    const others = lines.reduce((n, y, j) => n + (j !== li && y.type ? y.count || 0 : 0), 0)
+    const perRoom = (kind === 'bedrooms' ? MAX_BEDS_PER_BEDROOM : MAX_BEDS_PER_LIVING) - others
+    const floorLeft = space.allowance - (space.used - (x.type ? bedFloor(x.type) * (x.count || 0) : 0))
+    const byFloor = x.type ? Math.floor(floorLeft / bedFloor(x.type)) : perRoom
+    return Math.max(0, Math.min(perRoom, byFloor))
+  }
   const bedArea = (kind: 'bedrooms' | 'living', idx: number) => {
     const lines = b[kind][idx]
     const name = kind === 'bedrooms' ? `Bedroom ${idx + 1}` : `Living Room ${idx + 1}`
@@ -806,7 +818,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
               </span>
               <span className="flex flex-col gap-1 text-[13px] font-semibold text-ink-700">
                 Number of beds
-                <span className={!x.type ? 'pointer-events-none opacity-50' : ''}>{stepper(x.count, (v) => put(li, { count: v }), `${name} beds`, 10)}</span>
+                <span className={!x.type ? 'pointer-events-none opacity-50' : ''}>{stepper(x.count, (v) => put(li, { count: v }), `${name} beds`, bedMax(kind, idx, li))}</span>
               </span>
             </div>
           ))}
@@ -925,6 +937,16 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     2: (
       <>
         <h4 className="px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Select the bed type for all the bedrooms below</h4>
+        {space.allowance > 0 && (
+          <div className="px-4 pt-2 sm:px-5">
+            <p className={`text-[13.5px] ${e.beds ? 'font-semibold text-alert' : 'text-ink-500'}`} role={e.beds ? 'alert' : undefined}>
+              {e.beds ?? `Beds use about ${space.used} of ${space.allowance} sq ft available for beds in this ${Math.round(areaSqft(r))} sq ft room (up to ${MAX_BEDS_PER_BEDROOM} beds per bedroom).`}
+            </p>
+            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-paper">
+              <span className={`block h-full rounded-full ${space.used > space.allowance ? 'bg-alert' : 'bg-pine-800'}`} style={{ width: `${Math.min(100, (space.used / space.allowance) * 100)}%` }} />
+            </span>
+          </div>
+        )}
         <div className="mt-3">
           {b.bedrooms.map((_, i) => bedArea('bedrooms', i))}
           {b.living.length > 0 && (
@@ -949,7 +971,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
         </Row>
         {r.extraBed && (
           <Row title="What is the maximum number of extra bed(s) that can be accommodated in this room/unit?">
-            {stepper(r.extraBedMax ?? 1, (v) => setBeds(b, { extraBedMax: Math.max(1, v) }), 'extra beds', 5)}
+            {stepper(r.extraBedMax ?? 1, (v) => setBeds(b, { extraBedMax: Math.max(1, v) }), 'extra beds', Math.max(1, Math.min(5, Math.floor((space.allowance - space.beds) / EXTRA_BED_FLOOR))))}
           </Row>
         )}
         <div className="border-t-8 border-[#F4F8FC] px-4 pt-5 sm:px-5">
@@ -966,7 +988,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
           ] as const
         ).map(([k, t, h]) => (
           <Row key={k} title={t} help={h} error={e[k]}>
-            {stepper(occ[k], (v) => setOcc(k, v), t.toLowerCase(), 30)}
+            {stepper(occ[k], (v) => setOcc(k, v), t.toLowerCase(), Math.max(k === 'baseAdults' ? 1 : 0, occLim[k]))}
           </Row>
         ))}
       </>

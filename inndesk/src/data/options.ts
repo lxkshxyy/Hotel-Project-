@@ -1154,15 +1154,16 @@ export const allAmenities = amenityGroups.flatMap((g) => g.items)
  * Bed types for Sleeping Arrangement, with how many adults each one sleeps (used to pre-fill occupancy).
  * [CONFIRM] the reference list scrolled after "Single Bed"; the rest are common additions.
  */
+/** `floor` = the floor one bed covers, in sq ft (length × width of the bed itself). */
 export const bedCatalog = [
-  { name: 'King Bed', size: '>6 feet by 6 feet', sleeps: 2, width: 1.25 },
-  { name: 'Queen Bed', size: '6 feet by 6 feet', sleeps: 2, width: 1.1 },
-  { name: 'Double Bed', size: '5 feet by 6 feet', sleeps: 2, width: 1 },
-  { name: 'Single Bed', size: '3 feet by 6 feet', sleeps: 1, width: 0.62 },
-  { name: 'Bunk Bed', size: 'Two single beds, one above the other', sleeps: 2, width: 0.62 },
-  { name: 'Sofa Bed', size: 'Sofa that opens into a bed', sleeps: 1, width: 0.9 },
-  { name: 'Futon', size: 'Foldable floor bed', sleeps: 1, width: 0.8 },
-  { name: 'Floor Mattress', size: 'Mattress laid on the floor', sleeps: 1, width: 0.8 },
+  { name: 'King Bed', size: '>6 feet by 6 feet', sleeps: 2, width: 1.25, floor: 42 },
+  { name: 'Queen Bed', size: '6 feet by 6 feet', sleeps: 2, width: 1.1, floor: 36 },
+  { name: 'Double Bed', size: '5 feet by 6 feet', sleeps: 2, width: 1, floor: 30 },
+  { name: 'Single Bed', size: '3 feet by 6 feet', sleeps: 1, width: 0.62, floor: 18 },
+  { name: 'Bunk Bed', size: 'Two single beds, one above the other', sleeps: 2, width: 0.62, floor: 18 },
+  { name: 'Sofa Bed', size: 'Sofa that opens into a bed', sleeps: 1, width: 0.9, floor: 30 },
+  { name: 'Futon', size: 'Foldable floor bed', sleeps: 1, width: 0.8, floor: 24 },
+  { name: 'Floor Mattress', size: 'Mattress laid on the floor', sleeps: 1, width: 0.8, floor: 18 },
 ] as const
 export const roomAmenities = ['AC', 'TV', 'Wi-Fi', 'Work desk', 'Mini fridge', 'Kettle', 'Balcony', 'City view', 'Bathtub', 'Sofa', 'Wardrobe', 'Geyser']
 
