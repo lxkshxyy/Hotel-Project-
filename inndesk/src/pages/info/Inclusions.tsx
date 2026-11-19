@@ -6,6 +6,7 @@ import { RangeCalendar } from '../../components/RangeCalendar'
 import { addDays, parseISODate, todayISO, uid } from '../../lib/format'
 import type { Inclusion } from '../../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, Field, inputCls, PageTitle, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 export const inclusionKinds = ['Welcome drink', 'Complimentary breakfast', 'Early check-in (subject to availability)', 'Late checkout (subject to availability)', 'Airport / station pickup', 'Airport / station drop', 'Evening snacks', 'Discount on food & beverages', 'Spa discount', 'Free laundry (2 pieces)', 'Room upgrade (subject to availability)', 'Sightseeing tour', 'Other']
 
@@ -163,11 +164,11 @@ function InclusionDialog({ inc: start, rooms, isNew, onClose, onSave }: { inc: I
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Inclusion" htmlFor="i-kind">
-          <select id="i-kind" value={inc.kind} onChange={(e) => put({ kind: e.target.value })} className={inputCls}>
+          <Select id="i-kind" value={inc.kind} onChange={(e) => put({ kind: e.target.value })} className={inputCls}>
             {inclusionKinds.map((k) => (
               <option key={k}>{k}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={inc.kind === 'Other' ? 'Describe it' : 'Details (optional)'} error={needDetail ? 'Describe the inclusion.' : undefined} hint="e.g. “One per guest per stay”" htmlFor="i-detail">
           <input id="i-detail" value={inc.detail} maxLength={80} onChange={(e) => put({ detail: e.target.value })} className={inputCls} />

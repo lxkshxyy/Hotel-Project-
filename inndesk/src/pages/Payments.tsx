@@ -12,6 +12,7 @@ import { payoutDate, settle } from '../lib/money'
 import { answerDispute, getDisputeAnswers, listDisputes, saveListing, useData, useVerifications } from '../lib/store'
 import type { Dispute, Listing } from '../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, Faq, Field, inputCls, PageTitle } from './info/kit'
+import { Select } from '../components/Select'
 
 const pages = ['payouts', 'transactions', 'past-payouts', 'settings', 'advance', 'compensation', 'invoices', 'disputes'] as const
 type Page = (typeof pages)[number]
@@ -297,19 +298,19 @@ function Transactions({ l, txs }: P) {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Booking ID or guest name" className={`${inputCls} h-[52px] pl-9`} />
         </label>
         <RangeCalendar value={range} onChange={setRange} />
-        <select aria-label="Paid" value={paid} onChange={(e) => setPaid(e.target.value)} className={`${inputCls} h-[52px]`}>
+        <Select aria-label="Paid" value={paid} onChange={(e) => setPaid(e.target.value)} className={`${inputCls} h-[52px]`}>
           <option value="all">Online &amp; at hotel</option>
           <option value="online">Paid online</option>
           <option value="hotel">Pay at hotel</option>
-        </select>
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} h-[52px]`}>
+        </Select>
+        <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} h-[52px]`}>
           <option value="all">All statuses</option>
           {(Object.keys(statusText) as Tx['status'][]).map((k) => (
             <option key={k} value={k}>
               {statusText[k]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(

@@ -7,6 +7,7 @@ import { mealPlans } from '../../data/options'
 import { inr, uid } from '../../lib/format'
 import type { ListingRoom, RatePlan } from '../../lib/types'
 import { btnLink, btnOutline, btnSolid, Card, Dialog, Field, inputCls, PageTitle, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 /** Short industry codes for meal plans. */
 const planCode = (m?: string) => (!m || m === mealPlans[0] ? 'EP' : m === mealPlans[1] ? 'CP' : m === mealPlans[2] ? 'MAP' : m === mealPlans[3] ? 'AP' : 'AI')
@@ -133,13 +134,13 @@ function PlanDialog({ room, onClose, onSave }: { room: ListingRoom; onClose: () 
     >
       <div className="flex flex-col gap-4">
         <Field label="Meal plan" htmlFor="rp-meal">
-          <select id="rp-meal" value={meal} onChange={(e) => setMeal(e.target.value)} className={inputCls}>
+          <Select id="rp-meal" value={meal} onChange={(e) => setMeal(e.target.value)} className={inputCls}>
             {mealPlans.map((m) => (
               <option key={m} value={m}>
                 {planCode(m)} – {m}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Rateplan name" hint="Leave empty to use the meal plan name." htmlFor="rp-name">
           <input id="rp-name" value={name} maxLength={50} placeholder={planName(meal)} onChange={(e) => setName(e.target.value)} className={inputCls} />

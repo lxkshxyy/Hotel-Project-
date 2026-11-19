@@ -35,6 +35,7 @@ import {
 } from '../lib/promotions'
 import { useData } from '../lib/store'
 import type { Listing } from '../lib/types'
+import { Select } from '../components/Select'
 
 const ord = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`
 /** "9th Dec '25" */
@@ -699,13 +700,13 @@ function Editor({ l, p: start, others, onClose, onSaved }: { l: Listing; p: Prom
         {p.kind === 'audience' && (
           <div className="sm:col-span-2">
             <FieldRow label="Audience" error={err('audience') ?? errors.audience}>
-              <select value={p.audience} onChange={(e) => set({ audience: e.target.value as Audience, name: p.name === audienceLabel(p.audience) ? audienceLabel(e.target.value as Audience) : p.name })} className={inputCls}>
+              <Select value={p.audience} onChange={(e) => set({ audience: e.target.value as Audience, name: p.name === audienceLabel(p.audience) ? audienceLabel(e.target.value as Audience) : p.name })} className={inputCls}>
                 {audiences.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FieldRow>
           </div>
         )}
@@ -720,11 +721,11 @@ function Editor({ l, p: start, others, onClose, onSaved }: { l: Listing; p: Prom
         </FieldRow>
         {p.kind === 'last-minute' && (
           <FieldRow label="Booked how close to check-in?">
-            <select value={p.withinDays} onChange={(e) => set({ withinDays: Number(e.target.value) })} className={inputCls}>
+            <Select value={p.withinDays} onChange={(e) => set({ withinDays: Number(e.target.value) })} className={inputCls}>
               <option value={0}>Same day (0 days)</option>
               <option value={1}>Up to 1 day before</option>
               <option value={2}>Up to 2 days before</option>
-            </select>
+            </Select>
           </FieldRow>
         )}
         {p.kind === 'early-bird' && (
@@ -866,26 +867,26 @@ function PriceDialog({ l, promos, onClose }: { l: Listing; promos: Promotion[]; 
         <>
           <div className="grid gap-5 sm:grid-cols-2">
             <FieldRow label="Room">
-              <select value={roomId} onChange={(e) => setRoomId(e.target.value)} className={inputCls}>
+              <Select value={roomId} onChange={(e) => setRoomId(e.target.value)} className={inputCls}>
                 {rooms.map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.name} · {inr(x.price)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FieldRow>
             <FieldRow label="Check-in – Check-out">
               <RangeCalendar tabs={false} centered clearable={false} min={t} label={`${nights} night${nights === 1 ? '' : 's'}`} value={{ mode: 'stay', from: dates.from, to: dates.to }} onChange={(v) => v && setDates({ from: v.from, to: v.to > v.from ? v.to : addDays(v.from, 1) })} />
             </FieldRow>
             <FieldRow label="Guest type (Tier 2)">
-              <select value={aud} onChange={(e) => setAud(e.target.value as Audience | '')} className={inputCls}>
+              <Select value={aud} onChange={(e) => setAud(e.target.value as Audience | '')} className={inputCls}>
                 <option value="">Regular guest</option>
                 {audiences.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FieldRow>
             <FieldRow label="Coupon (Tier 3)" hint={coupons.length ? undefined : 'No active coupons.'}>
               <label className={`flex h-11 items-center gap-2.5 text-[14.5px] ${coupons.length ? 'cursor-pointer text-ink-900' : 'text-ink-400'}`}>

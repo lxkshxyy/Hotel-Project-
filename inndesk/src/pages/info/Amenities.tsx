@@ -8,6 +8,7 @@ import { amenityGroups, checkTimes, roomAmenities, timeLabel } from '../../data/
 import { uid } from '../../lib/format'
 import type { Restaurant } from '../../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, Field, inputCls, PageTitle, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 type Tab = 'amenities' | 'restaurant'
 
@@ -71,7 +72,7 @@ function AmenityTab({ l, set }: InfoProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-[15px] whitespace-nowrap text-ink-900">
           View amenities for:
-          <select
+          <Select
             value={forId}
             onChange={(e) =>
               setParams((p) => {
@@ -89,7 +90,7 @@ function AmenityTab({ l, set }: InfoProps) {
                 {r.name || `Room type ${i + 1}`}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {!room && (
           <label className="relative w-full sm:w-[320px]">
@@ -283,31 +284,31 @@ function RestaurantDialog({ r: start, isNew, onClose, onSave }: { r: Restaurant;
           <input id="r-name" value={r.name} maxLength={60} onChange={(e) => put({ name: e.target.value })} className={inputCls} />
         </Field>
         <Field label="Food served" htmlFor="r-food">
-          <select id="r-food" value={r.food} onChange={(e) => put({ food: e.target.value as Restaurant['food'] })} className={inputCls}>
+          <Select id="r-food" value={r.food} onChange={(e) => put({ food: e.target.value as Restaurant['food'] })} className={inputCls}>
             {(Object.keys(foodLabel) as Restaurant['food'][]).map((k) => (
               <option key={k} value={k}>
                 {foodLabel[k]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Opens at" htmlFor="r-open">
-          <select id="r-open" value={r.open} onChange={(e) => put({ open: e.target.value })} className={inputCls}>
+          <Select id="r-open" value={r.open} onChange={(e) => put({ open: e.target.value })} className={inputCls}>
             {checkTimes.map((t) => (
               <option key={t} value={t}>
                 {timeLabel(t)}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Closes at" htmlFor="r-close">
-          <select id="r-close" value={r.close} onChange={(e) => put({ close: e.target.value })} className={inputCls}>
+          <Select id="r-close" value={r.close} onChange={(e) => put({ close: e.target.value })} className={inputCls}>
             {checkTimes.map((t) => (
               <option key={t} value={t}>
                 {timeLabel(t)}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="sm:col-span-2">
           <Field label="Cuisine" required error={tried ? errs.cuisines : undefined}>

@@ -7,6 +7,7 @@ import { addDays, inr, parseISODate, todayISO } from '../lib/format'
 import { useListings, useReservations } from '../lib/hooks'
 import { saveListing } from '../lib/store'
 import type { CalendarCell, Listing } from '../lib/types'
+import { Select } from '../components/Select'
 
 const DAYS = 14
 const WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -115,13 +116,13 @@ export default function Calendar() {
         {usable.length > 1 ? (
           <label className="label min-w-[240px]">
             Property
-            <select className="field" value={l.id} onChange={(e) => setParams({ property: e.target.value })}>
+            <Select className="field" value={l.id} onChange={(e) => setParams({ property: e.target.value })}>
               {usable.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.basics.name || 'Untitled property'}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         ) : (
           <strong className="font-display text-xl">{l.basics.name}</strong>
@@ -220,13 +221,13 @@ export default function Calendar() {
           <div className="flex flex-col gap-4">
             <label className="label">
               Room type
-              <select className="field" value={edit.roomId} onChange={(e) => setEdit({ ...edit, roomId: e.target.value })}>
+              <Select className="field" value={edit.roomId} onChange={(e) => setEdit({ ...edit, roomId: e.target.value })}>
                 {l.rooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name || 'Room type'}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="label">

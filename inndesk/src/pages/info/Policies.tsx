@@ -11,6 +11,7 @@ import type { Listing } from '../../lib/types'
 import { CancelTimeline, RuleGroup } from '../Wizard'
 import { ratePlansOf } from './Rooms'
 import { btnOutline, btnSolid, Card, Dialog, Faq, Field, inputCls, PageTitle, Tabs, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 type Tab = 'cancel' | 'rules' | 'notices' | 'child' | 'post'
 const nice = (iso: string) => parseISODate(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -209,22 +210,22 @@ function Rules({ l, set }: InfoProps) {
           <h2 className="text-[18px] font-semibold text-ink-900">Check-in &amp; Check-out Time</h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <Field label="Check-in Time" htmlFor="p-in">
-              <select id="p-in" value={l.policies.checkIn} onChange={(e) => upP(set, { checkIn: e.target.value })} className={inputCls}>
+              <Select id="p-in" value={l.policies.checkIn} onChange={(e) => upP(set, { checkIn: e.target.value })} className={inputCls}>
                 {checkTimes.map((t) => (
                   <option key={t} value={t}>
                     {timeLabel(t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Check-out Time" htmlFor="p-out">
-              <select id="p-out" value={l.policies.checkOut} onChange={(e) => upP(set, { checkOut: e.target.value })} className={inputCls}>
+              <Select id="p-out" value={l.policies.checkOut} onChange={(e) => upP(set, { checkOut: e.target.value })} className={inputCls}>
                 {checkTimes.map((t) => (
                   <option key={t} value={t}>
                     {timeLabel(t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           </div>
         </Card>
@@ -309,31 +310,31 @@ function ChildAge({ l, set }: InfoProps) {
         <p className="text-[13.5px] text-ink-700">Set the age bands used for pricing children.</p>
         <div className="mt-4 grid gap-5 sm:grid-cols-3">
           <Field label="Infants: up to age" hint="Stay free, no extra bed" htmlFor="c-inf">
-            <select id="c-inf" value={infant} onChange={(e) => upP(set, { infantAge: Number(e.target.value), childMaxAge: Math.max(child, Number(e.target.value) + 1) })} className={inputCls}>
+            <Select id="c-inf" value={infant} onChange={(e) => upP(set, { infantAge: Number(e.target.value), childMaxAge: Math.max(child, Number(e.target.value) + 1) })} className={inputCls}>
               {ages.slice(0, 6).map((a) => (
                 <option key={a} value={a}>
                   {a} {a === 1 ? 'year' : 'years'}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Children: up to age" hint="Child charge applies" htmlFor="c-child">
-            <select id="c-child" value={child} onChange={(e) => upP(set, { childMaxAge: Number(e.target.value) })} className={inputCls}>
+            <Select id="c-child" value={child} onChange={(e) => upP(set, { childMaxAge: Number(e.target.value) })} className={inputCls}>
               {ages.filter((a) => a > infant).map((a) => (
                 <option key={a} value={a}>
                   {a} years
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Free stay: up to age" hint="Sharing beds with parents" htmlFor="c-free">
-            <select id="c-free" value={p.childrenFreeAge} onChange={(e) => upP(set, { childrenFreeAge: Number(e.target.value) })} className={inputCls}>
+            <Select id="c-free" value={p.childrenFreeAge} onChange={(e) => upP(set, { childrenFreeAge: Number(e.target.value) })} className={inputCls}>
               {ages.slice(0, child + 1).map((a) => (
                 <option key={a} value={a}>
                   {a === 0 ? 'No free stay' : `${a} years`}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-lg border border-line text-center text-[13px]">

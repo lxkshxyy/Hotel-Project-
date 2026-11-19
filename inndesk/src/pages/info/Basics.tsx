@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { groups } from '../../components/PropertyTypePicker'
 import { site } from '../../config/site'
 import { areaCls, Card, Field, inputCls, PageTitle, Radio, Tabs, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 const years = Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => new Date().getFullYear() - i)
 const chains = ['Independent property (no chain)', 'IHCL (Taj, Vivanta, Ginger)', 'ITC Hotels', 'Lemon Tree Hotels', 'Sarovar Hotels', 'Radisson Hotel Group', 'Marriott International', 'Hyatt', 'Accor', 'Wyndham', 'Royal Orchid Hotels', 'The Park Hotels', 'Treebo', 'FabHotels', 'OYO', 'Other chain']
@@ -60,41 +61,41 @@ function Details({ l, set }: InfoProps) {
           <textarea id="b-desc" rows={4} value={b.description} onChange={(e) => put({ description: e.target.value })} className={`${areaCls} resize-y`} />
         </Field>
         <Field label="Property Type" htmlFor="b-type">
-          <select id="b-type" value={b.propertyType} onChange={(e) => put({ propertyType: e.target.value })} className={inputCls}>
+          <Select id="b-type" value={b.propertyType} onChange={(e) => put({ propertyType: e.target.value })} className={inputCls}>
             {!types.some((t) => t.name === b.propertyType) && <option value={b.propertyType}>{b.propertyType}</option>}
             {types.map((t) => (
               <option key={t.name} value={t.name}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Star Rating" required hint="Changing the star rating needs a document check. Contact support." htmlFor="b-stars">
           <input id="b-stars" value={b.stars ? `${b.stars}` : 'Not rated'} disabled className={inputCls} />
         </Field>
         <Field label="Name of the hotel chain that your property belongs to" htmlFor="b-chain">
-          <select id="b-chain" value={b.chain ?? ''} onChange={(e) => put({ chain: e.target.value || undefined })} className={inputCls}>
+          <Select id="b-chain" value={b.chain ?? ''} onChange={(e) => put({ chain: e.target.value || undefined })} className={inputCls}>
             <option value="">Select</option>
             {chains.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Year of Construction" required htmlFor="b-built">
-          <select id="b-built" value={b.yearBuilt ?? ''} onChange={(e) => put({ yearBuilt: Number(e.target.value) || undefined })} className={inputCls}>
+          <Select id="b-built" value={b.yearBuilt ?? ''} onChange={(e) => put({ yearBuilt: Number(e.target.value) || undefined })} className={inputCls}>
             <option value="">Select</option>
             {years.map((y) => (
               <option key={y}>{y}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Accepting bookings since" required error={b.yearBuilt && b.bookingSince && b.bookingSince < b.yearBuilt ? 'This can’t be before the year the property was built.' : undefined} htmlFor="b-since">
-          <select id="b-since" value={b.bookingSince ?? ''} onChange={(e) => put({ bookingSince: Number(e.target.value) || undefined })} className={inputCls}>
+          <Select id="b-since" value={b.bookingSince ?? ''} onChange={(e) => put({ bookingSince: Number(e.target.value) || undefined })} className={inputCls}>
             <option value="">Select</option>
             {years.map((y) => (
               <option key={y}>{y}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="No. of Restaurants" hint={l.restaurants?.length ? `${l.restaurants.length} added under Amenities & Restaurant` : undefined} htmlFor="b-rest">
           <input id="b-rest" type="number" inputMode="numeric" min={0} value={b.restaurantsCount ?? l.restaurants?.length ?? 0} onChange={(e) => put({ restaurantsCount: num(e.target.value) })} className={inputCls} />

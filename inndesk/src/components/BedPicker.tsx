@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { bathCatalog, bedCatalog } from '../data/options'
 
@@ -114,9 +114,9 @@ function ImagePicker({ items, Icon, value, onChange, label, placeholder }: { ite
         {current ? (
           <>
             <Icon type={current.name} />
-            <span className="min-w-0 flex-1 leading-tight">
-              <strong className="block text-[15px] text-pine-800">{current.name}</strong>
-              <span className="block truncate text-[12.5px] text-ink-500">{current.size}</span>
+            <span className="min-w-0 flex-1 leading-tight" title={`${current.name} — ${current.size}`}>
+              <strong className="block truncate text-[14px] font-semibold text-pine-800">{current.name}</strong>
+              <span className="block truncate text-[12px] text-ink-500">{current.size}</span>
             </span>
           </>
         ) : (
@@ -125,7 +125,7 @@ function ImagePicker({ items, Icon, value, onChange, label, placeholder }: { ite
         <ChevronDown className={`h-4 w-4 shrink-0 text-ink-700 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
-        <ul role="listbox" className={`absolute inset-x-0 z-50 max-h-64 overflow-y-auto rounded-lg bg-white py-1 shadow-lift ring-1 ring-line ${up ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        <ul role="listbox" className={`absolute inset-x-0 z-50 max-h-72 min-w-[260px] overflow-y-auto rounded-xl border border-line bg-white p-1.5 shadow-[0_16px_40px_rgba(26,44,91,0.18)] ${up ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}>
           {items.map((b) => (
             <li key={b.name} role="option" aria-selected={b.name === value}>
               <button
@@ -134,13 +134,14 @@ function ImagePicker({ items, Icon, value, onChange, label, placeholder }: { ite
                   onChange(b.name)
                   setOpen(false)
                 }}
-                className={`flex w-full items-center gap-2.5 px-2.5 py-2 text-left hover:bg-pine-50 ${b.name === value ? 'bg-pine-50' : ''}`}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-pine-50 ${b.name === value ? 'bg-pine-50' : ''}`}
               >
                 <Icon type={b.name} />
-                <span className="leading-tight">
-                  <strong className="block text-[15px] text-ink-900">{b.name}</strong>
-                  <span className="text-[12.5px] text-ink-500">{b.size}</span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <strong className={`block text-[14px] ${b.name === value ? 'font-semibold text-pine-800' : 'font-medium text-ink-900'}`}>{b.name}</strong>
+                  <span className="text-[12px] text-ink-500">{b.size}</span>
                 </span>
+                {b.name === value && <Check className="h-4 w-4 shrink-0 text-pine-800" aria-hidden="true" />}
               </button>
             </li>
           ))}

@@ -22,6 +22,7 @@ import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, Publ
 import { verifyLabel, VerificationList } from '../components/Verification'
 import { isDemoMode } from '../lib/supabase'
 import type { BedLine, Listing, ListingRoom, VerifyKind } from '../lib/types'
+import { Select } from '../components/Select'
 
 type Set = (fn: (l: Listing) => Listing) => void
 
@@ -178,7 +179,7 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
         </Row>
         {b.category !== 'homestay' && (
           <Row id="b-stars" title="Hotel star rating" error={e.stars}>
-            <select id="b-stars" className="field" value={b.starsChosen ? String(b.stars) : ''} onChange={(x) => up({ stars: Number(x.target.value), starsChosen: x.target.value !== '' })} aria-invalid={!!e.stars}>
+            <Select id="b-stars" className="field" value={b.starsChosen ? String(b.stars) : ''} onChange={(x) => up({ stars: Number(x.target.value), starsChosen: x.target.value !== '' })} aria-invalid={!!e.stars}>
               <option value="" disabled hidden>Select rating</option>
               <option value="0">Not rated</option>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -186,24 +187,24 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
                   {n} star
                 </option>
               ))}
-            </select>
+            </Select>
           </Row>
         )}
         <Row id="b-built" title="When was the property built?" error={e.yearBuilt}>
-          <select id="b-built" className="field" value={b.yearBuilt ?? ''} onChange={(x) => up({ yearBuilt: Number(x.target.value) || undefined })} aria-invalid={!!e.yearBuilt}>
+          <Select id="b-built" className="field" value={b.yearBuilt ?? ''} onChange={(x) => up({ yearBuilt: Number(x.target.value) || undefined })} aria-invalid={!!e.yearBuilt}>
             <option value="" disabled hidden>Select a year</option>
             {years.map((y) => (
               <option key={y}>{y}</option>
             ))}
-          </select>
+          </Select>
         </Row>
         <Row id="b-since" title="Accepting bookings since?" help="Since when guests have been able to book this property" error={e.bookingSince}>
-          <select id="b-since" className="field" value={b.bookingSince ?? ''} onChange={(x) => up({ bookingSince: Number(x.target.value) || undefined })} aria-invalid={!!e.bookingSince}>
+          <Select id="b-since" className="field" value={b.bookingSince ?? ''} onChange={(x) => up({ bookingSince: Number(x.target.value) || undefined })} aria-invalid={!!e.bookingSince}>
             <option value="" disabled hidden>Select a year</option>
             {years.filter((y) => !b.yearBuilt || y >= b.yearBuilt).map((y) => (
               <option key={y}>{y}</option>
             ))}
-          </select>
+          </Select>
         </Row>
         <Row title="Do you work with a channel manager?" help="A channel manager updates your rooms and rates across travel websites in one go" error={e.channel ?? e.channelName}>
           <div role="radiogroup" aria-label="Channel manager" className="flex min-h-[46px] items-center gap-8">
@@ -218,12 +219,12 @@ function Basics({ l, set, show, onChangeType }: { l: Listing; set: Set; show: bo
             ))}
           </div>
           {b.channelManager && (
-            <select className="field" aria-label="Which channel manager" value={b.channelManagerName ?? ''} onChange={(x) => up({ channelManagerName: x.target.value })} aria-invalid={!!e.channelName}>
+            <Select className="field" aria-label="Which channel manager" value={b.channelManagerName ?? ''} onChange={(x) => up({ channelManagerName: x.target.value })} aria-invalid={!!e.channelName}>
               <option value="" disabled hidden>Select your channel manager</option>
               {channelManagers.map((c) => (
                 <option key={c}>{c}</option>
               ))}
-            </select>
+            </Select>
           )}
         </Row>
 
@@ -851,7 +852,7 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     1: (
       <>
         <Row id="r-type" title="Room type" help="Choose the type that best describes this room" error={e.roomType}>
-          <select id="r-type" className="field" value={r.roomType ?? ''} onChange={(x) => setType(x.target.value)} aria-invalid={!!e.roomType}>
+          <Select id="r-type" className="field" value={r.roomType ?? ''} onChange={(x) => setType(x.target.value)} aria-invalid={!!e.roomType}>
             <option value="" disabled hidden>
               Select room type
             </option>
@@ -859,17 +860,17 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
             {[...roomTypes, ...(r.roomType && !roomTypes.includes(r.roomType) ? [r.roomType] : [])].map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </Row>
         <Row id="r-view" title="Room view" help="Describe what the guest will see from this room, like pool, garden, or city views" error={e.view}>
-          <select id="r-view" className="field" value={r.view ?? ''} onChange={(x) => up({ view: x.target.value })} aria-invalid={!!e.view}>
+          <Select id="r-view" className="field" value={r.view ?? ''} onChange={(x) => up({ view: x.target.value })} aria-invalid={!!e.view}>
             <option value="" disabled hidden>
               Select room view
             </option>
             {roomViews.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </Row>
         <Row id="r-size" title="Room Size (Area)" help="Specify the indoor area only, excluding shared & outdoor spaces" error={e.size}>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -1003,21 +1004,21 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
           </div>
           <div className="flex flex-col gap-2">
             {baths.map((x, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,170px)_auto] items-end gap-2 sm:gap-3">
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_minmax(140px,180px)_auto]">
                 <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold text-ink-700">
                   Bathroom Type {i + 1}
                   <BathPicker label={`Bathroom type ${i + 1}`} value={x.type} onChange={(v) => setBaths(baths.map((y, j) => (j === i ? { ...y, type: v } : y)))} />
                 </label>
-                <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold text-ink-700">
-                  Attached to which room?
-                  <select className="field min-h-[52px]" value={rooms.includes(x.attached) ? x.attached : ''} onChange={(ev) => setBaths(baths.map((y, j) => (j === i ? { ...y, attached: ev.target.value } : y)))} aria-label={`Bathroom ${i + 1} attached to`}>
+                <label className="col-span-1 flex min-w-0 flex-col gap-1 text-[13px] font-semibold whitespace-nowrap text-ink-700 max-md:order-3 max-md:col-span-2">
+                  Attached to
+                  <Select className="field min-h-[52px]" value={rooms.includes(x.attached) ? x.attached : ''} onChange={(ev) => setBaths(baths.map((y, j) => (j === i ? { ...y, attached: ev.target.value } : y)))} aria-label={`Bathroom ${i + 1} attached to`}>
                     <option value="" disabled hidden>
                       Select room
                     </option>
                     {rooms.map((o) => (
                       <option key={o}>{o}</option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <span className="flex h-[52px] w-9 items-center justify-center">
                   {baths.length > 1 && (
@@ -1470,23 +1471,23 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="label">
               Check-in Time
-              <select className="field" value={p.checkIn} onChange={(e) => up({ checkIn: e.target.value })}>
+              <Select className="field" value={p.checkIn} onChange={(e) => up({ checkIn: e.target.value })}>
                 {checkTimes.map((t) => (
                   <option key={t} value={t}>
                     {timeLabel(t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="label">
               Check-out Time
-              <select className="field" value={p.checkOut} onChange={(e) => up({ checkOut: e.target.value })}>
+              <Select className="field" value={p.checkOut} onChange={(e) => up({ checkOut: e.target.value })}>
                 {checkTimes.map((t) => (
                   <option key={t} value={t}>
                     {timeLabel(t)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
         </PolicyCard>
@@ -1524,13 +1525,13 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="label">
               Children stay free up to age
-              <select className="field" value={p.childrenFreeAge} onChange={(e) => up({ childrenFreeAge: Number(e.target.value) })}>
+              <Select className="field" value={p.childrenFreeAge} onChange={(e) => up({ childrenFreeAge: Number(e.target.value) })}>
                 {Array.from({ length: 18 }, (_, a) => (
                   <option key={a} value={a}>
                     {a === 0 ? 'No free stay for children' : `${a} year${a === 1 ? '' : 's'}`}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="label">
               Extra bed charge per night

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { useSession } from '../../context/Session'
 import { site } from '../../config/site'
 import { btnOutline, btnSolid, Card, Dialog, Field, inputCls, PageTitle, Tabs, type InfoProps } from './kit'
+import { Select } from '../../components/Select'
 
 const managers = ['Aiosell', 'STAAH', 'eZee Centrix', 'AxisRooms', 'SiteMinder', 'RateGain', 'Djubo', 'Other']
 // [LIVE] the access token must be issued by the server, not the browser.
@@ -75,11 +76,11 @@ function ChannelManager({ l, commit }: InfoProps) {
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="w-full max-w-[300px]">
               <Field label="Channel manager" htmlFor="cm-name">
-                <select id="cm-name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls}>
+                <Select id="cm-name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls}>
                   {managers.map((m) => (
                     <option key={m}>{m}</option>
                   ))}
-                </select>
+                </Select>
               </Field>
             </div>
             <button type="button" onClick={connect} className={btnSolid}>

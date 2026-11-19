@@ -5,6 +5,7 @@ import { amenityDetails, amenityForms, formIntro, poolDepths, weekDays, type Ame
 import { uid } from '../lib/format'
 import { resizeImage } from '../lib/images'
 import type { AmenityEntry, EntryValue, Listing } from '../lib/types'
+import { Select } from './Select'
 
 type Set = (fn: (l: Listing) => Listing) => void
 
@@ -136,14 +137,14 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
               return f.type === 'multi' ? (
                 <MultiSelect key={f.id} label={`${label}: ${f.label}`} options={f.options} value={Array.isArray(v) ? v : []} onChange={(nv) => setDetail(f, nv)} />
               ) : (
-                <select key={f.id} aria-label={`${label}: ${f.label}`} aria-invalid={showErr && empty(f)} className={`field ${showErr && empty(f) ? '!border-alert' : ''}`} value={typeof v === 'string' ? v : ''} onChange={(e) => setDetail(f, e.target.value)}>
+                <Select key={f.id} aria-label={`${label}: ${f.label}`} aria-invalid={showErr && empty(f)} className={`field ${showErr && empty(f) ? '!border-alert' : ''}`} value={typeof v === 'string' ? v : ''} onChange={(e) => setDetail(f, e.target.value)}>
                   <option value="" disabled hidden>
                     {f.label}
                   </option>
                   {f.options.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
-                </select>
+                </Select>
               )
             })}
           </div>
@@ -410,14 +411,14 @@ function AmenityFormModal({ form, entry, l, onClose, onSave }: { form?: AmenityF
         const dv = (val(f.id) as { depth: string; shallow: boolean } | undefined) ?? { depth: '', shallow: false }
         return (
           <div className="flex flex-col gap-2">
-            <select aria-label="Depth" className="field max-w-[240px]" value={dv.depth} onChange={(e) => put(f.id, { ...dv, depth: e.target.value })}>
+            <Select aria-label="Depth" className="field max-w-[240px]" value={dv.depth} onChange={(e) => put(f.id, { ...dv, depth: e.target.value })}>
               <option value="" disabled hidden>
                 Select Depth
               </option>
               {poolDepths.map((o) => (
                 <option key={o}>{o}</option>
               ))}
-            </select>
+            </Select>
             <label className="flex cursor-pointer items-center gap-2.5 text-[15px] text-ink-900">
               <input type="checkbox" checked={dv.shallow} onChange={(e) => put(f.id, { ...dv, shallow: e.target.checked })} className="h-[18px] w-[18px] accent-pine-800" />
               This pool has a shallow end

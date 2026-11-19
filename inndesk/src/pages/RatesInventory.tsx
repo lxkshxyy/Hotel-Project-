@@ -13,6 +13,7 @@ import { saveListing } from '../lib/store'
 import type { CalendarCell, HourlySetup, Listing, ListingRoom } from '../lib/types'
 import { btnOutline, btnSolid, Dialog, Field, inputCls } from './info/kit'
 import { ratePlansOf } from './info/Rooms'
+import { Select } from '../components/Select'
 
 const WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -510,13 +511,13 @@ function RateCalendar({ l, room, toast }: { l: Listing; room: ListingRoom; toast
         <div className="mb-3 flex items-center gap-3">
           <label className="relative">
             <span className="absolute -top-2 left-2.5 bg-white px-1 text-[11.5px] text-ink-500">Rate plan shown</span>
-            <select value={plan.id} onChange={(e) => setPlanId(e.target.value)} className="h-11 rounded-full border border-pine-700 bg-white pr-9 pl-4 text-[14.5px] text-pine-800">
+            <Select value={plan.id} onChange={(e) => setPlanId(e.target.value)} className="h-11 rounded-full border border-pine-700 bg-white pr-9 pl-4 text-[14.5px] text-pine-800">
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         {months.map((m) => {
@@ -794,13 +795,13 @@ function BulkDialog({ l, onClose, onSaved }: { l: Listing; onClose: () => void; 
     >
       <div className="flex flex-col gap-4">
         <Field label="Room type" htmlFor="ri-room">
-          <select id="ri-room" value={roomId} onChange={(x) => (setRoomId(x.target.value), setE((y) => ({ ...y, prices: {} })))} className={inputCls}>
+          <Select id="ri-room" value={roomId} onChange={(x) => (setRoomId(x.target.value), setE((y) => ({ ...y, prices: {} })))} className={inputCls}>
             {l.rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Dates">
           <RangeCalendar tabs={false} centered clearable={false} min={todayISO()} label="From – To" value={{ mode: 'stay', from, to }} onChange={(v) => v && (setFrom(v.from), setTo(v.to >= v.from ? v.to : v.from))} />
@@ -1148,39 +1149,39 @@ function HourlySettings({ l, h, onClose, onSave }: { l: Listing; h: HourlySetup;
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Room type" htmlFor="hs-room">
-          <select id="hs-room" value={x.roomId} onChange={(e) => setX({ ...x, roomId: e.target.value, rooms: Math.min(x.rooms, l.rooms.find((r) => r.id === e.target.value)?.count ?? 1) })} className={inputCls}>
+          <Select id="hs-room" value={x.roomId} onChange={(e) => setX({ ...x, roomId: e.target.value, rooms: Math.min(x.rooms, l.rooms.find((r) => r.id === e.target.value)?.count ?? 1) })} className={inputCls}>
             {l.rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={`Rooms for hourly stays (of ${room.count})`} htmlFor="hs-rooms">
           <input id="hs-rooms" type="number" min={1} max={room.count} value={x.rooms} onChange={(e) => setX({ ...x, rooms: Math.max(1, Math.min(room.count, Math.round(Number(e.target.value) || 1))) })} className={inputCls} />
         </Field>
         <Field label="First check-in" htmlFor="hs-in">
-          <select id="hs-in" value={x.firstCheckIn} onChange={(e) => setX({ ...x, firstCheckIn: e.target.value })} className={inputCls}>
+          <Select id="hs-in" value={x.firstCheckIn} onChange={(e) => setX({ ...x, firstCheckIn: e.target.value })} className={inputCls}>
             {checkTimes.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Last check-out" htmlFor="hs-out">
-          <select id="hs-out" value={x.lastCheckOut} onChange={(e) => setX({ ...x, lastCheckOut: e.target.value })} className={inputCls}>
+          <Select id="hs-out" value={x.lastCheckOut} onChange={(e) => setX({ ...x, lastCheckOut: e.target.value })} className={inputCls}>
             {checkTimes.map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Housekeeping duration" htmlFor="hs-hk">
-          <select id="hs-hk" value={x.housekeeping} onChange={(e) => setX({ ...x, housekeeping: Number(e.target.value) })} className={inputCls}>
+          <Select id="hs-hk" value={x.housekeeping} onChange={(e) => setX({ ...x, housekeeping: Number(e.target.value) })} className={inputCls}>
             {[30, 60, 90, 120].map((m) => (
               <option key={m} value={m}>
                 {m === 30 ? '30 minutes' : hkLabel(m)}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <p className="self-end pb-2 text-[14px] text-ink-700">
           Window: <strong className="font-semibold text-ink-900">{w.hours} hours</strong>

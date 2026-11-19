@@ -5,6 +5,7 @@ import { useSession } from '../context/Session'
 import { gstinError } from '../lib/gstin'
 import { isDemoMode } from '../lib/supabase'
 import type { Owner } from '../lib/types'
+import { Select } from '../components/Select'
 
 export default function Settings() {
   const { owner, user, saveOwner } = useSession()
@@ -47,10 +48,10 @@ export default function Settings() {
             </label>
             <label className="label">
               Role
-              <select className="field" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Owner['role'] })}>
+              <Select className="field" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Owner['role'] })}>
                 <option>Owner</option>
                 <option>Manager</option>
-              </select>
+              </Select>
             </label>
             <label className="label">
               Business name
