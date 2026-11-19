@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getOwner, saveOwner as persistOwner } from '../lib/store'
-import { isDemoMode, supabase } from '../lib/supabase'
+import { authLinkUsed, isDemoMode, supabase } from '../lib/supabase'
 import type { Owner } from '../lib/types'
 
 /*
@@ -76,7 +76,7 @@ export const passwordOk = (p: string) => passwordRules.every((r) => r.test(p))
 
 const friendly = (m: string) =>
   /invalid login credentials/i.test(m)
-    ? 'We couldn’t find an account with that email and password. Check both (the password is case-sensitive).'
+    ? 'We couldn’t find an account with that email and password. Check both (the password is case-sensitive). If you joined TRPOTELS with an email code and never set a password, use “Forgot your password?” to set one.'
     : /email not confirmed/i.test(m)
       ? 'Confirm your email first. Use “Create an account” again to get a new code.'
       : /token has expired|invalid/i.test(m)
@@ -102,12 +102,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return
     }
     const toUser = (u: { id: string; email?: string; user_metadata?: { full_name?: string } } | undefined) => (u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name ?? '' } : null)
-    supabase.auth.getSession().then(({ data }) => {
+    // Arriving from a reset-password email: start signed out, so the new password has to be set with the code.
+    const start = authLinkUsed === 'recovery' ? supabase.auth.signOut({ scope: 'local' }) : Promise.resolve()
+    start.then(() => supabase!.auth.getSession()).then(({ data }) => {
       const u = toUser(data.session?.user)
       setUser(u)
       if (!u) setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setUser((cur) => (cur?.id === session?.user?.id ? cur : toUser(session?.user))))
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // A password-reset session must never open the panel; the owner sets a new password with the code instead.
+      if (event === 'PASSWORD_RECOVERY') {
+        void supabase?.auth.signOut()
+        setUser(null)
+        setLoading(false)
+        return
+      }
+      setUser((cur) => (cur?.id === session?.user?.id ? cur : toUser(session?.user)))
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 

@@ -282,7 +282,7 @@ export function CreateAccount({ open, onClose, onDone, presetEmail = '' }: { ope
 
 /* ---------------- Forgot password ---------------- */
 
-export function ForgotPassword({ open, onClose, onDone, presetEmail = '' }: { open: boolean; onClose: () => void; onDone: () => void; presetEmail?: string }) {
+export function ForgotPassword({ open, onClose, onDone, presetEmail = '', notice }: { open: boolean; onClose: () => void; onDone: () => void; presetEmail?: string; notice?: string }) {
   const { sendReset, resetPassword } = useSession()
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState(presetEmail)
@@ -330,6 +330,7 @@ export function ForgotPassword({ open, onClose, onDone, presetEmail = '' }: { op
     <Popup open={open} onClose={onClose} title="Reset your password">
       {step === 'email' ? (
         <form onSubmit={send} noValidate className="flex flex-col gap-4">
+          {notice && <p className="rounded-lg bg-pine-50 px-3 py-2.5 text-[14px] text-ink-900">{notice}</p>}
           <label className="label">
             Email address
             <input className="field" type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />

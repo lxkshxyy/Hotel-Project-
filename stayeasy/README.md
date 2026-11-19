@@ -43,6 +43,8 @@ project for hosting. Until the Supabase keys are set the site runs in **demo mod
 1. Create a project at https://supabase.com (region: Mumbai).
 2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/seed.sql` (replace the sample hotels first).
 3. **Authentication → Email Templates → Magic Link:** include the code, e.g. `Your StayEasy code is {{ .Token }}`.
+   InnDesk (hotel owners) also needs **Confirm signup** and **Reset password** to show `{{ .Token }}` — the code
+   only, no link. InnDesk ignores links from auth emails on purpose, so a forwarded or leaked email can't sign anyone in.
 4. **Authentication → URL Configuration:** Site URL = your live address; add `http://localhost:5173` to redirect URLs.
 5. **Authentication → SMTP:** connect a real sender (Resend, Zoho, SES). Supabase's built-in mailer only sends a few emails an hour.
 

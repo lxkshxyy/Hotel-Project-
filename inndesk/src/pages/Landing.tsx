@@ -7,6 +7,7 @@ import { Mark } from '../components/ui'
 import { site } from '../config/site'
 import { useSession } from '../context/Session'
 import { inr } from '../lib/format'
+import { authLinkUsed } from '../lib/supabase'
 
 const pct = (n: number) => `${Math.round(n * 100)}%`
 
@@ -79,7 +80,8 @@ export default function Landing() {
   const next = params.get('next')
   const after = next && next.startsWith('/app') ? next : '/app'
   const [create, setCreate] = useState<{ open: boolean; email: string }>({ open: pathname === '/signup', email: '' })
-  const [forgot, setForgot] = useState<{ open: boolean; email: string }>({ open: false, email: '' })
+  // Someone opened a link from an auth email: links don't sign in here, so offer the code instead.
+  const [forgot, setForgot] = useState<{ open: boolean; email: string }>({ open: authLinkUsed === 'recovery', email: '' })
   const listNew = () => (user ? navigate('/app/properties?new=1') : setCreate({ open: true, email: '' }))
 
   return (
@@ -155,7 +157,7 @@ export default function Landing() {
       </div>
 
       <CreateAccount open={create.open} presetEmail={create.email} onClose={() => setCreate({ open: false, email: '' })} onDone={() => navigate(after, { replace: true })} />
-      <ForgotPassword open={forgot.open} presetEmail={forgot.email} onClose={() => setForgot({ open: false, email: '' })} onDone={() => navigate(after, { replace: true })} />
+      <ForgotPassword open={forgot.open} presetEmail={forgot.email} notice={authLinkUsed === 'recovery' ? 'For your security, links in emails don’t sign you in to InnDesk. Enter your email, then type the 6-digit code we send you.' : undefined} onClose={() => setForgot({ open: false, email: '' })} onDone={() => navigate(after, { replace: true })} />
 
       <div className="h-16" />
       <section id="how" className="border-y border-line bg-white">
