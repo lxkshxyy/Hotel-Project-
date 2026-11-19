@@ -251,7 +251,8 @@ export default function PhotoManager({ l, set }: { l: Listing; set: Set }) {
       setBusy(`Preparing photo ${i + 1} of ${list.length}…`)
       try {
         const f = list[i]
-        if (!/^image\/(jpeg|png)$/.test(f.type)) throw new Error(`${f.name} isn’t a JPEG or PNG photo.`)
+        // Windows sometimes reports JPGs as image/pjpeg or with no type at all, so the extension counts too.
+        if (!/^image\/(jpeg|pjpeg|jpg|png|webp)$/.test(f.type) && !/\.(jpe?g|jfif|png|webp)$/i.test(f.name)) throw new Error(`${f.name} isn’t a JPG or PNG photo.`)
         if (f.size > site.maxPhotoMb * 1024 * 1024) throw new Error(`${f.name} is larger than ${site.maxPhotoMb} MB.`)
         const r = await resizePhoto(f)
         added.push({ id: uid(8), url: r.url, tag: guessTag(f.name), landscape: r.width > r.height, labels: [] })
@@ -352,7 +353,7 @@ export default function PhotoManager({ l, set }: { l: Listing; set: Set }) {
               </span>
             )}
             <span className="text-[12px] text-ink-500">(Upload JPEG/PNG files up to {site.maxPhotoMb} MB each · select many at once)</span>
-            <input ref={input} type="file" accept="image/jpeg,image/png" multiple className="sr-only" aria-label="Choose photos" tabIndex={-1} onClick={(e) => e.stopPropagation()} onChange={(e) => e.target.files && add(e.target.files)} />
+            <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple className="sr-only" aria-label="Choose photos" tabIndex={-1} onClick={(e) => e.stopPropagation()} onChange={(e) => e.target.files && add(e.target.files)} />
           </div>
           {errorList}
           {landscapeAlert}
