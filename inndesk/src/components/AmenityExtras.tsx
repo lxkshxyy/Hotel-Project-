@@ -8,6 +8,13 @@ import type { AmenityEntry, EntryValue, Listing } from '../lib/types'
 
 type Set = (fn: (l: Listing) => Listing) => void
 
+/** Fired when the owner tries to move on with amenity details left empty: every unfinished box shows its error. */
+export const AMENITY_CHECK = 'inndesk:amenity-check'
+export function showAmenityErrors(firstId?: string) {
+  window.dispatchEvent(new Event(AMENITY_CHECK))
+  if (firstId) setTimeout(() => document.getElementById(`amen-x-${firstId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+}
+
 /* ---------------- searchable multi-select ---------------- */
 
 export function MultiSelect({ label, options, value, onChange, selectAll = false }: { label: string; options: string[]; value: string[]; onChange: (v: string[]) => void; selectAll?: boolean }) {
@@ -94,6 +101,19 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
   // Ticking an amenity with its own form opens the form straight away (like answering Yes).
   const [editing, setEditing] = useState<AmenityEntry | 'new' | null>(() => (autoOpen && form && !entries.length ? 'new' : null))
   const setDetail = (f: DetailField, v: string | string[]) => set((x) => ({ ...x, amenityDetails: { ...x.amenityDetails, [id]: { ...x.amenityDetails?.[id], [f.id]: v } } }))
+  const empty = (f: DetailField) => {
+    const v = l.amenityDetails?.[id]?.[f.id]
+    return Array.isArray(v) ? v.length === 0 : !v
+  }
+  const missing = (fields ?? []).filter(empty)
+  const [shout, setShout] = useState(false)
+  useEffect(() => {
+    const on = () => setShout(true)
+    window.addEventListener(AMENITY_CHECK, on)
+    return () => window.removeEventListener(AMENITY_CHECK, on)
+  }, [])
+  const needsEntry = !!form && entries.length === 0
+  const showErr = shout && (missing.length > 0 || needsEntry)
 
   return (
     <motion.div
@@ -105,8 +125,10 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
       // Clip only while opening/closing, so dropdown lists can hang over the tiles below.
       className={`col-span-full ${settled ? 'overflow-visible' : 'overflow-hidden'}`}
     >
-      <div className="flex flex-col gap-3 rounded-xl bg-[#E6EEF7] p-3 sm:p-4">
-        <span className="text-[13px] font-semibold text-ink-700">{label} details</span>
+      <div id={`amen-x-${id}`} className={`flex flex-col gap-3 rounded-xl border-2 bg-[#E6EEF7] p-3 sm:p-4 ${showErr ? 'border-alert' : 'border-transparent'}`}>
+        <span className="text-[13px] font-semibold text-ink-700">
+          {label} details{fields?.length || form ? <span className="text-alert"> *</span> : null}
+        </span>
         {fields && (
           <div className="grid gap-2 sm:grid-cols-2">
             {fields.map((f) => {
@@ -114,7 +136,7 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
               return f.type === 'multi' ? (
                 <MultiSelect key={f.id} label={`${label}: ${f.label}`} options={f.options} value={Array.isArray(v) ? v : []} onChange={(nv) => setDetail(f, nv)} />
               ) : (
-                <select key={f.id} aria-label={`${label}: ${f.label}`} className="field" value={typeof v === 'string' ? v : ''} onChange={(e) => setDetail(f, e.target.value)}>
+                <select key={f.id} aria-label={`${label}: ${f.label}`} aria-invalid={showErr && empty(f)} className={`field ${showErr && empty(f) ? '!border-alert' : ''}`} value={typeof v === 'string' ? v : ''} onChange={(e) => setDetail(f, e.target.value)}>
                   <option value="" disabled hidden>
                     {f.label}
                   </option>
@@ -125,6 +147,11 @@ export function AmenityExtrasBox({ l, set, id, label, autoOpen = false }: { l: L
               )
             })}
           </div>
+        )}
+        {showErr && (
+          <span role="alert" className="flex items-center gap-1.5 text-[13px] font-semibold text-alert">
+            <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" /> {missing.length ? `Fill in the empty box${missing.length === 1 ? '' : 'es'} to continue, or untick ${label}.` : `Add the ${form?.title.toLowerCase()} details to continue, or untick ${label}.`}
+          </span>
         )}
         {form && (
           <>

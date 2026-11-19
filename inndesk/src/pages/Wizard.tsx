@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBoxes, Popup, useCountdown } from '../components/Auth'
 import { useLeaveGuard } from '../components/DiscardDialog'
-import { AmenityExtrasBox, hasExtras, MultiSelect } from '../components/AmenityExtras'
+import { AmenityExtrasBox, hasExtras, MultiSelect, showAmenityErrors } from '../components/AmenityExtras'
 import { answered, policyGroups, type HouseAnswers, type PolicyGroup, type PolicyRule } from '../data/policyRules'
 import { BathPicker, BedPicker } from '../components/BedPicker'
 import SearchSelect from '../components/SearchSelect'
@@ -17,7 +17,7 @@ import { useSession } from '../context/Session'
 import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { attachOptions, autoOccupancy, basicsErrors, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { amenityGaps, attachOptions, autoOccupancy, basicsErrors, isMultiRoom, layoutLimits, layoutOf, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, SQFT_PER_SQM, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode, verifyPartner } from '../lib/store'
 import { verifyLabel, VerificationList } from '../components/Verification'
 import { isDemoMode } from '../lib/supabase'
@@ -653,7 +653,6 @@ function Amenities({ l, set }: { l: Listing; set: Set }) {
 }
 
 const newRoom = (): ListingRoom => ({ id: uid(6), name: '', bed: '', sizeSqft: 0, maxGuests: 0, count: 1, price: 0, breakfast: false, amenities: [], bedrooms: 1, livingRooms: 0, extraBed: null })
-const SQFT_PER_SQM = 10.7639
 
 /** The numbered line on the left of Create Room. */
 function StepDot({ n, state }: { n: number; state: 'done' | 'active' | 'locked' }) {
@@ -731,6 +730,16 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     const nb = bedsOf(next)
     up({ bedrooms, livingRooms, beds: nb })
   }
+  /** Ordinary room types are one bedroom with no living room, so switching to one trims the extra areas. */
+  const setType = (roomType: string) => {
+    const next = { ...r, roomType }
+    if (isMultiRoom(next)) return up({ roomType })
+    const beds = bedsOf({ ...next, bedrooms: 1, livingRooms: 0 })
+    up({ roomType, bedrooms: 1, livingRooms: 0, beds })
+  }
+  const layout = layoutOf(r)
+  const lim = layoutLimits(r)
+  const sizeText = r.sizeUnit === 'sqm' ? `${r.size} sq m` : `${r.size} sq ft`
   const occ = r.occupancy ?? autoOccupancy(r)
   const setOcc = (k: keyof typeof occ, v: number) => {
     const o = { ...occ, [k]: v }
@@ -830,11 +839,12 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
     1: (
       <>
         <Row id="r-type" title="Room type" help="Choose the type that best describes this room" error={e.roomType}>
-          <select id="r-type" className="field" value={r.roomType ?? ''} onChange={(x) => up({ roomType: x.target.value })} aria-invalid={!!e.roomType}>
+          <select id="r-type" className="field" value={r.roomType ?? ''} onChange={(x) => setType(x.target.value)} aria-invalid={!!e.roomType}>
             <option value="" disabled hidden>
               Select room type
             </option>
-            {roomTypes.map((t) => (
+            {/* A type saved before the list was trimmed (Cottage, Villa, Tent) stays visible until changed. */}
+            {[...roomTypes, ...(r.roomType && !roomTypes.includes(r.roomType) ? [r.roomType] : [])].map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
@@ -871,12 +881,39 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
         <Row id="r-name" title={`Room Name (as displayed on ${site.marketplace} & partner websites)`} help="Add a room name that looks attractive to travellers" error={e.name}>
           <input id="r-name" className="field" maxLength={60} placeholder="Example: Luxury room with private pool" value={r.name} onChange={(x) => up({ name: x.target.value })} aria-invalid={!!e.name} />
         </Row>
-        <Row title="Number of bedroom(s)" help="Bedrooms in one room/unit of this type" error={e.bedrooms}>
-          {stepper(r.bedrooms ?? 1, (v) => setRooms(Math.max(1, v), r.livingRooms ?? 0), 'bedrooms', 10)}
-        </Row>
-        <Row title="Number of living room(s)" help="Living rooms in one room/unit of this type, if any">
-          {stepper(r.livingRooms ?? 0, (v) => setRooms(r.bedrooms ?? 1, v), 'living rooms', 5)}
-        </Row>
+        {isMultiRoom(r) ? (
+          <>
+            <Row title="Number of bedroom(s)" help="Separate bedrooms inside one unit of this type" error={e.bedrooms}>
+              {lim.area ? (
+                <div className="flex flex-col gap-1.5">
+                  {stepper(layout.bedrooms, (v) => setRooms(Math.max(1, v), layout.living), 'bedrooms', lim.maxBedrooms)}
+                  <span className="text-[13px] text-ink-500">Up to {lim.maxBedrooms} in {sizeText} (about 120 sq ft each).</span>
+                </div>
+              ) : (
+                <span className="text-[14px] text-ink-500">Enter the room size above first. The number of bedrooms depends on it.</span>
+              )}
+            </Row>
+            <Row title="Number of living room(s)" help="Separate living rooms inside one unit, if any">
+              {lim.area ? (
+                <div className="flex flex-col gap-1.5">
+                  {stepper(layout.living, (v) => setRooms(layout.bedrooms, Math.max(0, v)), 'living rooms', lim.maxLiving)}
+                  <span className="text-[13px] text-ink-500">{lim.maxLiving ? `Up to ${lim.maxLiving} with ${layout.bedrooms} bedroom${layout.bedrooms === 1 ? '' : 's'} (about 100 sq ft each).` : `No room left for a living room with ${layout.bedrooms} bedroom${layout.bedrooms === 1 ? '' : 's'} in ${sizeText}.`}</span>
+                </div>
+              ) : (
+                <span className="text-[14px] text-ink-500">Enter the room size above first.</span>
+              )}
+            </Row>
+          </>
+        ) : (
+          r.roomType && (
+            <Row title="Layout" help="What one room of this type has inside">
+              <p className="text-[15px] text-ink-900">
+                One bedroom, no separate living room.
+                <span className="mt-1 block text-[13px] text-ink-500">A {r.roomType.toLowerCase()} is a single room. For more bedrooms or a living room, choose Suite, Family Room or Apartment.</span>
+              </p>
+            </Row>
+          )
+        )}
         <Row id="r-count" title="Number of rooms (of this type)" help="Total rooms/units available in this property" error={e.count}>
           <input id="r-count" className="field max-w-[320px]" inputMode="numeric" value={r.count || ''} onChange={(x) => up({ count: Math.min(999, Number(x.target.value.replace(/\D/g, '')) || 0) })} aria-invalid={!!e.count} />
         </Row>
@@ -890,6 +927,11 @@ function RoomEditor({ l, set, room, sec, openSec, tried, goPhotos }: { l: Listin
         <h4 className="px-4 pt-5 text-[18px] font-black text-ink-900 sm:px-5">Select the bed type for all the bedrooms below</h4>
         <div className="mt-3">
           {b.bedrooms.map((_, i) => bedArea('bedrooms', i))}
+          {b.living.length > 0 && (
+            <h4 className="px-4 pt-6 pb-1 text-[16px] font-bold text-ink-900 sm:px-5">
+              Living room{b.living.length === 1 ? '' : 's'} <span className="text-[13.5px] font-normal text-ink-500">(add a sofa bed only if it has one)</span>
+            </h4>
+          )}
           {b.living.map((_, i) => bedArea('living', i))}
         </div>
         <Row title="Can this room/unit accommodate extra bed(s)?" error={e.extraBed}>
@@ -1934,6 +1976,14 @@ export default function Wizard() {
   const unlocked = (i: number) => isLive || (!!l && steps.slice(0, i).every((s) => stepDone(l, s.id)))
 
   const go = (s: StepId, field?: string) => {
+    // Moving forward from Amenities (button or step tabs) needs every ticked amenity's details filled in.
+    const ahead = steps.findIndex((x) => x.id === s) > steps.findIndex((x) => x.id === step)
+    const gaps = l && step === 'amenities' && ahead ? amenityGaps(l) : []
+    if (gaps.length) {
+      setShowErrors(true)
+      showAmenityErrors(gaps[0].id)
+      return
+    }
     if (l && saveState === 'dirty' && l.status === 'draft') save(l)
     setShowErrors(false)
     setParams({ step: s, ...(field ? { focus: field } : {}) }, { replace: false })
@@ -2028,6 +2078,13 @@ export default function Wizard() {
     if (!l) return
     // Live listings: stay on Finance & Legal while new details are checked, so the owner sees the result.
     if (isLive && step === 'legal' && site.autoVerify && pendingChecks(l, [1, 2]).length) return void runChecks(l, [1, 2])
+    // Ticked amenities need their details (type, mode…) for every listing, live or draft.
+    const gaps = step === 'amenities' ? amenityGaps(l) : []
+    if (gaps.length) {
+      setShowErrors(true)
+      showAmenityErrors(gaps[0].id)
+      return
+    }
     if (!isLive && !stepDone(l, step)) {
       setShowErrors(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })

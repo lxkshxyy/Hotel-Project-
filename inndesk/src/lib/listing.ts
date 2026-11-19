@@ -1,6 +1,6 @@
 import { site } from '../config/site'
-import { amenityForms } from '../data/amenityDetails'
-import { allAmenities, bedCatalog, cancellationOptions, cities, SHARED_BATH } from '../data/options'
+import { amenityDetails, amenityForms } from '../data/amenityDetails'
+import { allAmenities, bedCatalog, cancellationOptions, cities, multiRoomTypes, SHARED_BATH } from '../data/options'
 import { houseRuleLines } from '../data/policyRules'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
@@ -180,10 +180,32 @@ export const roomSections = [
   { id: 5, title: 'Amenity Details', intro: 'Select the amenities to help guests know what to expect during their stay' },
 ] as const
 
+/* ---------- room layout: bedrooms and living rooms must fit in the room's area ---------- */
+
+export const SQFT_PER_SQM = 10.7639
+/** Floor space each part of a unit needs, with its share of passage: a bedroom ≈ 120 sq ft (11 m²), a living room ≈ 100 sq ft (9 m²). */
+export const BEDROOM_SQFT = 120
+export const LIVING_SQFT = 100
+export const isMultiRoom = (r: Pick<ListingRoom, 'roomType'>) => multiRoomTypes.includes(r.roomType ?? '')
+/** Indoor area in square feet, whichever unit the owner typed. */
+export const areaSqft = (r: Pick<ListingRoom, 'size' | 'sizeUnit' | 'sizeSqft'>) => (r.size ? (r.sizeUnit === 'sqm' ? r.size * SQFT_PER_SQM : r.size) : r.sizeSqft || 0)
+/** Bedrooms and living rooms in one unit. Ordinary room types are always one bedroom with no living room. */
+export const layoutOf = (r: ListingRoom) => (isMultiRoom(r) ? { bedrooms: Math.max(1, r.bedrooms ?? 1), living: Math.max(0, r.livingRooms ?? 0) } : { bedrooms: 1, living: 0 })
+/** The most bedrooms (with the living rooms chosen) and living rooms (with the bedrooms chosen) the area allows. */
+export function layoutLimits(r: ListingRoom) {
+  const area = areaSqft(r)
+  const { bedrooms, living } = layoutOf(r)
+  return {
+    area,
+    maxBedrooms: Math.max(1, Math.min(10, Math.floor((area - living * LIVING_SQFT) / BEDROOM_SQFT))),
+    maxLiving: Math.max(0, Math.min(5, Math.floor((area - bedrooms * BEDROOM_SQFT) / LIVING_SQFT))),
+    needs: bedrooms * BEDROOM_SQFT + living * LIVING_SQFT,
+  }
+}
+
 /** Bedrooms and living rooms with their bed lines, sized to the counts in Room Details. */
 export function bedsOf(r: ListingRoom) {
-  const nb = Math.max(1, r.bedrooms ?? 1)
-  const nl = Math.max(0, r.livingRooms ?? 0)
+  const { bedrooms: nb, living: nl } = layoutOf(r)
   const pad = (rows: BedLine[][] | undefined, n: number) => Array.from({ length: n }, (_, i) => (rows?.[i]?.length ? rows[i] : [{ type: '', count: 0 }]))
   return { bedrooms: pad(r.beds?.bedrooms, nb), living: pad(r.beds?.living, nl) }
 }
@@ -227,7 +249,15 @@ export function roomErrors(r: ListingRoom, section: number): Record<string, stri
     else if (!r.size || r.size < (r.sizeUnit === 'sqm' ? 5 : 50)) e.size = `Enter the indoor area in ${r.sizeUnit === 'sqm' ? 'square meters' : 'square feet'}.`
     if (r.name.trim().length < 3) e.name = 'Enter the room name guests will see.'
     if (!(r.count >= 1)) e.count = 'Enter how many rooms of this type you have.'
-    if (!((r.bedrooms ?? 1) >= 1)) e.bedrooms = 'At least 1 bedroom.'
+    if (isMultiRoom(r)) {
+      const { bedrooms, living } = layoutOf(r)
+      const lim = layoutLimits(r)
+      if (!((r.bedrooms ?? 1) >= 1)) e.bedrooms = 'At least 1 bedroom.'
+      else if (!e.size && lim.needs > lim.area) {
+        const shown = r.sizeUnit === 'sqm' ? `${r.size} sq m (about ${Math.round(lim.area)} sq ft)` : `${r.size} sq ft`
+        e.bedrooms = `${bedrooms} bedroom${bedrooms === 1 ? '' : 's'}${living ? ` and ${living} living room${living === 1 ? '' : 's'}` : ''} need at least ${lim.needs} sq ft, but this unit is ${shown}. Lower the numbers or correct the size.`
+      }
+    }
   }
   if (section === 2) {
     const b = bedsOf(r)
@@ -357,6 +387,29 @@ export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 
   return e
 }
 
+/** The dropdowns of a ticked amenity that are still empty, as plain words ("type", "mode", "an option"). */
+export function amenityMissing(l: Listing, id: string) {
+  return (amenityDetails[id] ?? []).filter((f) => {
+    const v = l.amenityDetails?.[id]?.[f.id]
+    return Array.isArray(v) ? v.length === 0 : !v
+  })
+}
+/** Ticked amenities whose details aren't filled in. Each must be completed or unticked. */
+export function amenityGaps(l: Listing) {
+  return l.amenities
+    .map((id) => {
+      const label = allAmenities.find((a) => a.id === id)?.label ?? id
+      // Amenities with their own form (parking, pool…) need at least one entry added.
+      if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) return { id, label, message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` }
+      const missing = amenityMissing(l, id)
+      if (!missing.length) return null
+      const words = missing.filter((f) => /^Select\s+\S/i.test(f.label)).map((f) => f.label.replace(/^Select\s+/i, '').toLowerCase())
+      const what = words.length === missing.length ? `the ${words.join(' and ')}` : missing.length > 1 ? 'all the options' : 'an option'
+      return { id, label, message: `${label}: choose ${what} under it, or untick it.` }
+    })
+    .filter((g): g is { id: string; label: string; message: string } => !!g)
+}
+
 /** Things that must be fixed before the listing can go live. */
 export function blockers(l: Listing): Check[] {
   const out: Check[] = []
@@ -364,7 +417,7 @@ export function blockers(l: Listing): Check[] {
   out.push(...Object.values(locationErrors(l)).filter((m): m is string => !!m).map((message) => ({ step: 'location' as const, message })))
   const need = minAmenities(l)
   if (l.amenities.length < need) out.push({ step: 'amenities', message: `A ${l.basics.stars}-star property needs at least ${need} amenities ticked (${l.amenities.length} ticked so far).` })
-  for (const id of l.amenities) if (amenityForms[id] && !(l.amenityEntries?.[id] ?? []).length) out.push({ step: 'amenities', message: `${amenityForms[id].title}: press “Add ${amenityForms[id].title}” and fill in the details, or untick it.` })
+  for (const g of amenityGaps(l)) out.push({ step: 'amenities', message: g.message })
   if (l.rooms.length === 0) out.push({ step: 'rooms', message: 'Add at least one room type.' })
   l.rooms.forEach((r, i) => {
     const n = r.name.trim() || `Room type ${i + 1}`

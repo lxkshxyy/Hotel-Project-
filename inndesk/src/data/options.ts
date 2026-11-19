@@ -1183,7 +1183,10 @@ export const checkTimes = Array.from({ length: 24 }, (_, h) => `${h % 12 || 12}:
 export const timeLabel = (t: string) => (t === '12:00 PM' ? '12:00 pm (noon)' : t === '12:00 AM' ? '12:00 am (midnight)' : t.replace('AM', 'am').replace('PM', 'pm'))
 
 /** Room Details dropdowns. [CONFIRM] lists against the reference screens when available. */
-export const roomTypes = ['Standard Room', 'Deluxe Room', 'Super Deluxe Room', 'Premium Room', 'Executive Room', 'Club Room', 'Junior Suite', 'Suite', 'Family Room', 'Studio', 'Apartment', 'Cottage', 'Villa', 'Dormitory', 'Tent']
+// Rooms only. Cottages, villas and tents are kinds of property (chosen in Basic Info), not rooms.
+export const roomTypes = ['Standard Room', 'Deluxe Room', 'Super Deluxe Room', 'Premium Room', 'Executive Room', 'Club Room', 'Junior Suite', 'Suite', 'Family Room', 'Studio', 'Apartment', 'Dormitory']
+/** Room types that can have more than one bedroom or a separate living room. Every other type is one bedroom. */
+export const multiRoomTypes = ['Suite', 'Family Room', 'Apartment']
 export const roomViews = ['City View', 'Garden View', 'Pool View', 'Sea View', 'Beach View', 'Mountain View', 'Lake View', 'River View', 'Valley View', 'Forest View', 'Courtyard View', 'No View']
 /** Meal plans for a room type. [CONFIRM] the last two against the full list on the reference. */
 export const mealPlans = [

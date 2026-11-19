@@ -5,6 +5,8 @@ import { Navigate, useParams } from 'react-router-dom'
 import { useLeaveGuard } from '../components/DiscardDialog'
 import { Spinner } from '../components/ui'
 import { useSession } from '../context/Session'
+import { showAmenityErrors } from '../components/AmenityExtras'
+import { amenityGaps } from '../lib/listing'
 import { getListing, saveListing } from '../lib/store'
 import type { Listing } from '../lib/types'
 import { btnOutline, btnSolid } from './info/kit'
@@ -125,7 +127,22 @@ export default function PropertyInfo() {
                 >
                   Cancel
                 </button>
-                <button type="button" className={btnSolid} disabled={busy} onClick={() => l && store(l)}>
+                <button
+                  type="button"
+                  className={btnSolid}
+                  disabled={busy}
+                  onClick={() => {
+                    if (!l) return
+                    // Ticked amenities must have their details (type, mode…) before saving.
+                    const gaps = page === 'amenities' ? amenityGaps(l) : []
+                    if (gaps.length) {
+                      setError(gaps.length === 1 ? gaps[0].message : `${gaps.length} amenities need their details filled in, or untick them.`)
+                      showAmenityErrors(gaps[0].id)
+                      return
+                    }
+                    void store(l)
+                  }}
+                >
                   {busy ? 'Saving…' : 'Save'}
                 </button>
               </div>
