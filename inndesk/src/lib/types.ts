@@ -236,7 +236,7 @@ export interface Listing {
     pan: string
     /** File name of the proof of ownership or lease, as uploaded. */
     ownershipDoc?: string
-    /** Where the file is kept (private partner-docs bucket, live mode). The server reads it to check the document. */
+    /** Where the file is kept (private partner-docs bucket, live mode), for the team to check by hand. */
     ownershipDocPath?: string
     payoutName: string
     bankName: string
@@ -326,8 +326,8 @@ export interface Dispute {
   status: 'open' | 'responded' | 'won' | 'lost'
 }
 
-export type VerifyKind = 'gstin' | 'pan' | 'bank' | 'ownership'
-/** Outcome of an automatic GSTIN / PAN / bank / ownership-document check (server: functions/verify-partner). */
+export type VerifyKind = 'gstin' | 'pan' | 'bank'
+/** Outcome of an automatic GSTIN / PAN / bank check (server: functions/verify-partner). */
 export interface Verification {
   kind: VerifyKind
   status: 'verified' | 'review' | 'failed'

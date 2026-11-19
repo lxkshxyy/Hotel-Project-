@@ -131,16 +131,16 @@ export default function Finance({ l, base }: InfoProps) {
           <div className="flex flex-col gap-5">
             <Card className="p-4">
               <strong className="block text-[15px] font-semibold text-ink-900">Verification</strong>
-              <p className="mt-0.5 text-[13px] text-ink-500">Checked automatically with the GST department, Income Tax records, your bank and a reading of your property document.</p>
+              <p className="mt-0.5 text-[13px] text-ink-500">Checked automatically with the GST department, Income Tax records and your bank.</p>
               <VerificationList
                 listingId={l.id}
-                kinds={g.hasGstin === false ? ['pan', 'bank', 'ownership'] : ['gstin', 'pan', 'bank', 'ownership']}
-                sigs={{ gstin: checkSig(l, 'gstin'), pan: checkSig(l, 'pan'), bank: checkSig(l, 'bank'), ownership: checkSig(l, 'ownership') }}
+                kinds={g.hasGstin === false ? ['pan', 'bank'] : ['gstin', 'pan', 'bank']}
+                sigs={{ gstin: checkSig(l, 'gstin'), pan: checkSig(l, 'pan'), bank: checkSig(l, 'bank') }}
                 checking={checking}
                 action={(k) =>
-                  k === 'bank' || k === 'ownership' ? (
-                    <Link to={`${base}/edit?step=legal&lsec=${k === 'bank' ? 1 : 3}`} className="text-[13px] font-semibold text-pine-800">
-                      {k === 'bank' ? 'Re-enter account' : 'Upload again'}
+                  k === 'bank' ? (
+                    <Link to={`${base}/edit?step=legal&lsec=1`} className="text-[13px] font-semibold text-pine-800">
+                      Re-enter account
                     </Link>
                   ) : (
                     <button type="button" disabled={!!checking.length || (k === 'gstin' && !g.gstin)} onClick={() => recheck(k)} className="text-[13px] font-semibold text-pine-800 disabled:text-ink-400">

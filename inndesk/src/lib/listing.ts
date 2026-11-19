@@ -434,20 +434,18 @@ export function checkSig(l: Listing, k: VerifyKind) {
   const up = (v?: string | null) => (v ?? '').trim().toUpperCase()
   if (k === 'pan') return `${up(g.pan)}|${up(g.legalName)}`
   if (k === 'gstin') return `${up(g.gstin)}|${up(g.legalName)}`
-  if (k === 'bank') return `${up(g.ifsc)}|${g.accountLast4}|${up(g.payoutName || g.legalName)}`
-  return g.ownershipDocPath || g.ownershipDoc || ''
+  return `${up(g.ifsc)}|${g.accountLast4}|${up(g.payoutName || g.legalName)}`
 }
 
 /** The automatic checks a Finance & Legal part needs to pass, and which results count as passed. */
 export function requiredChecks(l: Listing, section: number): { kind: VerifyKind; ok: Verification['status'][] }[] {
   if (section === 1) return site.autoVerify ? [{ kind: 'bank', ok: ['verified'] }] : []
   if (section === 2) return site.autoVerify ? [{ kind: 'pan', ok: ['verified'] }, ...(l.legal.hasGstin ? [{ kind: 'gstin' as const, ok: ['verified' as const] }] : [])] : []
-  // A real property document whose name or address differs (a bill in a parent's name…) goes to the team, and onboarding continues.
-  if (section === 3) return site.docVerify ? [{ kind: 'ownership', ok: ['verified', 'review'] }] : []
+  // Property Documents (section 3) has no automatic check: the upload is required and the team checks it by hand.
   return []
 }
 
-const kindName: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'bank account', ownership: 'ownership document' }
+const kindName: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'bank account' }
 
 /** Checks that block a Finance & Legal part: not run yet, run on old details, failed or needing review. Empty = passed. */
 export function verifyGaps(l: Listing, checks: Verification[], section: number) {
@@ -460,10 +458,8 @@ export function verifyGaps(l: Listing, checks: Verification[], section: number) 
       const message = !current
         ? kind === 'bank'
           ? `Your ${what} hasn’t been verified with these details. Enter the account number twice and press Save & Continue to run the ₹1 check.`
-          : kind === 'ownership'
-            ? 'Your document hasn’t been checked yet. Upload it again to run the check.'
-            : `Your ${kind === 'pan' ? 'PAN' : 'GSTIN'} hasn’t been verified with these details yet. Press Save & Continue to run the check.`
-        : `Your ${what} ${v.status === 'failed' ? 'failed verification' : 'needs a look'}: ${v.message} ${kind === 'bank' ? 'Correct the details, enter the account number again and save.' : kind === 'ownership' ? 'Upload a clear copy of a property document.' : 'Correct the details and save again.'}`
+          : `Your ${kind === 'pan' ? 'PAN' : 'GSTIN'} hasn’t been verified with these details yet. Press Save & Continue to run the check.`
+        : `Your ${what} ${v.status === 'failed' ? 'failed verification' : 'needs a look'}: ${v.message} ${kind === 'bank' ? 'Correct the details, enter the account number again and save.' : 'Correct the details and save again.'}`
       return { kind, message }
     })
     .filter((x): x is { kind: VerifyKind; message: string } => !!x)

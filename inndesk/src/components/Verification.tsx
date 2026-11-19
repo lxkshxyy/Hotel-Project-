@@ -4,7 +4,7 @@ import { site } from '../config/site'
 import { useVerifications } from '../lib/store'
 import type { Verification, VerifyKind } from '../lib/types'
 
-export const verifyLabel: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'Bank account', ownership: 'Ownership document' }
+export const verifyLabel: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'Bank account' }
 
 const look = {
   verified: { text: 'Verified', cls: 'bg-[#e8f6ee] text-live', icon: CircleCheck },
@@ -80,14 +80,11 @@ function Row({ kind, v, checking, action }: { kind: VerifyKind; v?: Verification
 /** With `sigs`, a result checked on different details than the current ones shows as not checked yet. */
 export function VerificationList({ listingId, kinds, checking = [], action, sigs }: { listingId: string; kinds: VerifyKind[]; checking?: VerifyKind[]; action?: (k: VerifyKind, v?: Verification) => React.ReactNode; sigs?: Partial<Record<VerifyKind, string>> }) {
   const { data } = useVerifications(listingId)
-  const on = (k: VerifyKind) => (k === 'ownership' ? site.docVerify : site.autoVerify)
-  const manual = kinds.filter((k) => !on(k))
-  const auto = kinds.filter(on)
-  if (!auto.length)
-    return <p className="py-3 text-[13.5px] text-ink-700">Our team checks your {manual.map((k) => verifyLabel[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} before your first payout. Automatic checks will appear here once they’re switched on.</p>
+  if (!site.autoVerify)
+    return <p className="py-3 text-[13.5px] text-ink-700">Our team checks your {kinds.map((k) => verifyLabel[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} before your first payout. Automatic checks will appear here once they’re switched on.</p>
   return (
     <ul className="divide-y divide-line">
-      {auto.map((k) => {
+      {kinds.map((k) => {
         const found = data?.find((x) => x.kind === k)
         const v = found && (!sigs || found.details?._sig === sigs[k]) ? found : undefined
         return <Row key={k} kind={k} v={v} checking={checking.includes(k)} action={action?.(k, v)} />

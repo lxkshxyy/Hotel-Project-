@@ -155,7 +155,7 @@ export class PublishError extends Error {}
 export async function publishListing(input: Listing): Promise<Listing> {
   const problems = blockers(input)
   if (problems.length) throw new PublishError(`${problems.length} thing${problems.length > 1 ? 's' : ''} to fix before publishing.`)
-  // Bank account, PAN, GSTIN and the ownership document must have passed their automatic checks.
+  // Bank account, PAN and GSTIN must have passed their automatic checks.
   const checks = await listVerifications(input.id)
   const gaps = legalSections.flatMap((s) => verifyGaps(input, checks, s.id))
   if (gaps.length) throw new PublishError(`Finance & Legal: ${gaps[0].message}`)
@@ -362,7 +362,7 @@ const verifyKey = (id: string) => `inndesk.verify.${id}`
 
 /** Latest check results for a listing. Live: partner_verifications (written only by the server). */
 export async function listVerifications(listingId: string): Promise<Verification[]> {
-  if (!site.autoVerify && !site.docVerify) return []
+  if (!site.autoVerify) return []
   if (isDemoMode || !supabase) {
     try {
       return JSON.parse(localStorage.getItem(verifyKey(listingId)) ?? '[]') as Verification[]
@@ -375,9 +375,6 @@ export async function listVerifications(listingId: string): Promise<Verification
   return (data ?? []) as Verification[]
 }
 
-/** Words that show up in the names of real property documents (demo mode only looks at the file name). */
-const DEMO_DOC_WORDS = /bill|electric|bses|bescom|tata ?power|deed|registry|agreement|lease|rent|tax|mutation|allot|property|ownership|noc/i
-
 /** Demo mode: plausible results without calling anyone (account numbers ending 0000 fail). */
 function demoCheck(l: Listing, k: VerifyKind, account = ''): Verification {
   const v = demoResult(l, k, account)
@@ -387,11 +384,6 @@ function demoResult(l: Listing, k: VerifyKind, account = ''): Verification {
   const g = l.legal
   const at = new Date().toISOString()
   const name = (g.payoutName || g.legalName).toUpperCase()
-  if (k === 'ownership') {
-    if (!DEMO_DOC_WORDS.test(g.ownershipDoc ?? ''))
-      return { kind: k, status: 'failed', message: 'This doesn’t look like a property document.', notes: ['Upload an electricity bill, property tax receipt, sale deed or rent agreement for this property.', 'Demo mode only looks at the file name. The live check reads the document itself.'], details: { 'File': g.ownershipDoc ?? '' }, checked_at: at }
-    return { kind: k, status: 'verified', message: 'Property document accepted.', notes: ['Demo mode only looks at the file name. The live check reads the document itself.'], details: { 'File': g.ownershipDoc ?? '', 'Document type': 'Property document' }, checked_at: at }
-  }
   if (k === 'pan') return { kind: k, status: 'verified', message: 'PAN is valid and the name matches.', notes: [], details: { 'Name on PAN records': g.legalName.toUpperCase(), 'PAN status': 'Existing and Valid', 'Name match': '100%' }, checked_at: at }
   if (k === 'bank') {
     if (account.endsWith('0000')) return { kind: k, status: 'failed', message: 'This account number doesn’t exist at that bank.', notes: [], details: { 'Account ending': account.slice(-4) }, checked_at: at }
@@ -433,7 +425,7 @@ const imageSize = (file: File) =>
 
 /**
  * Checks the file, then keeps the ownership / lease proof in the private partner-docs bucket (live mode).
- * Returns the fields to save on the listing. The document itself is checked by verifyPartner(['ownership']).
+ * Returns the fields to save on the listing. The team checks the document by hand.
  */
 export async function uploadOwnershipDoc(l: Listing, file: File): Promise<{ ownershipDoc: string; ownershipDocPath?: string }> {
   const type = await docKind(file)
@@ -454,10 +446,10 @@ export async function uploadOwnershipDoc(l: Listing, file: File): Promise<{ owne
 }
 
 /**
- * Checks the GSTIN, PAN, bank account and/or ownership document on a saved listing. The full account number is sent to
+ * Checks the GSTIN, PAN and/or bank account on a saved listing. The full account number is sent to
  * the server once for the ₹1 penny drop and stored there encrypted, never in the listing.
  */
-export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount?: string, documentPath?: string): Promise<Verification[]> {
+export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount?: string): Promise<Verification[]> {
   let results: Verification[]
   if (isDemoMode || !supabase) {
     await new Promise((r) => setTimeout(r, 700))
@@ -465,7 +457,7 @@ export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount
     const kept = (await listVerifications(l.id)).filter((v) => !kinds.includes(v.kind))
     localStorage.setItem(verifyKey(l.id), JSON.stringify([...kept, ...results]))
   } else {
-    const { data, error } = await supabase.functions.invoke('verify-partner', { body: { listing_id: l.id, kinds, bank_account: bankAccount, document_path: documentPath ?? l.legal.ownershipDocPath } })
+    const { data, error } = await supabase.functions.invoke('verify-partner', { body: { listing_id: l.id, kinds, bank_account: bankAccount } })
     if (error) {
       const msg = await (error as { context?: Response }).context?.json?.().then((b: { error?: string }) => b.error).catch(() => '')
       throw new Error(msg || 'Couldn’t run the checks. Please try again in a few minutes.')

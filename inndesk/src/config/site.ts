@@ -30,8 +30,6 @@ export const site = {
   contactOtp: demo || env('VITE_CONTACT_OTP') === 'on',
   /** Automatic GSTIN / PAN / bank checks (verify-partner function + Cashfree). Live: VITE_AUTO_VERIFY=on once set up. */
   autoVerify: demo || env('VITE_AUTO_VERIFY') === 'on',
-  /** Automatic check that the uploaded ownership / lease proof is a real property document (verify-partner + ANTHROPIC_API_KEY). Live: VITE_DOC_VERIFY=on. */
-  docVerify: demo || env('VITE_DOC_VERIFY') === 'on',
   /** Largest ownership / lease document an owner can upload, in MB. */
   maxDocMb: 10,
   /** The customer website that listings publish to. */

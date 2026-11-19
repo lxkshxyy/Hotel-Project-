@@ -1601,7 +1601,7 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking, checks, onDoc, 
   // A part opens only when every part before it is filled in and has passed its automatic checks.
   const unlocked = (n: number) => legalSections.slice(0, n - 1).every((s) => legalPassed(l, checks, s.id))
   const gaps = tried ? verifyGaps(l, checks, sec) : []
-  const sigs = { bank: checkSig(l, 'bank'), pan: checkSig(l, 'pan'), gstin: checkSig(l, 'gstin'), ownership: checkSig(l, 'ownership') }
+  const sigs = { bank: checkSig(l, 'bank'), pan: checkSig(l, 'pan'), gstin: checkSig(l, 'gstin') }
   const gateBox =
     gaps.length > 0 ? (
       <div role="alert" className="mt-4 flex gap-2.5 rounded-lg border border-alert/30 bg-alert-50 px-3.5 py-3 text-[13.5px] text-alert">
@@ -1730,7 +1730,7 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking, checks, onDoc, 
             <>
               <label className={`flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-dashed bg-paper px-3 text-[15px] font-medium text-pine-800 ${docBusy ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-pine-700'} ${docErr || e.doc ? 'border-alert' : 'border-line-strong'}`}>
                 {docBusy ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-pine-800 border-t-transparent" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-                {docBusy ? 'Uploading and checking…' : g.ownershipDoc ? 'Replace document' : 'Upload document'}
+                {docBusy ? 'Uploading…' : g.ownershipDoc ? 'Replace document' : 'Upload document'}
                 <input
                   id="d-doc"
                   type="file"
@@ -1745,15 +1745,10 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking, checks, onDoc, 
                 />
               </label>
               {g.ownershipDoc && <span className="text-[13px] font-medium break-all text-ink-700">Attached: {g.ownershipDoc}</span>}
-              <span className="text-[12.5px] text-ink-500">PDF up to {site.maxDocMb} MB, or a JPG/PNG photo up to 5 MB. The whole page must be clear and readable.</span>
+              <span className="text-[12.5px] text-ink-500">PDF up to {site.maxDocMb} MB, or a JPG/PNG photo up to 5 MB. The whole page must be clear and readable. Our team checks it before your first payout.</span>
             </>,
             'd-doc',
           )}
-          <div className="mt-2 rounded-lg border border-line px-4">
-            <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
-            <VerificationList listingId={l.id} kinds={['ownership']} checking={checking} sigs={sigs} />
-          </div>
-          {gateBox}
         </div>
         <label className="mt-4 flex cursor-pointer items-start gap-2.5">
           <input type="checkbox" checked={g.agreed} onChange={(x) => up({ agreed: x.target.checked })} className="mt-0.5 h-[18px] w-[18px] accent-pine-800" />
@@ -2125,8 +2120,8 @@ export default function Wizard() {
     setParams({ step: 'legal', lsec: String(n) })
     window.scrollTo({ top: 0 })
   }
-  // Bank account (section 1) and PAN / GSTIN (section 2) are checked automatically when saved; the ownership
-  // document (section 3) as soon as it is uploaded. A check runs again only when the details it covers change.
+  // Bank account (section 1) and PAN / GSTIN (section 2) are checked automatically when saved.
+  // A check runs again only when the details it covers change.
   const current = (x: Listing, k: VerifyKind) => checks.some((c) => c.kind === k && c.details?._sig === checkSig(x, k))
   const pendingChecks = (x: Listing, secs: number[]) => {
     const g = x.legal
@@ -2158,25 +2153,19 @@ export default function Wizard() {
     }
   }
 
-  // The ownership / lease proof is uploaded and checked straight away; the result shows under the upload box.
+  // The ownership / lease proof is uploaded straight away (required); the team checks it by hand.
   const uploadDoc = async (file: File) => {
     if (!l) return
     setDocBusy(true)
     setDocErr('')
     try {
       const f = await uploadOwnershipDoc(l, file)
-      const x = { ...l, legal: { ...l.legal, ...f } }
       set((y) => ({ ...y, legal: { ...y.legal, ...f } }))
-      if (site.docVerify) {
-        setChecking(['ownership'])
-        const [r] = await verifyPartner(x, ['ownership'], undefined, f.ownershipDocPath)
-        if (r) setToast({ text: r.status === 'failed' ? 'Document not accepted' : r.status === 'review' ? 'Document received — our team will confirm it' : 'Document verified', n: 4, warn: r.status === 'failed' })
-      }
+      setToast({ text: 'Document uploaded', n: 3 })
     } catch (e) {
       setDocErr(e instanceof Error ? e.message : 'Couldn’t upload the document.')
     } finally {
       setDocBusy(false)
-      setChecking([])
     }
   }
 
