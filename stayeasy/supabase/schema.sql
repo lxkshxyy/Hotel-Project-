@@ -332,7 +332,7 @@ create policy "Owners manage their listings"
 -- their own; only the server writes, so an owner can't mark themselves verified.
 create table if not exists public.partner_verifications (
   listing_id  text not null references public.partner_listings (id) on delete cascade,
-  kind        text not null check (kind in ('gstin', 'pan', 'bank')),
+  kind        text not null check (kind in ('gstin', 'pan', 'bank', 'ownership')),
   status      text not null check (status in ('verified', 'review', 'failed')),
   message     text not null,
   notes       jsonb not null default '[]',
@@ -363,6 +363,20 @@ create table if not exists public.partner_payout_accounts (
   checked_at     timestamptz not null default now()
 );
 alter table public.partner_payout_accounts enable row level security;
+
+-- Proof of ownership / lease documents: PRIVATE bucket. Each owner uploads and reads only inside their own
+-- folder ({user id}/{listing id}/…); the server (verify-partner) and the admin team read them with the service role.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('partner-docs', 'partner-docs', false, 10485760, array['application/pdf', 'image/jpeg', 'image/png'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "Owners upload their documents" on storage.objects;
+create policy "Owners upload their documents"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'partner-docs' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "Owners read their documents" on storage.objects;
+create policy "Owners read their documents"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'partner-docs' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Owners see the bookings made at their hotels (guest name, dates, amount) — nothing else.
 drop policy if exists "Owners read bookings at their hotels" on public.bookings;

@@ -4,7 +4,7 @@ import { site } from '../config/site'
 import { useVerifications } from '../lib/store'
 import type { Verification, VerifyKind } from '../lib/types'
 
-export const verifyLabel: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'Bank account' }
+export const verifyLabel: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'Bank account', ownership: 'Ownership document' }
 
 const look = {
   verified: { text: 'Verified', cls: 'bg-[#e8f6ee] text-live', icon: CircleCheck },
@@ -31,7 +31,7 @@ export function VerifyBadge({ v, checking }: { v?: Verification; checking?: bool
 
 function Row({ kind, v, checking, action }: { kind: VerifyKind; v?: Verification; checking: boolean; action?: React.ReactNode }) {
   const [open, setOpen] = useState(false)
-  const details = Object.entries(v?.details ?? {}).filter(([, x]) => x)
+  const details = Object.entries(v?.details ?? {}).filter(([k, x]) => x && !k.startsWith('_'))
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -77,14 +77,19 @@ function Row({ kind, v, checking, action }: { kind: VerifyKind; v?: Verification
 }
 
 /** The latest automatic checks for some of a listing's details, with an optional action per row. */
-export function VerificationList({ listingId, kinds, checking = [], action }: { listingId: string; kinds: VerifyKind[]; checking?: VerifyKind[]; action?: (k: VerifyKind, v?: Verification) => React.ReactNode }) {
+/** With `sigs`, a result checked on different details than the current ones shows as not checked yet. */
+export function VerificationList({ listingId, kinds, checking = [], action, sigs }: { listingId: string; kinds: VerifyKind[]; checking?: VerifyKind[]; action?: (k: VerifyKind, v?: Verification) => React.ReactNode; sigs?: Partial<Record<VerifyKind, string>> }) {
   const { data } = useVerifications(listingId)
-  if (!site.autoVerify)
-    return <p className="py-3 text-[13.5px] text-ink-700">Our team checks your {kinds.map((k) => verifyLabel[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} before your first payout. Automatic checks will appear here once they’re switched on.</p>
+  const on = (k: VerifyKind) => (k === 'ownership' ? site.docVerify : site.autoVerify)
+  const manual = kinds.filter((k) => !on(k))
+  const auto = kinds.filter(on)
+  if (!auto.length)
+    return <p className="py-3 text-[13.5px] text-ink-700">Our team checks your {manual.map((k) => verifyLabel[k]).join(', ').replace(/, ([^,]*)$/, ' and $1')} before your first payout. Automatic checks will appear here once they’re switched on.</p>
   return (
     <ul className="divide-y divide-line">
-      {kinds.map((k) => {
-        const v = data?.find((x) => x.kind === k)
+      {auto.map((k) => {
+        const found = data?.find((x) => x.kind === k)
+        const v = found && (!sigs || found.details?._sig === sigs[k]) ? found : undefined
         return <Row key={k} kind={k} v={v} checking={checking.includes(k)} action={action?.(k, v)} />
       })}
     </ul>

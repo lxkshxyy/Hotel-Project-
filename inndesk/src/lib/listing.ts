@@ -4,7 +4,8 @@ import { allAmenities, bedCatalog, cancellationOptions, cities, multiRoomTypes, 
 import { houseRuleLines, ruleGaps } from '../data/policyRules'
 import { gstinError, ifscError, panError } from './gstin'
 import { slugify, uid } from './format'
-import type { BedLine, Listing, ListingRoom } from './types'
+import { isDemoMode } from './supabase'
+import type { BedLine, Listing, ListingRoom, Verification, VerifyKind } from './types'
 
 export const steps = [
   { id: 'basics', label: 'Basic Info' },
@@ -399,6 +400,7 @@ export function legalErrors(l: Listing, section: number): Record<string, string>
   const g = l.legal
   const e: Record<string, string> = {}
   if (section === 1) {
+    if (!g.payoutName.trim()) e.payoutName = 'Enter the account holder name exactly as your bank shows it.'
     if (!g.accountLast4) e.acct = 'Enter your bank account number twice.'
     if (!g.ifsc) e.ifsc = 'Enter the IFSC code.'
     else if (ifscError(g.ifsc)) e.ifsc = ifscError(g.ifsc)
@@ -416,11 +418,57 @@ export function legalErrors(l: Listing, section: number): Record<string, string>
     else if (g.msme && udyamError(g.udyam ?? '')) e.udyam = udyamError(g.udyam ?? '')
   }
   if (section === 3) {
+    if (!g.ownershipDoc || (!isDemoMode && !g.ownershipDocPath)) e.doc = 'Upload a proof of ownership or lease (electricity bill, property tax receipt, sale deed or rent agreement).'
     if (!g.agreed) e.agreed = 'Confirm you own or are authorised to list this property, and accept the partner terms.'
   }
   return e
 }
 export const legalSectionDone = (l: Listing, section: number) => !Object.keys(legalErrors(l, section)).length
+
+/**
+ * What a check was run on. The server stores the same fingerprint with each result (details._sig), so a
+ * result only counts while the details it checked are unchanged. Keep in step with functions/verify-partner.
+ */
+export function checkSig(l: Listing, k: VerifyKind) {
+  const g = l.legal
+  const up = (v?: string | null) => (v ?? '').trim().toUpperCase()
+  if (k === 'pan') return `${up(g.pan)}|${up(g.legalName)}`
+  if (k === 'gstin') return `${up(g.gstin)}|${up(g.legalName)}`
+  if (k === 'bank') return `${up(g.ifsc)}|${g.accountLast4}|${up(g.payoutName || g.legalName)}`
+  return g.ownershipDocPath || g.ownershipDoc || ''
+}
+
+/** The automatic checks a Finance & Legal part needs to pass, and which results count as passed. */
+export function requiredChecks(l: Listing, section: number): { kind: VerifyKind; ok: Verification['status'][] }[] {
+  if (section === 1) return site.autoVerify ? [{ kind: 'bank', ok: ['verified'] }] : []
+  if (section === 2) return site.autoVerify ? [{ kind: 'pan', ok: ['verified'] }, ...(l.legal.hasGstin ? [{ kind: 'gstin' as const, ok: ['verified' as const] }] : [])] : []
+  // A real property document whose name or address differs (a bill in a parent's name…) goes to the team, and onboarding continues.
+  if (section === 3) return site.docVerify ? [{ kind: 'ownership', ok: ['verified', 'review'] }] : []
+  return []
+}
+
+const kindName: Record<VerifyKind, string> = { gstin: 'GSTIN', pan: 'PAN', bank: 'bank account', ownership: 'ownership document' }
+
+/** Checks that block a Finance & Legal part: not run yet, run on old details, failed or needing review. Empty = passed. */
+export function verifyGaps(l: Listing, checks: Verification[], section: number) {
+  return requiredChecks(l, section)
+    .map(({ kind, ok }) => {
+      const v = checks.find((c) => c.kind === kind)
+      const current = !!v && v.details?._sig === checkSig(l, kind)
+      if (current && ok.includes(v.status)) return null
+      const what = kindName[kind]
+      const message = !current
+        ? kind === 'bank'
+          ? `Your ${what} hasn’t been verified with these details. Enter the account number twice and press Save & Continue to run the ₹1 check.`
+          : kind === 'ownership'
+            ? 'Your document hasn’t been checked yet. Upload it again to run the check.'
+            : `Your ${kind === 'pan' ? 'PAN' : 'GSTIN'} hasn’t been verified with these details yet. Press Save & Continue to run the check.`
+        : `Your ${what} ${v.status === 'failed' ? 'failed verification' : 'needs a look'}: ${v.message} ${kind === 'bank' ? 'Correct the details, enter the account number again and save.' : kind === 'ownership' ? 'Upload a clear copy of a property document.' : 'Correct the details and save again.'}`
+      return { kind, message }
+    })
+    .filter((x): x is { kind: VerifyKind; message: string } => !!x)
+}
+export const legalPassed = (l: Listing, checks: Verification[], section: number) => legalSectionDone(l, section) && !verifyGaps(l, checks, section).length
 
 /** What's missing on the Location tab, keyed by field. */
 export function locationErrors(l: Listing): Partial<Record<'address' | 'area' | 'pincode' | 'state' | 'city' | 'pin' | 'confirm', string>> {
@@ -490,7 +538,6 @@ export function tips(l: Listing): Check[] {
   if (l.amenities.length < 8) out.push({ step: 'amenities', message: 'Tick every amenity you offer. Guests filter by them.' })
   if (l.rooms.some((r) => !r.photoId)) out.push({ step: 'rooms', message: 'Give each room type its own photo.' })
   if (!l.legal.gstin) out.push({ step: 'legal', message: 'Add your GSTIN so commission invoices carry it.' })
-  if (!l.legal.ownershipDoc) out.push({ step: 'legal', message: 'Upload proof of ownership or lease before your first payout.' })
   return out
 }
 

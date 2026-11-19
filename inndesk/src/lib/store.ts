@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { onLocalMachine, site } from '../config/site'
 import { dataUrlToBlob } from './images'
 import { gstinState as gstState } from './gstin'
-import { blockers, makeSlug, toHotel } from './listing'
+import { blockers, checkSig, legalSections, makeSlug, toHotel, verifyGaps } from './listing'
 import { isDemoMode, supabase } from './supabase'
 import type { Dispute, GuestReview, Listing, Owner, Reservation, Verification, VerifyKind } from './types'
 
@@ -155,6 +155,10 @@ export class PublishError extends Error {}
 export async function publishListing(input: Listing): Promise<Listing> {
   const problems = blockers(input)
   if (problems.length) throw new PublishError(`${problems.length} thing${problems.length > 1 ? 's' : ''} to fix before publishing.`)
+  // Bank account, PAN, GSTIN and the ownership document must have passed their automatic checks.
+  const checks = await listVerifications(input.id)
+  const gaps = legalSections.flatMap((s) => verifyGaps(input, checks, s.id))
+  if (gaps.length) throw new PublishError(`Finance & Legal: ${gaps[0].message}`)
   const now = new Date().toISOString()
   let l: Listing = { ...input, slug: input.slug || makeSlug(input), status: 'live', publishedAt: input.publishedAt ?? now, updatedAt: now }
   l = await uploadPhotos(l)
@@ -358,7 +362,7 @@ const verifyKey = (id: string) => `inndesk.verify.${id}`
 
 /** Latest check results for a listing. Live: partner_verifications (written only by the server). */
 export async function listVerifications(listingId: string): Promise<Verification[]> {
-  if (!site.autoVerify) return []
+  if (!site.autoVerify && !site.docVerify) return []
   if (isDemoMode || !supabase) {
     try {
       return JSON.parse(localStorage.getItem(verifyKey(listingId)) ?? '[]') as Verification[]
@@ -371,11 +375,23 @@ export async function listVerifications(listingId: string): Promise<Verification
   return (data ?? []) as Verification[]
 }
 
+/** Words that show up in the names of real property documents (demo mode only looks at the file name). */
+const DEMO_DOC_WORDS = /bill|electric|bses|bescom|tata ?power|deed|registry|agreement|lease|rent|tax|mutation|allot|property|ownership|noc/i
+
 /** Demo mode: plausible results without calling anyone (account numbers ending 0000 fail). */
 function demoCheck(l: Listing, k: VerifyKind, account = ''): Verification {
+  const v = demoResult(l, k, account)
+  return { ...v, details: { ...v.details, _sig: checkSig(l, k) } }
+}
+function demoResult(l: Listing, k: VerifyKind, account = ''): Verification {
   const g = l.legal
   const at = new Date().toISOString()
   const name = (g.payoutName || g.legalName).toUpperCase()
+  if (k === 'ownership') {
+    if (!DEMO_DOC_WORDS.test(g.ownershipDoc ?? ''))
+      return { kind: k, status: 'failed', message: 'This doesn’t look like a property document.', notes: ['Upload an electricity bill, property tax receipt, sale deed or rent agreement for this property.', 'Demo mode only looks at the file name. The live check reads the document itself.'], details: { 'File': g.ownershipDoc ?? '' }, checked_at: at }
+    return { kind: k, status: 'verified', message: 'Property document accepted.', notes: ['Demo mode only looks at the file name. The live check reads the document itself.'], details: { 'File': g.ownershipDoc ?? '', 'Document type': 'Property document' }, checked_at: at }
+  }
   if (k === 'pan') return { kind: k, status: 'verified', message: 'PAN is valid and the name matches.', notes: [], details: { 'Name on PAN records': g.legalName.toUpperCase(), 'PAN status': 'Existing and Valid', 'Name match': '100%' }, checked_at: at }
   if (k === 'bank') {
     if (account.endsWith('0000')) return { kind: k, status: 'failed', message: 'This account number doesn’t exist at that bank.', notes: [], details: { 'Account ending': account.slice(-4) }, checked_at: at }
@@ -392,11 +408,56 @@ function demoCheck(l: Listing, k: VerifyKind, account = ''): Verification {
   }
 }
 
+/** File types accepted for the ownership / lease proof, recognised from the file's first bytes (not its name). */
+async function docKind(file: File): Promise<'application/pdf' | 'image/jpeg' | 'image/png' | null> {
+  const b = new Uint8Array(await file.slice(0, 8).arrayBuffer())
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return 'application/pdf'
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png'
+  return null
+}
+const imageSize = (file: File) =>
+  new Promise<{ w: number; h: number }>((ok) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      ok({ w: img.naturalWidth, h: img.naturalHeight })
+      URL.revokeObjectURL(url)
+    }
+    img.onerror = () => {
+      ok({ w: 0, h: 0 })
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
+  })
+
 /**
- * Checks the GSTIN, PAN and/or bank account on a saved listing. The full account number is sent to
+ * Checks the file, then keeps the ownership / lease proof in the private partner-docs bucket (live mode).
+ * Returns the fields to save on the listing. The document itself is checked by verifyPartner(['ownership']).
+ */
+export async function uploadOwnershipDoc(l: Listing, file: File): Promise<{ ownershipDoc: string; ownershipDocPath?: string }> {
+  const type = await docKind(file)
+  if (!type) throw new Error(/\.(heic|heif)$/i.test(file.name) ? 'HEIC photos can’t be read here. Take a screenshot of it or save it as JPG, then upload that.' : 'Upload a PDF, JPG or PNG file.')
+  if (file.size > site.maxDocMb * 1024 * 1024) throw new Error(`The file is larger than ${site.maxDocMb} MB. Upload a smaller copy.`)
+  if (type !== 'application/pdf' && file.size > 5 * 1024 * 1024) throw new Error('Photos can be up to 5 MB. Upload a smaller photo or a PDF scan.')
+  if (file.size < 15 * 1024) throw new Error('This file is too small to be a readable document. Upload a clear scan or photo of the whole page.')
+  if (type !== 'application/pdf') {
+    const { w, h } = await imageSize(file)
+    if (Math.min(w, h) < 500) throw new Error('This image is too small to read. Upload a clear photo or scan of the whole page (at least 500 pixels on each side).')
+  }
+  if (isDemoMode || !supabase) return { ownershipDoc: file.name }
+  const ext = type === 'application/pdf' ? 'pdf' : type === 'image/png' ? 'png' : 'jpg'
+  const path = `${l.ownerId}/${l.id}/ownership-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('partner-docs').upload(path, file, { contentType: type, upsert: false })
+  if (error) throw new Error(`Upload failed: ${error.message}`)
+  return { ownershipDoc: file.name, ownershipDocPath: path }
+}
+
+/**
+ * Checks the GSTIN, PAN, bank account and/or ownership document on a saved listing. The full account number is sent to
  * the server once for the ₹1 penny drop and stored there encrypted, never in the listing.
  */
-export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount?: string): Promise<Verification[]> {
+export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount?: string, documentPath?: string): Promise<Verification[]> {
   let results: Verification[]
   if (isDemoMode || !supabase) {
     await new Promise((r) => setTimeout(r, 700))
@@ -404,7 +465,7 @@ export async function verifyPartner(l: Listing, kinds: VerifyKind[], bankAccount
     const kept = (await listVerifications(l.id)).filter((v) => !kinds.includes(v.kind))
     localStorage.setItem(verifyKey(l.id), JSON.stringify([...kept, ...results]))
   } else {
-    const { data, error } = await supabase.functions.invoke('verify-partner', { body: { listing_id: l.id, kinds, bank_account: bankAccount } })
+    const { data, error } = await supabase.functions.invoke('verify-partner', { body: { listing_id: l.id, kinds, bank_account: bankAccount, document_path: documentPath ?? l.legal.ownershipDocPath } })
     if (error) {
       const msg = await (error as { context?: Response }).context?.json?.().then((b: { error?: string }) => b.error).catch(() => '')
       throw new Error(msg || 'Couldn’t run the checks. Please try again in a few minutes.')

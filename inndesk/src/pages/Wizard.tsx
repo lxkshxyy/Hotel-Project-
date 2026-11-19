@@ -17,11 +17,11 @@ import { useSession } from '../context/Session'
 import { amenityGroups, banks, bathCatalog, cancellationOptions, checkTimes, mealPlans, SHARED_BATH, timeLabel, roomAmenities, roomTypes, roomViews } from '../data/options'
 import { inr, uid } from '../lib/format'
 import { demoIds, gstinError, gstinState, ifscError, panError } from '../lib/gstin'
-import { amenityGaps, areaSqft, bedFloor, bedSpace, EXTRA_BED_FLOOR, MAX_BEDS_PER_BEDROOM, MAX_BEDS_PER_LIVING, occupancyLimits, attachOptions, autoOccupancy, basicsErrors, isMultiRoom, layoutLimits, layoutOf, cityByName, servedCity, legalErrors, legalSectionDone, legalSections, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, SQFT_PER_SQM, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
-import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode, verifyPartner } from '../lib/store'
-import { verifyLabel, VerificationList } from '../components/Verification'
+import { amenityGaps, areaSqft, bedFloor, bedSpace, EXTRA_BED_FLOOR, MAX_BEDS_PER_BEDROOM, MAX_BEDS_PER_LIVING, occupancyLimits, attachOptions, autoOccupancy, basicsErrors, isMultiRoom, layoutLimits, layoutOf, cityByName, servedCity, checkSig, legalErrors, legalPassed, legalSectionDone, legalSections, verifyGaps, bedsOf, bedSummary, blockers, locationErrors, minAmenities, roomDone, roomErrors, roomSectionDone, roomSections, SQFT_PER_SQM, fromPrice, guestRules, quality, stepDone, steps, tips, toHotel, type StepId } from '../lib/listing'
+import { checkContactCode, CONTACT_CODE_LENGTH, getListing, publishListing, PublishError, retrySync, saveListing, sendContactCode, uploadOwnershipDoc, useVerifications, verifyPartner } from '../lib/store'
+import { VerificationList } from '../components/Verification'
 import { isDemoMode } from '../lib/supabase'
-import type { BedLine, Listing, ListingRoom, VerifyKind } from '../lib/types'
+import type { BedLine, Listing, ListingRoom, Verification, VerifyKind } from '../lib/types'
 import { Select } from '../components/Select'
 
 type Set = (fn: (l: Listing) => Listing) => void
@@ -1592,13 +1592,30 @@ function Policies({ l, set }: { l: Listing; set: Set }) {
   )
 }
 
-function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing; set: Set; sec: number; openSec: (n: number) => void; tried: boolean; acctRef: { current: string }; checking: VerifyKind[] }) {
+function Legal({ l, set, sec, openSec, tried, acctRef, checking, checks, onDoc, docBusy, docErr }: { l: Listing; set: Set; sec: number; openSec: (n: number) => void; tried: boolean; acctRef: { current: string }; checking: VerifyKind[]; checks: Verification[]; onDoc: (f: File) => void; docBusy: boolean; docErr: string }) {
   const g = l.legal
   const up = (x: Partial<Listing['legal']>) => set((y) => ({ ...y, legal: { ...y.legal, ...x } }))
   const [acct, setAcct] = useState('')
   const [acct2, setAcct2] = useState('')
   const e = tried ? legalErrors(l, sec) : {}
-  const unlocked = (n: number) => legalSections.slice(0, n - 1).every((s) => legalSectionDone(l, s.id))
+  // A part opens only when every part before it is filled in and has passed its automatic checks.
+  const unlocked = (n: number) => legalSections.slice(0, n - 1).every((s) => legalPassed(l, checks, s.id))
+  const gaps = tried ? verifyGaps(l, checks, sec) : []
+  const sigs = { bank: checkSig(l, 'bank'), pan: checkSig(l, 'pan'), gstin: checkSig(l, 'gstin'), ownership: checkSig(l, 'ownership') }
+  const gateBox =
+    gaps.length > 0 ? (
+      <div role="alert" className="mt-4 flex gap-2.5 rounded-lg border border-alert/30 bg-alert-50 px-3.5 py-3 text-[13.5px] text-alert">
+        <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>
+          <strong className="block font-semibold">You can’t continue until this is verified.</strong>
+          {gaps.map((x) => (
+            <span key={x.kind} className="block">
+              {x.message}
+            </span>
+          ))}
+        </span>
+      </div>
+    ) : null
   const hasGstin = g.hasGstin ?? (g.gstin ? true : null)
   const mismatch = acct2.length > 0 && acct !== acct2
   const setAccount = (a: string, b: string) => {
@@ -1633,6 +1650,7 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
   const body: Record<number, ReactNode> = {
     1: (
       <div className="px-4 pb-4 sm:px-5">
+        <div className="border-b border-line">{row('Account Holder Name', 'Exactly as your bank shows it (passbook or cheque)', e.payoutName, <input id="b-holder" className="field" autoComplete="off" value={g.payoutName} onChange={(x) => up({ payoutName: x.target.value })} aria-invalid={!!e.payoutName} />, 'b-holder')}</div>
         <div className="border-b border-line pb-2">
           {row(
             'Bank Account Number',
@@ -1662,8 +1680,9 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
         )}
         <div className="mt-4 rounded-lg border border-line px-4">
           <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
-          <VerificationList listingId={l.id} kinds={['bank']} checking={checking} />
+          <VerificationList listingId={l.id} kinds={['bank']} checking={checking} sigs={sigs} />
         </div>
+        {gateBox}
       </div>
     ),
     2: (
@@ -1696,8 +1715,9 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
         {g.msme && row('Udyam Registration Number', undefined, e.udyam, <input id="t-udyam" className="field uppercase" maxLength={19} placeholder="UDYAM-DL-01-0001234" value={g.udyam ?? ''} onChange={(x) => up({ udyam: x.target.value.toUpperCase() })} aria-invalid={!!e.udyam} />, 't-udyam')}
         <div className="mt-4 rounded-lg border border-line px-4">
           <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
-          <VerificationList listingId={l.id} kinds={hasGstin ? ['pan', 'gstin'] : ['pan']} checking={checking} />
+          <VerificationList listingId={l.id} kinds={hasGstin ? ['pan', 'gstin'] : ['pan']} checking={checking} sigs={sigs} />
         </div>
+        {gateBox}
       </div>
     ),
     3: (
@@ -1705,18 +1725,35 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
         <div className="border-b border-line pb-3">
           {row(
             'Proof of ownership or lease',
-            'Electricity bill, property tax receipt, sale deed or rent agreement. Optional now, needed before your first payout.',
-            undefined,
+            'Required. An electricity bill, property tax receipt, sale deed or rent agreement for this property, showing the owner’s name and the property address.',
+            docErr || e.doc,
             <>
-              <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-dashed border-line-strong bg-paper px-3 text-[15px] font-medium text-pine-800 hover:border-pine-700">
-                <Upload className="h-4 w-4" aria-hidden="true" />
-                {g.ownershipDoc ? 'Replace document' : 'Upload document'}
-                <input type="file" accept=".pdf,image/jpeg,image/png" className="sr-only" onChange={(x) => x.target.files?.[0] && up({ ownershipDoc: x.target.files[0].name })} />
+              <label className={`flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-dashed bg-paper px-3 text-[15px] font-medium text-pine-800 ${docBusy ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-pine-700'} ${docErr || e.doc ? 'border-alert' : 'border-line-strong'}`}>
+                {docBusy ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-pine-800 border-t-transparent" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
+                {docBusy ? 'Uploading and checking…' : g.ownershipDoc ? 'Replace document' : 'Upload document'}
+                <input
+                  id="d-doc"
+                  type="file"
+                  accept=".pdf,image/jpeg,image/png"
+                  disabled={docBusy}
+                  className="sr-only"
+                  onChange={(x) => {
+                    const f = x.target.files?.[0]
+                    x.target.value = ''
+                    if (f) onDoc(f)
+                  }}
+                />
               </label>
-              {g.ownershipDoc && <span className="text-[13px] font-medium text-live">Attached: {g.ownershipDoc}</span>}
-              <span className="text-[12.5px] text-ink-500">PDF, JPG or PNG.{isDemoMode ? ' In demo mode only the file name is kept.' : ''}</span>
+              {g.ownershipDoc && <span className="text-[13px] font-medium break-all text-ink-700">Attached: {g.ownershipDoc}</span>}
+              <span className="text-[12.5px] text-ink-500">PDF up to {site.maxDocMb} MB, or a JPG/PNG photo up to 5 MB. The whole page must be clear and readable.</span>
             </>,
+            'd-doc',
           )}
+          <div className="mt-2 rounded-lg border border-line px-4">
+            <h4 className="pt-3 text-[13px] font-semibold tracking-wide text-ink-500 uppercase">Automatic check</h4>
+            <VerificationList listingId={l.id} kinds={['ownership']} checking={checking} sigs={sigs} />
+          </div>
+          {gateBox}
         </div>
         <label className="mt-4 flex cursor-pointer items-start gap-2.5">
           <input type="checkbox" checked={g.agreed} onChange={(x) => up({ agreed: x.target.checked })} className="mt-0.5 h-[18px] w-[18px] accent-pine-800" />
@@ -1760,7 +1797,7 @@ function Legal({ l, set, sec, openSec, tried, acctRef, checking }: { l: Listing;
         {legalSections.map((s, i) => {
           const open = s.id === sec
           const can = unlocked(s.id)
-          const done = can && legalSectionDone(l, s.id) && !open
+          const done = can && legalPassed(l, checks, s.id) && !open
           const state = open ? 'active' : done ? 'done' : 'locked'
           const nextOpen = i < legalSections.length - 1 && unlocked(s.id + 1)
           return (
@@ -1934,7 +1971,7 @@ export default function Wizard() {
   const [roomTried, setRoomTried] = useState(false)
   // Finance & Legal: which of its three parts is open.
   const [legalTried, setLegalTried] = useState(false)
-  const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
+  const [toast, setToast] = useState<{ text: string; n: number; warn?: boolean } | null>(null)
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast((x) => (x && x.n > 1 ? { ...x, n: x.n - 1 } : null)), 1000)
@@ -2003,24 +2040,31 @@ export default function Wizard() {
     return () => clearTimeout(t)
   }, [focusField, l, setParams])
 
+  // Results of the automatic bank / PAN / GSTIN / document checks. Undefined while loading.
+  const verif = useVerifications(l?.id ?? '')
+  const checks = verif.data ?? []
+  const checksReady = verif.data !== undefined
+
   // Opening Finance & Legal pins the part to show (the first unfinished one), so it doesn't jump while typing.
   const legalPinned = !!params.get('lsec')
   useEffect(() => {
-    if (step !== 'legal' || legalPinned || !l) return
-    setParams({ step: 'legal', lsec: String(legalSections.find((x) => !legalSectionDone(l, x.id))?.id ?? 1) }, { replace: true })
-  }, [step, legalPinned, l, setParams])
+    if (step !== 'legal' || legalPinned || !l || !checksReady) return
+    setParams({ step: 'legal', lsec: String(legalSections.find((x) => !legalPassed(l, checks, x.id))?.id ?? 1) }, { replace: true })
+  }, [step, legalPinned, l, setParams, checksReady, checks])
 
   // Full bank account number typed in Finance & Legal, kept only until it has been checked.
   const acctRef = useRef('')
   const [checking, setChecking] = useState<VerifyKind[]>([])
-  // PAN / GSTIN details last sent for checking, so saving again without changes doesn't pay for a second check.
-  const lastTaxCheck = useRef('')
+  const [docBusy, setDocBusy] = useState(false)
+  const [docErr, setDocErr] = useState('')
 
   if (id === 'new') return <Navigate to="/app/properties?new=1" replace />
 
   const isLive = !!l && l.status !== 'draft'
   // A tab opens once every tab before it is complete. Live listings can jump anywhere.
-  const unlocked = (i: number) => isLive || (!!l && steps.slice(0, i).every((s) => stepDone(l, s.id)))
+  // Finance & Legal also needs its automatic checks passed (skipped while the results are still loading).
+  const legalVerified = (x: Listing) => !checksReady || legalSections.every((s) => !verifyGaps(x, checks, s.id).length)
+  const unlocked = (i: number) => isLive || (!!l && steps.slice(0, i).every((s) => stepDone(l, s.id) && (s.id !== 'legal' || legalVerified(l))))
 
   const go = (s: StepId, field?: string) => {
     // Moving forward from Amenities (button or step tabs) needs every ticked amenity's details filled in.
@@ -2074,63 +2118,108 @@ export default function Wizard() {
     else closeRoom()
   }
 
-  const lsec = l ? Math.min(3, Math.max(1, Number(params.get('lsec')) || (legalSections.find((x) => !legalSectionDone(l, x.id))?.id ?? 1))) : 1
+  const lsec = l ? Math.min(3, Math.max(1, Number(params.get('lsec')) || (legalSections.find((x) => !legalPassed(l, checks, x.id))?.id ?? 1))) : 1
   const openLegal = (n: number) => {
     setLegalTried(false)
     setShowErrors(false)
     setParams({ step: 'legal', lsec: String(n) })
     window.scrollTo({ top: 0 })
   }
-  // Bank account (section 1) and PAN / GSTIN (section 2) are checked automatically once saved.
-  const taxSig = (g: Listing['legal']) => JSON.stringify([g.legalName.trim(), g.pan, g.hasGstin, g.gstin])
+  // Bank account (section 1) and PAN / GSTIN (section 2) are checked automatically when saved; the ownership
+  // document (section 3) as soon as it is uploaded. A check runs again only when the details it covers change.
+  const current = (x: Listing, k: VerifyKind) => checks.some((c) => c.kind === k && c.details?._sig === checkSig(x, k))
   const pendingChecks = (x: Listing, secs: number[]) => {
     const g = x.legal
     const kinds: VerifyKind[] = []
-    if (secs.includes(1) && acctRef.current && g.bankConsent && !ifscError(g.ifsc)) kinds.push('bank')
-    if (secs.includes(2) && taxSig(g) !== lastTaxCheck.current) {
-      if (g.legalName.trim() && !panError(g.pan)) kinds.push('pan')
-      if (g.hasGstin && !gstinError(g.gstin)) kinds.push('gstin')
+    if (!site.autoVerify) return kinds
+    if (secs.includes(1) && acctRef.current && g.bankConsent && !ifscError(g.ifsc) && g.payoutName.trim()) kinds.push('bank')
+    if (secs.includes(2)) {
+      if (g.legalName.trim() && !panError(g.pan) && !current(x, 'pan')) kinds.push('pan')
+      if (g.hasGstin && !gstinError(g.gstin) && !current(x, 'gstin')) kinds.push('gstin')
     }
     return kinds
   }
-  const runChecks = async (x: Listing, secs: number[]) => {
+  /** Runs the pending checks and returns all results, fresh ones included (null if the checks couldn't run). */
+  const runChecks = async (x: Listing, secs: number[]): Promise<Verification[] | null> => {
     const kinds = pendingChecks(x, secs)
-    if (!kinds.length || !site.autoVerify) return
-    if (kinds.includes('pan')) lastTaxCheck.current = taxSig(x.legal)
+    if (!kinds.length) return checks
     const account = acctRef.current
     setChecking(kinds)
     try {
-      if (!(await save(x))) return
+      if (!(await save(x))) return null
       const res = await verifyPartner(x, kinds, kinds.includes('bank') ? account : undefined)
       if (kinds.includes('bank')) acctRef.current = ''
-      const bad = res.filter((r) => r.status !== 'verified').map((r) => verifyLabel[r.kind])
-      setToast({ text: bad.length ? `${bad.join(' and ')} need${bad.length === 1 ? 's' : ''} a look` : `${res.map((r) => verifyLabel[r.kind]).join(' and ')} verified`, n: 4 })
+      return [...checks.filter((c) => !res.some((r) => r.kind === c.kind)), ...res]
     } catch (e) {
-      lastTaxCheck.current = ''
-      setToast({ text: e instanceof Error ? e.message : 'Couldn’t run the checks.', n: 5 })
+      setToast({ text: e instanceof Error ? e.message : 'Couldn’t run the checks.', n: 6, warn: true })
+      return null
     } finally {
       setChecking([])
     }
   }
 
-  const legalNext = () => {
+  // The ownership / lease proof is uploaded and checked straight away; the result shows under the upload box.
+  const uploadDoc = async (file: File) => {
     if (!l) return
+    setDocBusy(true)
+    setDocErr('')
+    try {
+      const f = await uploadOwnershipDoc(l, file)
+      const x = { ...l, legal: { ...l.legal, ...f } }
+      set((y) => ({ ...y, legal: { ...y.legal, ...f } }))
+      if (site.docVerify) {
+        setChecking(['ownership'])
+        const [r] = await verifyPartner(x, ['ownership'], undefined, f.ownershipDocPath)
+        if (r) setToast({ text: r.status === 'failed' ? 'Document not accepted' : r.status === 'review' ? 'Document received — our team will confirm it' : 'Document verified', n: 4, warn: r.status === 'failed' })
+      }
+    } catch (e) {
+      setDocErr(e instanceof Error ? e.message : 'Couldn’t upload the document.')
+    } finally {
+      setDocBusy(false)
+      setChecking([])
+    }
+  }
+
+  /** Shows why a Finance & Legal part is blocked. True when it may be left. */
+  const legalGate = (x: Listing, all: Verification[], n: number) => {
+    const gaps = verifyGaps(x, all, n)
+    if (!gaps.length) return true
+    setLegalTried(true)
+    setToast({ text: `${legalSections[n - 1].title}: verification needed`, n: 4, warn: true })
+    return false
+  }
+
+  const legalNext = async () => {
+    if (!l || checking.length || docBusy) return
     if (!legalSectionDone(l, lsec)) {
       setLegalTried(true)
       return
     }
-    void runChecks(l, [lsec])
+    const all = await runChecks(l, [lsec])
+    if (!all || !legalGate(l, all, lsec)) return
     if (saveState === 'dirty' && l.status === 'draft') save(l)
     const title = legalSections[lsec - 1].title
     setToast({ text: `${title} has been saved`, n: 3 })
     if (lsec < 3) openLegal(lsec + 1)
-    else next()
+    else next(all)
   }
 
-  const next = () => {
+  const next = async (known?: Verification[]) => {
     if (!l) return
-    // Live listings: stay on Finance & Legal while new details are checked, so the owner sees the result.
-    if (isLive && step === 'legal' && site.autoVerify && pendingChecks(l, [1, 2]).length) return void runChecks(l, [1, 2])
+    if (step === 'legal') {
+      if (checking.length || docBusy) return
+      // Live listings: changed details are checked on Save; the owner stays here to see the result.
+      const ran = isLive && pendingChecks(l, [1, 2]).length > 0
+      const all = ran ? await runChecks(l, [1, 2]) : (known ?? checks)
+      if (!all) return
+      const blocked = legalSections.find((s) => verifyGaps(l, all, s.id).length)
+      if (blocked && checksReady) {
+        if (blocked.id !== lsec) openLegal(blocked.id)
+        legalGate(l, all, blocked.id)
+        return
+      }
+      if (ran) return
+    }
     // Ticked amenities need their details (type, mode…) for every listing, live or draft.
     const gaps = step === 'amenities' ? amenityGaps(l) : []
     if (gaps.length) {
@@ -2192,7 +2281,7 @@ export default function Wizard() {
     ),
     photos: <Photos l={l} set={set} />,
     policies: <Policies l={l} set={set} />,
-    legal: <Legal l={l} set={set} sec={lsec} openSec={openLegal} tried={legalTried} acctRef={acctRef} checking={checking} />,
+    legal: <Legal l={l} set={set} sec={lsec} openSec={openLegal} tried={legalTried} acctRef={acctRef} checking={checking} checks={checks} onDoc={uploadDoc} docBusy={docBusy} docErr={docErr} />,
     review: <Review l={l} go={go} onPublish={publish} busy={publishing} result={result} onRetry={async () => setL(await retrySync(l))} />,
   }[step]
 
@@ -2222,7 +2311,7 @@ export default function Wizard() {
             {steps.map((s, i) => {
               const on = s.id === step
               const open = unlocked(i)
-              const done = open && stepDone(l, s.id) && s.id !== 'review'
+              const done = open && stepDone(l, s.id) && s.id !== 'review' && (s.id !== 'legal' || legalVerified(l))
               return (
                 <li key={s.id}>
                   <button
@@ -2295,8 +2384,8 @@ export default function Wizard() {
               </button>
             ) : (
               index < steps.length - 1 && (
-                <button type="button" className="btn-brass min-h-11 px-6" onClick={step === 'legal' && !isLive ? legalNext : next}>
-                  {step === 'basics' ? 'Continue' : step === 'legal' ? 'Save & Continue' : 'Save And Continue'}
+                <button type="button" className="btn-brass min-h-11 px-6 disabled:cursor-wait disabled:opacity-70" disabled={step === 'legal' && (checking.length > 0 || docBusy)} onClick={() => (step === 'legal' && !isLive ? legalNext() : next())}>
+                  {step === 'legal' && checking.length > 0 ? 'Checking…' : step === 'basics' ? 'Continue' : step === 'legal' ? 'Save & Continue' : 'Save And Continue'}
                 </button>
               )
             )}
@@ -2306,8 +2395,8 @@ export default function Wizard() {
 
       <AnimatePresence>
         {toast && (
-          <motion.div role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className="fixed inset-x-3 bottom-20 z-[90] mx-auto flex max-w-[600px] items-center gap-3 rounded-lg bg-pine-800 px-4 py-3.5 text-white shadow-lift">
-            <CircleCheck className="h-6 w-6 shrink-0" aria-hidden="true" />
+          <motion.div role="status" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className={`fixed inset-x-3 bottom-20 z-[90] mx-auto flex max-w-[600px] items-center gap-3 rounded-lg px-4 py-3.5 text-white shadow-lift ${toast.warn ? 'bg-alert' : 'bg-pine-800'}`}>
+            {toast.warn ? <CircleAlert className="h-6 w-6 shrink-0" aria-hidden="true" /> : <CircleCheck className="h-6 w-6 shrink-0" aria-hidden="true" />}
             <strong className="flex-1 text-[15px]">{toast.text}</strong>
             <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full text-[12px] ring-2 ring-white/50">
               {toast.n}

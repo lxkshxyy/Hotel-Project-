@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { CodeBoxes } from '../../components/Auth'
 import { site } from '../../config/site'
 import { VerificationList } from '../../components/Verification'
+import { checkSig } from '../../lib/listing'
 import { checkContactCode, CONTACT_CODE_LENGTH, sendContactCode, useVerifications, verifyPartner } from '../../lib/store'
 import type { VerifyKind } from '../../lib/types'
 import { btnOutline, btnSolid, Card, Dialog, PageTitle, type InfoProps } from './kit'
@@ -117,6 +118,9 @@ export default function Finance({ l, base }: InfoProps) {
                 <Row k="Account number" v={g.accountLast4 ? `•••• •••• ${g.accountLast4}` : ''} />
                 <Row k="IFSC" v={g.ifsc} />
               </dl>
+              <dl className="mt-1 border-t border-line">
+                <Row k="Ownership proof" v={g.ownershipDoc} />
+              </dl>
               {g.bankConsent && (
                 <p className="mt-3 flex items-center gap-2 text-[13.5px] text-live">
                   <CircleCheck className="h-4 w-4" aria-hidden="true" /> ₹1 verification agreed
@@ -127,15 +131,16 @@ export default function Finance({ l, base }: InfoProps) {
           <div className="flex flex-col gap-5">
             <Card className="p-4">
               <strong className="block text-[15px] font-semibold text-ink-900">Verification</strong>
-              <p className="mt-0.5 text-[13px] text-ink-500">Checked automatically with the GST department, Income Tax records and your bank.</p>
+              <p className="mt-0.5 text-[13px] text-ink-500">Checked automatically with the GST department, Income Tax records, your bank and a reading of your property document.</p>
               <VerificationList
                 listingId={l.id}
-                kinds={g.hasGstin === false ? ['pan', 'bank'] : ['gstin', 'pan', 'bank']}
+                kinds={g.hasGstin === false ? ['pan', 'bank', 'ownership'] : ['gstin', 'pan', 'bank', 'ownership']}
+                sigs={{ gstin: checkSig(l, 'gstin'), pan: checkSig(l, 'pan'), bank: checkSig(l, 'bank'), ownership: checkSig(l, 'ownership') }}
                 checking={checking}
                 action={(k) =>
-                  k === 'bank' ? (
-                    <Link to={`${base}/edit?step=legal&lsec=1`} className="text-[13px] font-semibold text-pine-800">
-                      Re-enter account
+                  k === 'bank' || k === 'ownership' ? (
+                    <Link to={`${base}/edit?step=legal&lsec=${k === 'bank' ? 1 : 3}`} className="text-[13px] font-semibold text-pine-800">
+                      {k === 'bank' ? 'Re-enter account' : 'Upload again'}
                     </Link>
                   ) : (
                     <button type="button" disabled={!!checking.length || (k === 'gstin' && !g.gstin)} onClick={() => recheck(k)} className="text-[13px] font-semibold text-pine-800 disabled:text-ink-400">
