@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { parseISODate, toISODate, todayISO } from '../lib/format'
 
 export type DateMode = 'checkin' | 'stay' | 'booking'
@@ -101,6 +101,44 @@ export function RangeCalendar({
     return { y: d.getFullYear(), m: d.getMonth() }
   })
   const [two, setTwo] = useState(true)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  // Where the pop-up sits on screens wide enough for it to hang under the box (kept inside the window).
+  const [pos, setPos] = useState<{ left: number; top: number; width: number; maxH: number } | null>(null)
+  const [asModal, setAsModal] = useState(centered)
+
+  useLayoutEffect(() => {
+    if (!open || centered) return
+    const place = () => {
+      const el = wrapRef.current
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      if (!el || vw < 640) {
+        setPos(null)
+        setAsModal(false)
+        return
+      }
+      const r = el.getBoundingClientRect()
+      const width = Math.min(700, vw - 24)
+      const below = vh - r.bottom - 20
+      // Not enough room under the box (short laptop screens): show it in the middle of the screen instead.
+      if (below < 440) {
+        setAsModal(true)
+        setPos(null)
+        return
+      }
+      setAsModal(false)
+      const left = Math.max(12, Math.min(r.left, vw - width - 12))
+      setPos({ left, top: r.bottom + 8, width, maxH: vh - r.bottom - 20 })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open, centered, button])
+  const modal = centered || asModal
 
   useEffect(() => {
     if (!open) return
@@ -148,7 +186,7 @@ export function RangeCalendar({
   }
 
   return (
-    <div className={`relative ${button ? '' : 'min-w-0 flex-1'}`}>
+    <div ref={wrapRef} className={`relative ${button ? '' : 'min-w-0 flex-1'}`}>
       {button ? (
         <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className={`flex h-11 items-center gap-2 rounded-lg border px-4 text-[14.5px] font-semibold transition-colors ${value || open ? 'border-pine-800 bg-pine-800 text-white' : 'border-line-strong bg-white text-pine-800 hover:border-pine-700'}`}>
           <CalendarDays className="h-4 w-4" aria-hidden="true" />
@@ -174,8 +212,8 @@ export function RangeCalendar({
       <AnimatePresence>
         {open && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`fixed inset-0 bg-ink-900/35 ${centered ? 'z-[120]' : 'z-[70]'}`} onMouseDown={() => setOpen(false)} />
-            <div className={centered ? 'pointer-events-none fixed inset-0 z-[121] flex items-center justify-center p-3' : 'contents'}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`fixed inset-0 bg-ink-900/35 ${modal ? 'z-[120]' : 'z-[70]'}`} onMouseDown={() => setOpen(false)} />
+            <div className={modal ? 'pointer-events-none fixed inset-0 z-[121] flex items-center justify-center p-3' : 'contents'}>
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -184,10 +222,11 @@ export function RangeCalendar({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16 }}
+              style={!modal && pos ? { left: pos.left, top: pos.top, width: pos.width, maxHeight: pos.maxH, right: 'auto' } : undefined}
               className={
-                centered
+                modal
                   ? 'pointer-events-auto max-h-[calc(100dvh-24px)] w-[min(700px,100%)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6'
-                  : `fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 ${button ? 'sm:left-0' : 'sm:right-0'} sm:w-[min(700px,calc(100vw-48px))] sm:p-6`
+                  : 'fixed inset-x-3 top-20 z-[71] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6'
               }
               onMouseLeave={() => setHover('')}
             >
